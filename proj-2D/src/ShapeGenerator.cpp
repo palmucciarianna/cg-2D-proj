@@ -1,0 +1,429 @@
+// ============================================================================
+// File: src/ShapeGenerator.cpp
+// Progetto: Astro-Miner 2D: Cosmic Coin Rush
+// Disciplina: Computer Graphics - Università di Bologna (UniBo)
+// Descrizione: Implementazione del generatore procedurale delle forme geometriche 2D.
+//              Include le formule matematiche per:
+//              - Primitiva Triangolo, Rettangolo, Trapezio e Rombo
+//              - Moneta circolare e Disco parametrico (Triangle Fan)
+//              - Curva Polare della Farfalla (Fay): r = exp(cos t) - 2*cos(4t) + sin(t/12)^5
+//              - Curva Cardioide del Cuore: x = 16*sin(t)^3, y = 13*cos(t)-5*cos(2t)-2*cos(3t)-cos(4t)
+//              - Curva della Luna crescente: x = 3*sin(t), y = 0.5*cos(2t) - cos(t)
+//              - Frattale Chaos Game di Sierpinski con Mersenne Twister (std::mt19937)
+// ============================================================================
+
+#include "ShapeGenerator.h"
+#include <random>
+#include <cmath>
+
+namespace
+{
+    // Costante matematica Pi-Greco a 32 bit di precisione.
+    constexpr float PI = 3.14159265358979323846f;
+}
+
+// ============================================================================
+// Costruzione Triangolo di Base (GL_TRIANGLES)
+// ============================================================================
+MeshData ShapeGenerator::createTriangle(
+    const glm::vec4& color1,
+    const glm::vec4& color2,
+    const glm::vec4& color3)
+{
+    MeshData data;
+
+    // Aggiunge i 3 vertici locali centrati rispetto all'origine:
+    // Vertice 1: angolo inferiore sinistro (-0.5, -0.5)
+    data.positions.push_back(glm::vec3(-0.5f, -0.5f, 0.0f));
+    // Vertice 2: angolo inferiore destro (0.5, -0.5)
+    data.positions.push_back(glm::vec3(0.5f, -0.5f, 0.0f));
+    // Vertice 3: vertice superiore centrale (0.0, 0.5)
+    data.positions.push_back(glm::vec3(0.0f, 0.5f, 0.0f));
+
+    // Assegna i rispettivi colori ai vertici per generare un'interpolazione Gouraud liscia.
+    data.colors.push_back(color1);
+    data.colors.push_back(color2);
+    data.colors.push_back(color3);
+
+    // Imposta la modalità di rendering su GL_TRIANGLES (3 vertici per primitiva).
+    data.primitiveType = GL_TRIANGLES;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Rettangolo (GL_TRIANGLES - 2 Triangoli)
+// ============================================================================
+MeshData ShapeGenerator::createRectangle(
+    float width,
+    float height,
+    const glm::vec4& colorTop,
+    const glm::vec4& colorBottom)
+{
+    MeshData data;
+    // Calcola la semi-ampiezza e la semi-altezza rispetto al centro.
+    float hw = width * 0.5f;
+    float hh = height * 0.5f;
+
+    // Triangolo 1 (inferiore-destro): Bottom-Left, Bottom-Right, Top-Right
+    data.positions.push_back(glm::vec3(-hw, -hh, 0.0f));
+    data.positions.push_back(glm::vec3( hw, -hh, 0.0f));
+    data.positions.push_back(glm::vec3( hw,  hh, 0.0f));
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorTop);
+
+    // Triangolo 2 (superiore-sinistro): Bottom-Left, Top-Right, Top-Left
+    data.positions.push_back(glm::vec3(-hw, -hh, 0.0f));
+    data.positions.push_back(glm::vec3( hw,  hh, 0.0f));
+    data.positions.push_back(glm::vec3(-hw,  hh, 0.0f));
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorTop);
+    data.colors.push_back(colorTop);
+
+    data.primitiveType = GL_TRIANGLES;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Moneta Dorata con Gradiente Radiale (GL_TRIANGLES)
+// ============================================================================
+MeshData ShapeGenerator::createCoin(
+    float radius,
+    int segments,
+    const glm::vec4& innerColor,
+    const glm::vec4& outerColor)
+{
+    MeshData data;
+    // Centro geometrico della moneta.
+    glm::vec3 center(0.0f, 0.0f, 0.0f);
+
+    // Passo angolare tra due spicchi successivi: delta_theta = 2*PI / N
+    float step = (2.0f * PI) / static_cast<float>(segments);
+
+    for (int i = 0; i < segments; ++i)
+    {
+        // Angolo di inizio e di fine dello spicchio triangolare.
+        float a1 = static_cast<float>(i) * step;
+        float a2 = static_cast<float>(i + 1) * step;
+
+        // Punti sul perimetro circolare calcolati tramite coordinate polari: x = r*cos(a), y = r*sin(a).
+        glm::vec3 p1(radius * std::cos(a1), radius * std::sin(a1), 0.0f);
+        glm::vec3 p2(radius * std::cos(a2), radius * std::sin(a2), 0.0f);
+
+        // Triangolo dello spicchio: Centro -> P1 -> P2
+        data.positions.push_back(center);
+        data.positions.push_back(p1);
+        data.positions.push_back(p2);
+
+        // Colore interno dorato brillante al centro, metallico scuro sul bordo esterno.
+        data.colors.push_back(innerColor);
+        data.colors.push_back(outerColor);
+        data.colors.push_back(outerColor);
+    }
+
+    data.primitiveType = GL_TRIANGLES;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Trapezio Isoscele (Fusoliera Navicella)
+// ============================================================================
+MeshData ShapeGenerator::createTrapezoid(
+    float topWidth,
+    float bottomWidth,
+    float height,
+    const glm::vec4& colorTop,
+    const glm::vec4& colorBottom)
+{
+    MeshData data;
+    float h = height * 0.5f;
+    float hwTop = topWidth * 0.5f;
+    float hwBottom = bottomWidth * 0.5f;
+
+    // Triangolo 1: Bottom-Left, Bottom-Right, Top-Right
+    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f));
+    data.positions.push_back(glm::vec3( hwBottom, -h, 0.0f));
+    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f));
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorTop);
+
+    // Triangolo 2: Bottom-Left, Top-Right, Top-Left
+    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f));
+    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f));
+    data.positions.push_back(glm::vec3(-hwTop,     h, 0.0f));
+    data.colors.push_back(colorBottom);
+    data.colors.push_back(colorTop);
+    data.colors.push_back(colorTop);
+
+    data.primitiveType = GL_TRIANGLES;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Rombo / Diamante (Post-bruciatore Motore)
+// ============================================================================
+MeshData ShapeGenerator::createDiamond(
+    float width,
+    float height,
+    const glm::vec4& centerColor,
+    const glm::vec4& edgeColor)
+{
+    MeshData data;
+    float hw = width * 0.5f;
+    float hh = height * 0.5f;
+
+    glm::vec3 center(0.0f, 0.0f, 0.0f);
+    glm::vec3 top(0.0f, hh, 0.0f);
+    glm::vec3 bottom(0.0f, -hh, 0.0f);
+    glm::vec3 right(hw, 0.0f, 0.0f);
+    glm::vec3 left(-hw, 0.0f, 0.0f);
+
+    // Lambda per aggiungere un triangolo con gradiente dal centro verso la punta esterna.
+    auto addTri = [&](const glm::vec3& p1, const glm::vec3& p2) {
+        data.positions.push_back(center);
+        data.positions.push_back(p1);
+        data.positions.push_back(p2);
+        data.colors.push_back(centerColor);
+        data.colors.push_back(edgeColor);
+        data.colors.push_back(edgeColor);
+    };
+
+    // Costruisce i 4 quadranti del rombo.
+    addTri(top, right);
+    addTri(right, bottom);
+    addTri(bottom, left);
+    addTri(left, top);
+
+    data.primitiveType = GL_TRIANGLES;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Cerchio / Ellisse (GL_TRIANGLE_FAN)
+// ============================================================================
+MeshData ShapeGenerator::createCircle(
+    float cx,
+    float cy,
+    float radiusX,
+    float radiusY,
+    int segments,
+    const glm::vec4& centerColor,
+    const glm::vec4& borderColor)
+{
+    (void)cx; (void)cy; // La traslazione viene applicata via Model Matrix.
+    MeshData data;
+
+    // Riserva lo spazio di memoria esatto: 1 vertice centrale + (segments + 1) vertici perimetrali.
+    data.positions.reserve(segments + 2);
+    data.colors.reserve(segments + 2);
+
+    // 1. Vertice centrale all'origine locale (0,0).
+    data.positions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    data.colors.push_back(centerColor);
+
+    // Passo angolare di campionamento.
+    const float step = 2.0f * PI / static_cast<float>(segments);
+
+    // 2. Vertici perimetrali calcolati con formule trigonometriche: x = rx*cos(t), y = ry*sin(t).
+    for (int i = 0; i <= segments; ++i)
+    {
+        float t = static_cast<float>(i) * step;
+        float x = radiusX * std::cos(t);
+        float y = radiusY * std::sin(t);
+
+        data.positions.push_back(glm::vec3(x, y, 0.0f));
+        data.colors.push_back(borderColor);
+    }
+
+    // Modalità GL_TRIANGLE_FAN: il primo vertice è comune a tutti i triangoli generati.
+    data.primitiveType = GL_TRIANGLE_FAN;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Curva di Fay della Farfalla (GL_TRIANGLE_FAN)
+// ============================================================================
+// Equazione polare trascendente scoperta da Temple H. Fay (1989):
+// r(t) = e^{cos t} - 2*cos(4t) + sin^5(t / 12)
+// x(t) = radiusX * sin(t) * r(t)
+// y(t) = radiusY * cos(t) * r(t)
+MeshData ShapeGenerator::createButterfly(
+    float cx,
+    float cy,
+    float radiusX,
+    float radiusY,
+    int segments,
+    const glm::vec4& centerColor,
+    const glm::vec4& borderColor)
+{
+    (void)cx; (void)cy;
+    MeshData data;
+
+    data.positions.reserve(segments + 2);
+    data.colors.reserve(segments + 2);
+
+    // Centro della farfalla.
+    data.positions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    data.colors.push_back(centerColor);
+
+    const float step = 2.0f * PI / static_cast<float>(segments);
+
+    for (int i = 0; i <= segments; ++i)
+    {
+        float t = static_cast<float>(i) * step;
+
+        // Valutazione della componente radiale trascendente di Fay.
+        float common = std::exp(std::cos(t))
+                     - 2.0f * std::cos(4.0f * t)
+                     + std::pow(std::sin(t / 12.0f), 5.0f);
+
+        // Conversione in coordinate cartesiane.
+        float x = radiusX * std::sin(t) * common;
+        float y = radiusY * std::cos(t) * common;
+
+        data.positions.push_back(glm::vec3(x, y, 0.0f));
+        data.colors.push_back(borderColor);
+    }
+
+    data.primitiveType = GL_TRIANGLE_FAN;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Curva Spicchio di Luna (GL_TRIANGLE_FAN)
+// ============================================================================
+// Equazione parametrica armonica:
+// x(t) = scaleX * 3 * sin(t)
+// y(t) = scaleY * (0.5 * cos(2t) - cos(t))
+MeshData ShapeGenerator::createMoon(
+    float cx,
+    float cy,
+    float scaleX,
+    float scaleY,
+    int segments,
+    const glm::vec4& color)
+{
+    (void)cx; (void)cy;
+    MeshData data;
+
+    for (int i = 0; i <= segments; ++i)
+    {
+        float t = 2.0f * PI * static_cast<float>(i) / static_cast<float>(segments);
+
+        // Valutazione delle coordinate cartesiane della curvatura lunare.
+        float x = 3.0f * std::sin(t);
+        float y = 0.5f * std::cos(2.0f * t) - std::cos(t);
+
+        // Applicazione dei fattori di scala.
+        x = scaleX * x;
+        y = scaleY * y;
+
+        data.positions.push_back(glm::vec3(x, y, 0.0f));
+        data.colors.push_back(color);
+    }
+
+    data.primitiveType = GL_TRIANGLE_FAN;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Curva Cardioide del Cuore (GL_TRIANGLE_FAN)
+// ============================================================================
+// Equazioni parametriche del cuore:
+// x(t) = 16 * sin^3(t)
+// y(t) = 13*cos(t) - 5*cos(2t) - 2*cos(3t) - cos(4t)
+MeshData ShapeGenerator::createHeart(
+    float cx,
+    float cy,
+    float radiusX,
+    float radiusY,
+    int segments,
+    const glm::vec4& centerColor,
+    const glm::vec4& borderColor)
+{
+    (void)cx; (void)cy;
+    MeshData data;
+
+    data.positions.reserve(segments + 2);
+    data.colors.reserve(segments + 2);
+
+    // Centro del cuore.
+    data.positions.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    data.colors.push_back(centerColor);
+
+    const float step = 2.0f * PI / static_cast<float>(segments);
+
+    for (int i = 0; i <= segments; ++i)
+    {
+        float t = static_cast<float>(i) * step;
+        const float s = std::sin(t);
+
+        // Equazione per la coordinata X.
+        float x = radiusX * 16.0f * s * s * s;
+
+        // Equazione per la coordinata Y con i 4 coefficienti armonici di Fourier.
+        float y = radiusY * (
+            13.0f * std::cos(t)
+            - 5.0f * std::cos(2.0f * t)
+            - 2.0f * std::cos(3.0f * t)
+            - std::cos(4.0f * t)
+        );
+
+        data.positions.push_back(glm::vec3(x, y, 0.0f));
+        data.colors.push_back(borderColor);
+    }
+
+    data.primitiveType = GL_TRIANGLE_FAN;
+    return data;
+}
+
+// ============================================================================
+// Costruzione Frattale di Sierpinski (Chaos Game - GL_POINTS)
+// ============================================================================
+// Algoritmo del Caos (Barnsley, 1988):
+// 1. Si scelgono tre vertici fissi T0, T1, T2 formanti un triangolo.
+// 2. Si seleziona casualmente un punto di partenza.
+// 3. A ogni iterazione, si sceglie uniformemente a caso un vertice T_k (k in {0,1,2})
+//    e si calcola il punto medio: p_{n+1} = (p_n + T_k) / 2.
+// 4. L'insieme dei punti generati converge all'attrattore frattale con dimensione di Hausdorff log(3)/log(2) ≈ 1.585.
+MeshData ShapeGenerator::createSierpinski(
+    const glm::vec3& T0,
+    const glm::vec3& T1,
+    const glm::vec3& T2,
+    int nPoints,
+    const glm::vec4& color)
+{
+    MeshData data;
+
+    // Array dei tre vertici attrattori.
+    glm::vec3 vertices[3] = { T0, T1, T2 };
+
+    // Inizializzazione del generatore pseudo-casuale Mersenne Twister a 32 bit.
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    // Distribuzione uniforme discreta per estrarre equiprobabilmente gli indici 0, 1 o 2.
+    std::uniform_int_distribution<int> distribution(0, 2);
+
+    // Selezione del punto di partenza casuale tra i tre vertici.
+    glm::vec3 currentPoint = vertices[distribution(generator)];
+
+    // Generazione stocastica degli N punti del frattale.
+    for (int i = 0; i < nPoints; ++i)
+    {
+        // Estrazione casuale dell'attrattore target.
+        int vertexIndex = distribution(generator);
+        glm::vec3 selectedVertex = vertices[vertexIndex];
+
+        // Calcolo della combinazione convessa con peso 0.5 (punto medio geometrico).
+        currentPoint = 0.5f * (currentPoint + selectedVertex);
+
+        // Memorizzazione della posizione del punto e del colore associato.
+        data.positions.push_back(currentPoint);
+        data.colors.push_back(color);
+    }
+
+    // Modalità di rendering per primitive puntiformi isolate.
+    data.primitiveType = GL_POINTS;
+    return data;
+}
