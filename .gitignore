@@ -1,0 +1,38 @@
+# ==============================================================================
+# Git Ignore - Computer Graphics UniBo (Arianna Palmucci)
+# ==============================================================================
+
+# Directory di build CMake locale
+build/
+**/build/
+bin/
+obj/
+out/
+
+# File di sistema macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# File temporanei di Visual Studio e IDE
+.vs/
+*.user
+*.suo
+*.sln.docstates
+*.opensdf
+*.sdf
+
+# File ausiliari generati da LaTeX durante la compilazione
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# File di swap e backup editor
+*.swp
+*.swo
+*~
