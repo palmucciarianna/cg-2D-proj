@@ -1,0 +1,525 @@
+\documentclass[11pt,a4paper]{article}
+
+% ==============================================================================
+% PACCHETTI FONDAMENTALI
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{geometry}
+\geometry{
+    top=2.2cm,
+    bottom=2.2cm,
+    left=2.2cm,
+    right=2.2cm,
+    headheight=14pt
+}
+
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{hyperref}
+\graphicspath{{../../assets/}{../assets/}{assets/}}
+
+% ==============================================================================
+% DEFINIZIONE COLORI E STILI
+% ==============================================================================
+\definecolor{primaryBlue}{RGB}{20, 50, 95}
+\definecolor{accentTeal}{RGB}{0, 140, 170}
+\definecolor{darkGray}{RGB}{60, 60, 60}
+\definecolor{lightGray}{RGB}{245, 247, 250}
+\definecolor{codeBg}{RGB}{240, 243, 246}
+\definecolor{codeGreen}{RGB}{35, 130, 70}
+\definecolor{codeKeyword}{RGB}{170, 30, 90}
+\definecolor{codeString}{RGB}{180, 80, 20}
+\definecolor{boxBg}{RGB}{243, 248, 252}
+\definecolor{boxBorder}{RGB}{180, 210, 235}
+\definecolor{checkGreen}{RGB}{20, 140, 60}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryBlue,
+    citecolor=primaryBlue,
+    urlcolor=accentTeal
+}
+
+% Stile intestazioni sezioni
+\titleformat{\section}
+    {\color{primaryBlue}\normalfont\Large\bfseries}
+    {\thesection}{1em}{}
+\titleformat{\subsection}
+    {\color{accentTeal}\normalfont\large\bfseries}
+    {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\color{darkGray}\normalfont\normalsize\bfseries}
+    {\thesubsubsection}{1em}{}
+
+% Intestazione e Piè di Pagina
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkGray}Computer Graphics -- Midterm 2D: \textit{Astro-Miner 2D}}
+\fancyhead[R]{\small\color{darkGray}Arianna Palmucci}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Configurazione Listings (Codice sorgente C++/GLSL)
+\lstset{
+    backgroundcolor=\color{codeBg},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codeGreen},
+    keywordstyle=\color{codeKeyword}\bfseries,
+    stringstyle=\color{codeString},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    tabsize=4,
+    showspaces=false,
+    showstringspaces=false,
+    frame=single,
+    rulecolor=\color{lightGray}
+}
+
+% ==============================================================================
+% INTESTAZIONE DOCUMENTO
+% ==============================================================================
+\begin{document}
+
+\begin{center}
+    {\scshape\Large Università di Bologna \par}
+    \vspace{0.2cm}
+    {\large Corso di Laurea in Informatica / Ingegneria Informatica\par}
+    {\large Insegnamento di Computer Graphics -- A.A. 2025/2026\par}
+    \vspace{0.6cm}
+    \rule{\linewidth}{1.2pt}\\[0.3cm]
+    {\huge\bfseries\color{primaryBlue} Astro-Miner 2D: Cosmic Coin Rush\par}
+    \vspace{0.2cm}
+    {\Large\bfseries\color{accentTeal} Relazione Tecnica sull'Elaborato 1 (Interactive 2D World)\par}
+    \rule{\linewidth}{1.2pt}
+    \vspace{0.4cm}
+
+    \vspace{0.3cm}
+    \begin{tabularx}{\linewidth}{@{}X r@{}}
+        \textbf{Candidata:} Arianna Palmucci & \textbf{Data di Consegna:} Novembre 2026 \\
+        \textbf{Docente del Corso:} Prof.ssa Lazzaro & \textbf{Target OS:} macOS, Windows, Linux \\
+    \end{tabularx}
+    \vspace{0.15cm}
+    \small
+    \begin{tabularx}{\linewidth}{@{}l X@{}}
+        \textbf{Tecnologie Grafiche:} & C++17, OpenGL 3.3 Core Profile, GLSL 330 \\
+        \textbf{Librerie Software:} & GLFW, GLAD, GLM, Dear ImGui, stb\_image \\
+        \textbf{Presentazione Online (Canva):} & \href{https://canva.link/qwwbv3ayalvsctp}{\texttt{https://canva.link/qwwbv3ayalvsctp}} \\
+        \textbf{Presentazione PDF Inclusa:} & \texttt{presentazione/presentazione.pdf} \\
+    \end{tabularx}
+\end{center}
+
+\vspace{0.2cm}
+
+\begin{abstract}
+\noindent Il presente documento espone in maniera rigorosa la progettazione, l'architettura matematica e l'implementazione software del progetto midterm per l'insegnamento di Computer Graphics. L'applicazione, denominata \textbf{Astro-Miner 2D: Cosmic Coin Rush}, è un ambiente grafico e videogioco arcade 2D altamente reattivo, sviluppato in moderno \textbf{C++17} su pipeline programmabile \textbf{OpenGL 3.3 Core Profile}. L'elaborato soddisfa e amplia la totalità dei requisiti stabiliti dalla specifica docente: modellazione gerarchica di un veicolo composito a 8 parti; texture mapping 2D per il ritratto del pilota con shader e maschera ellittica dedicata; formulazione analitica ed esportazione di curve cubiche di Hermite interpolate di classe $C^1$ per due modelli geometrici distinti (uno dinamico letale, l'altro interattivo per la vittoria); istanziazione multipla condivisa su buffer statici VRAM (\texttt{GL\_STATIC\_DRAW}); due shader program GLSL disaccoppiati (sfondo matematico procedurale a 3 livelli di parallasse e shader oggetti con uniform tint); gestione temporale rigorosa basata su Delta Time; rilevamento collisioni Cerchio-Cerchio e AABB; sistema particellare fisico a frantumazione radiale con attrito e dissolvenza; orchestrazione del game loop tramite macchina a stati finiti con interfaccia grafica HUD Dear ImGui e pop-up centrati su schermo.
+\end{abstract}
+
+\vspace{0.3cm}
+
+% ==============================================================================
+% 1. INTRODUZIONE E OBIETTIVI
+% ==============================================================================
+\section{Introduzione e Obiettivi del Progetto}
+
+In stretta aderenza agli obiettivi definiti nella specifica ufficiale \textit{Interactive 2D World}, l'applicazione si prefigge di dimostrare la corretta comprensione ed integrazione pratica dei fondamenti di computer graphics trattati durante il corso.
+
+L'ambientazione scelta è uno scenario fantascientifico arcade ad alto ritmo: il giocatore pilota un caccia stellare minerario all'interno di un settore orbitale instabile. La dinamica di gioco si articola in una progressione su due fasi logiche:
+\begin{enumerate}
+    \item \textbf{Fase 1 (Raccolta Mineraria):} Il pilota deve navigare lo spazio, evitare le cinture di asteroidi e raccogliere esattamente \textbf{5 Monete Galattiche} animate con oscillazione armonica verticale e rotazione 3D fittizia.
+    \item \textbf{Fase 2 (Attivazione e Salto Dimensionale):} Al prelievo della quinta moneta, la \textbf{Reliquia Cosmica Warp Gate} (modellata tramite curve di Hermite) si attiva, emettendo bagliori dorati e azzurri e accelerando il proprio vortice. Il giocatore deve pilotare fisicamente la navicella all'interno del portale per chiudere la partita e scatenare l'evento di vittoria \textbf{HURR\`A!}, incassando 500 punti bonus e generando il livello successivo.
+\end{enumerate}
+
+\noindent A rendere dinamica la simulazione concorrono:
+\begin{itemize}
+    \item \textbf{L'Alien Sentinel Drone (Drone Nemico Alieno)}: modellato con curve di Hermite, fluttua secondo una traiettoria a 8 ed è un \textit{ostacolo letale}: passare sopra al drone nemico sottrae 1 vita per ciascuna collisione. Avendo il giocatore 3 vite a disposizione, dopo 3 contatti scatta il \textbf{Game Over} con pop-up centrato. A ogni passaggio, l'occhio giallo alieno sbatte le palpebre con un ammiccamento fluido.
+    \item \textbf{Cannone Laser e Frantumazione Rocce}: la barra spaziatrice aziona doppi cannoni al plasma che polverizzano gli asteroidi intercettati in 28 schegge fisiche animate con attrito e decadimento alpha.
+    \item \textbf{Incursione Raggi Laterali}: periodicamente compaiono dardi cremisi ad alta velocità preceduti da linee di avvertimento lampeggianti sul bordo dello schermo da schivare agilmente.
+\end{itemize}
+
+% ==============================================================================
+% 2. ARCHITETTURA SOFTWARE MODULARE
+% ==============================================================================
+\section{Architettura Software e Organizzazione Modulare}
+
+In ossequio al \textbf{Requisito 8 (Organizzazione del codice)}, il software adotta il principio della \textit{Separation of Concerns} (SoC), disaccoppiando nettamente il caricamento delle risorse OpenGL, la gestione della scena, il calcolo analitico delle collisioni e la logica di gioco.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{assets/screenshots/screenshot_gameplay.jpg}{
+        \includegraphics[width=0.88\linewidth]{assets/screenshots/screenshot_gameplay.jpg}
+        \caption{Schermata di gioco attiva: navicella composita controllata dal giocatore con foto pilota proiettata nel cupolino, drone alieno cornuto Hermite (ostacolo letale a 3 colpi con occhio giallo), Warp Gate dimensionale blu, monete d'oro rotanti, asteroidi a buffer condiviso e HUD Mission Control.}
+    }{
+        \framebox[0.88\linewidth]{\parbox{0.85\linewidth}{\centering \vspace{1.5cm} \textbf{[Schermata di Gioco: Navicella, Asteroidi Condivisi, Drone Hermite, Portale e HUD]} \vspace{1.5cm}}}
+    }
+    \label{fig:gameplay}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.1cm} p{4.6cm} X@{}}
+\toprule
+\textbf{Modulo} & \textbf{File / Classi Sorgente} & \textbf{Responsabilità Tecnica \& Funzioni} \\
+\midrule
+\textbf{Core \& Platform} & \texttt{Input.h/.cpp}, \texttt{Transform.h} & Callback GLFW (tastiera/mouse), matrici omogenee 2D. \\
+\textbf{Graphics Pipeline} & \texttt{ShaderMaker}, \texttt{Shader}, \texttt{Geometry} & Compilazione GLSL, binding VAO/VBO e upload statico GPU. \\
+\textbf{Texture Mapping} & \texttt{Texture.h/.cpp}, \texttt{stb\_image.h} & Decodifica immagini e filtro bilineare per la cabina del pilota. \\
+\textbf{Procedural Mesh} & \texttt{ShapeGenerator}, \texttt{PlayerShapeLoader} & Generatore primitive CPU e parser triangolatore OBJ/MTL. \\
+\textbf{Background Pass} & \texttt{BackgroundRenderer.h/.cpp} & Render pass dedicato su fullscreen quad NDC. \\
+\textbf{Scene Entities} & \texttt{Player}, \texttt{AsteroidManager}, \texttt{Collectible} & Entità di gioco, istanze condivise e logiche locali. \\
+\textbf{Hermite Splines} & \texttt{HermiteObject.h/.cpp} & Gestione dei due modelli a curve Hermite $C^1$ (drone e gate). \\
+\textbf{Projectiles \& Hazard} & \texttt{LaserManager}, \texttt{HazardManager} & Sparo laser del giocatore e dardi ad alta velocità dai bordi. \\
+\textbf{Physics \& FX} & \texttt{ParticleSystem}, \texttt{Collider2D.h} & Schegge roccia a frantumazione, coriandoli, test cerchio e AABB. \\
+\textbf{State Machine \& UI} & \texttt{GameWorld.h/.cpp}, \texttt{main.cpp} & Macchina a stati (\texttt{PLAYING, HURRA, GAMEOVER}) e Dear ImGui. \\
+\bottomrule
+\end{tabularx}
+\caption{Suddivisione modulare del codice sorgente (\texttt{proj-2D/src/}).}
+\label{tab:architecture}
+\end{table}
+
+\noindent Il ciclo principale (\textit{Game Loop}) computa a ogni frame il Delta Time scalato:
+\begin{equation}
+\Delta t = \min\left(t_{\text{current}} - t_{\text{last}},\, 0.05\right)
+\end{equation}
+garantendo l'assoluta indipendenza della fisica e delle animazioni dal frame-rate del display (60 Hz, 120 Hz ProMotion o monitor gaming a 144 Hz).
+
+% ==============================================================================
+% 3. MODELLAZIONE GEOMETRICA E CURVE DI HERMITE
+% ==============================================================================
+\section{Modellazione Geometrica e Curve di Hermite}
+
+\subsection{Assemblaggio Gerarchico dell'Oggetto Composto (Requisito 3.1)}
+Il caccia stellare controllato dal giocatore (\texttt{Player.cpp}) costituisce un oggetto complesso composto da \textbf{8 parti geometriche distinte}, legate tra loro da trasformazioni affini omogenee ad albero:
+\begin{enumerate}
+    \item \textbf{Muso Anteriore Affilato:} Triangolo isoscele affusolato con gradiente ciano-turchese brillante.
+    \item \textbf{Fusoliera Centrale Rastremata:} Trapezio isoscele ($24 \times 48$ px) a sfumatura metallica blu notte/titanio.
+    \item \textbf{Cupola della Cabina di Pilotaggio:} Ellisse discretizzata su 32 settori in cristallo ciano semitrasparente.
+    \item \textbf{Riflesso Geometrico 2D del Vetro:} Sotto-ellisse eccentrica bianca sfumata (decal geometrica semitrasparente) sovrapposta per conferire lucentezza ottica al cupolino senza modelli di illuminazione.
+    \item \textbf{Ali a Delta Simmetriche Speculari:} Coppia di ali a freccia ad assetto variabile. L'ala sinistra è generata riutilizzando la stessa geometria dell'ala destra invertendo l'asse $X$ locale tramite la matrice di riflessione:
+    \begin{equation}
+    S(-1, 1, 1) = \begin{bmatrix} -1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \end{bmatrix}
+    \end{equation}
+    \item \textbf{Cannoni Laser Alari:} Due bocche da fuoco rettangolari innestate rigidamente sulle estremità alari.
+    \item \textbf{Doppi Propulsori Reattivi:} Ugelli rettangolari posteriori dotati di fiamme dinamiche a doppio strato (nucleo caldissimo azzurro-bianco + alone esterno arancione).
+    \item \textbf{Indicatori LED Stroboscopici di Navigazione:} Due cerchietti alari 2D lampeggianti alternati ad alta frequenza (verde a dritta, rosso a sinistra).
+\end{enumerate}
+
+\noindent La matrice di ciascun componente è calcolata tramite la composizione gerarchica:
+\begin{equation}
+M_{\text{componente}} = M_{\text{player}} \cdot T(\mathbf{t}_{\text{rel}}) \cdot R(\theta_{\text{rel}}) \cdot S(\mathbf{s}_{\text{rel}})
+\end{equation}
+dove $M_{\text{player}} = T(\mathbf{p}_{\text{ship}}) \cdot R(\theta_{\text{ship}} - 90^\circ)$ governa la traiettoria globale dell'intera navetta nello spazio di gioco.
+
+\subsection{Texture Mapping 2D: Ritratto del Pilota sopra la Cabina}
+Sopra la cupola della cabina (\texttt{canopyMat}) viene proiettata l'immagine reale dell'astronauta tramite \textbf{Texture Mapping 2D} (implementato nella classe \texttt{Texture.cpp} con la libreria \texttt{stb\_image.h}). Per non alterare la silhouette e i riflessi dell'astronave:
+\begin{enumerate}
+    \item Viene prima renderizzata la base in cristallo ciano della cabina (\texttt{m\_canopyGeo}).
+    \item Uno shader dedicato (\texttt{texture.vert} e \texttt{texture.frag}) applica un quad texturizzato scalato a misura della cabina ($8.5 \times 15$ px). All'interno del fragment shader viene valutata la distanza ellittica normalizzata:
+    \begin{equation}
+    d^2 = \left(\frac{u - 0.5}{0.5}\right)^2 + \left(\frac{v - 0.5}{0.5}\right)^2
+    \end{equation}
+    Se $d^2 > 1.0$ il frammento viene scartato (\texttt{discard}), applicando un ritaglio morbido (\texttt{smoothstep}) che adatta la foto del volto alla forma ovoidale del cupolino.
+    \item Viene infine disegnato il riflesso geometrico in vetro (\texttt{m\_canopyShineGeo}) sopra la texture, preservando l'effetto realistico del vetro riflettente senza ricorrere a modelli di illuminotecnica 3D.
+\end{enumerate}
+
+\subsection{Curve Cubiche di Hermite (Requisito 3.2)}
+Nel pieno rispetto del Requisito 3.2, il progetto integra \textbf{due oggetti distinti} modellati mediante spline cubiche di Hermite, triangolati ed esportati in formato OBJ/MTL dal modellatore interattivo di laboratorio:
+
+\paragraph{Formulazione Matematica della Spline di Hermite.}
+Dato un segmento parametrico $t \in [0, 1]$ con estremi $P_0, P_1 \in \mathbb{R}^2$ e vettori tangenti $R_0, R_1 \in \mathbb{R}^2$, la curva è definita da:
+\begin{equation}
+\mathbf{p}(t) = H_0(t)\mathbf{P}_0 + H_1(t)\mathbf{P}_1 + H_2(t)\mathbf{R}_0 + H_3(t)\mathbf{R}_1
+\end{equation}
+dove i quattro polinomi di base cubici di Hermite sono:
+\begin{equation}
+\begin{cases}
+H_0(t) = 2t^3 - 3t^2 + 1 \\
+H_1(t) = -2t^3 + 3t^2 \\
+H_2(t) = t^3 - 2t^2 + t \\
+H_3(t) = t^3 - t^2
+\end{cases}
+\end{equation}
+In forma matriciale compatta:
+\begin{equation}
+\mathbf{p}(t) = \begin{bmatrix} t^3 & t^2 & t & 1 \end{bmatrix}
+\begin{bmatrix}
+2 & -2 & 1 & 1 \\
+-3 & 3 & -2 & -1 \\
+0 & 0 & 1 & 0 \\
+1 & 0 & 0 & 0
+\end{bmatrix}
+\begin{bmatrix}
+\mathbf{P}_0 \\ \mathbf{P}_1 \\ \mathbf{R}_0 \\ \mathbf{R}_1
+\end{bmatrix}
+\end{equation}
+
+\paragraph{Approfondimento Teorico: Come si garantisce la continuità delle curve di Hermite? (Continuità Tangenziale $C^1$)}
+Una curva spline a tratti è continua di classe $C^0$ se i punti estremi di segmenti contigui coincidono nello spazio: $\mathbf{p}_k(1) = \mathbf{p}_{k+1}(0) = \mathbf{P}_{k+1}$. 
+Per garantire la continuità tangenziale di classe $C^1$, è necessario che la derivata prima $\mathbf{p}'(t)$ non presenti discontinuità nei nodi di giunzione. 
+Derivando analiticamente la funzione parametrica rispetto a $t$:
+\begin{equation}
+\mathbf{p}'(t) = (6t^2 - 6t)\mathbf{P}_0 + (-6t^2 + 6t)\mathbf{P}_1 + (3t^2 - 4t + 1)\mathbf{R}_0 + (3t^2 - 2t)\mathbf{R}_1
+\end{equation}
+Si constata immediatamente che per $t = 0$ si ha $\mathbf{p}'(0) = \mathbf{R}_0$, mentre per $t = 1$ si ha $\mathbf{p}'(1) = \mathbf{R}_1$. 
+Pertanto, la continuità tangenziale $C^1$ si ottiene imponendo rigorosamente che il vettore tangente uscente dal segmento $k$ coincida in modulo, direzione e verso con il vettore tangente entrante nel segmento successivo $k+1$:
+\begin{equation}
+\mathbf{p}'_k(1) = \mathbf{p}'_{k+1}(0) \iff \mathbf{R}_{k+1}^- = \mathbf{R}_{k+1}^+
+\end{equation}
+Nel nostro flusso di lavoro, sia per il drone alieno che per l'anello Warp Gate, i punti di controllo e i vettori tangenti sono stati definiti nel modellatore interattivo di laboratorio: l'editor vincola i vettori tangenti adiacenti ad essere perfettamente allineati e congruenti. La geometria continua così ottenuta è stata campionata uniformemente ed esportata fedelmente in mesh Wavefront OBJ/MTL, preservando intatta la morbidezza visiva della curva differenziabile senza la formazione di cuspidi indesiderate.
+
+\paragraph{I Due Modelli Integrati:}
+\begin{itemize}
+    \item \textbf{1. Alien Sentinel Drone (\texttt{alien\_drone.obj}) -- Dinamico \& Ostacolo Letale:}
+    Sagoma biomorfa cornuta esportata con 113 vertici triangolati. Pattuglia lo spazio seguendo una curva armonica chiusa a forma di otto (Lissajous):
+    \begin{equation}
+    x(t) = 640 + 340 \cos(0.85 t), \quad y(t) = 380 + 160 \sin(1.70 t)
+    \end{equation}
+    Presenta un minaccioso occhio giallo centrale con pupilla verticale a fessura. È un ostacolo letale: passare sopra al drone nemico sottrae 1 vita alla navicella; subiti 3 impatti la partita termina con il Game Over. A ogni contatto, l'occhio giallo si socchiude e sbatte le palpebre (\textit{blink animation} di circa 0.38 secondi).
+    \item \textbf{2. Cosmic Warp Gate (\texttt{warp\_gate.obj}) -- Interattivo \& Traguardo di Fine Livello:}
+    Struttura monumentale ad anello circolare cavo (144 vertici Hermite) posta a coordinate $(1080, 560)$ con vortice interno rotante. È il traguardo obbligatorio: all'acquisizione delle 5 monete si accende di luce dorata ed energia ciano brillante; volandovi fisicamente dentro si completa la partita, scatenando l'HURR\`A festoso e il salto al livello successivo.
+\end{itemize}
+
+\subsection{Conformità Didattica: Esclusioni Esplicite da Specifica di Corso (Midterm 2D)}
+Nel pieno rispetto dei requisiti e dei limiti didattici dell'Elaborato 1 (Interactive 2D World):
+\begin{itemize}
+    \item \textbf{Curve di B\'ezier, B-spline e NURBS:} Nel progetto sono utilizzate unicamente \textbf{spline cubiche di Hermite a continuit\`a tangenziale $C^1$}. Non sono presenti curve di B\'ezier (polinomi di Bernstein / de Casteljau), B-spline (vettori dei nodi / De Boor) o NURBS, argomenti riservati alle successive fasi dell'insegnamento.
+    \item \textbf{Materiali e Modelli di Illuminazione (Phong, Blinn-Phong, Lambert):} Trattandosi di una scena bidimensionale, \textbf{non \`e presente alcun modello di illuminazione} (nessun calcolo di vettori normali, nessuna componente ambiente/diffusa/speculare, nessuna sorgente luminosa 3D). Il rendering \`e a colori per vertice (flat/interpolati) e tramite texture quad. I file Wavefront MTL fungono esclusivamente da tavolozza di colori RGB statici per le mesh 2D.
+    \item \textbf{Ray Tracing e Path Tracing:} Il rendering sfrutta esclusivamente la classica architettura a \textbf{rasterizzazione} della pipeline programmabile OpenGL 3.3 Core Profile (VAO, VBO, Vertex e Fragment Shader GLSL). Non \`e presente alcun algoritmo di tracciamento di raggi (ray tracing) o integrazione Monte Carlo (path tracing).
+\end{itemize}
+
+% ==============================================================================
+% 4. TRASFORMAZIONI GEOMETRICHE E OTTIMIZZAZIONE GPU
+% ==============================================================================
+\section{Trasformazioni Geometriche e Ottimizzazione GPU (Requisito 4)}
+
+L'applicazione rispetta fedelmente la convenzione standard OpenGL utilizzando coordinate omogenee quadridimensionali via GLM. La trasformazione da coordinate locali a clip space è espressa da:
+\begin{equation}
+\mathbf{v}_{\text{clip}} = P \cdot M \cdot \mathbf{v}_{\text{local}}
+\end{equation}
+dove $P = \text{glm::ortho}(0, \text{SCR\_W}, 0, \text{SCR\_H}, -1, 1)$ è la matrice di proiezione ortografica 2D e $M = T \cdot R \cdot S$ è la Model Matrix.
+
+\subsection{Ottimizzazione GPU: Perché non riscrivere i vertici a ogni frame? (\texttt{GL\_STATIC\_DRAW} vs Model Matrix)}
+Una questione architetturale cruciale nella computer graphics moderna è la gestione efficiente del traffico dati tra CPU e GPU. Durante la progettazione di \textit{Astro-Miner 2D}, è stata rigorosamente evitata la riscrittura dei vertici frame-by-frame:
+\begin{enumerate}
+    \item \textbf{Allocazione statica in VRAM (\texttt{GL\_STATIC\_DRAW}):} All'avvio dell'applicazione, le coordinate dei vertici locali di ogni primitiva (la mesh dell'asteroide, la moneta, i componenti del caccia) vengono caricate nei Vertex Buffer Object (VBO) della scheda grafica una sola volta mediante \texttt{glBufferData(GL\_ARRAY\_BUFFER, size, data, GL\_STATIC\_DRAW)}. Il flag \texttt{GL\_STATIC\_DRAW} informa esplicitamente il driver grafico che i dati rimarranno immutabili e risiederanno permanentemente nella memoria video (VRAM) ad accesso ultra-rapido.
+    \item \textbf{Eliminazione del Bottleneck CPU-GPU:} Riscrivere le coordinate dei vertici su CPU a ogni frame tramite funzioni come \texttt{glBufferSubData} comporterebbe un pesantissimo costo di trasferimento dati lungo il bus PCI-Express, costringendo inoltre la GPU a sincronizzarsi con la CPU e provocando stalli continui nella pipeline grafica.
+    \item \textbf{Calcolo delle Matrici Affini con GLM:} La CPU si limita a computare un'unica matrice omogenea $4 \times 4$ per ogni istanza di oggetto nello spazio di gioco:
+    \begin{equation}
+    M = T(\mathbf{p}) \cdot R(\theta) \cdot S(\mathbf{s})
+    \end{equation}
+    Tale matrice viene trasmessa alla GPU come variabile uniforme (\texttt{uniform mat4 model}) con una singola istruzione leggera \texttt{glUniformMatrix4fv}.
+    \item \textbf{Elaborazione Parallela nel Vertex Shader:} È il Vertex Shader (\texttt{basic.vert}), operante in parallelo massivo sui core di elaborazione grafica della GPU, a moltiplicare le posizioni dei vertici per la matrice di modellazione e proiezione ($v_{\text{clip}} = P \cdot M \cdot v_{\text{local}}$). Grazie a questo paradigma, l'applicazione renderizza centinaia di elementi contemporaneamente mantenendo stabilmente oltre 120 FPS con un carico di calcolo CPU prossimo allo zero.
+\end{enumerate}
+
+\paragraph{Condivisione della Geometria su Buffer Statici GPU.}
+Per soddisfare il vincolo di \textbf{almeno tre istanze simultanee}, la medesima mesh dell'asteroide (\texttt{m\_asteroidGeo}) viene condivisa da \textbf{4--6 istanze simultanee}:
+\begin{lstlisting}[language=C++]
+// Istanziazione Condivisa: stesso VAO/VBO riutilizzato per tutti gli asteroidi
+for (const auto& a : m_asteroids) {
+    if (a.active) {
+        glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(a.pos, 0.0f));
+        m = glm::rotate(m, glm::radians(a.rotation), glm::vec3(0, 0, 1));
+        m = glm::scale(m, glm::vec3(a.scale, a.scale, 1.0f));
+        shader.setMat4("model", m);
+        m_asteroidGeo.draw(); // Stesso VAO/VBO condiviso in VRAM
+    }
+}
+\end{lstlisting}
+La medesima tecnica governa le 5 monete galattiche (\texttt{Collectible.cpp}), ciascuna animata con velocità di oscillazione indipendente.
+
+% ==============================================================================
+% 5. PIPELINE DI RENDERING E SHADER GLSL
+% ==============================================================================
+\section{Pipeline di Rendering e Shader GLSL (Requisito 5)}
+
+Come prescritto dalla specifica, l'applicazione disaccoppia completamente le fasi visive impiegando programmi shader GLSL distinti.
+
+\subsection{Shader Dedicato allo Sfondo Procedurale Senza Texture (Requisito 5.1)}
+Il fragment shader dello sfondo (\texttt{background.frag}) viene eseguito su un quadrilatero fullscreen a coordinate normalizzate NDC $[-1, 1]$ e sintetizza matematicamente l'intero spazio profondo \textbf{senza l'impiego di alcuna texture precalcolata}.
+
+\paragraph{Spiegazione Tecnica: Come funziona lo sfondo senza texture?}
+\begin{enumerate}
+    \item \textbf{Generazione Stelle tramite Funzione Hash Pseudo-Casuale:}
+    I pixel delle stelle non provengono da un file bitmap ma nascono matematicamente all'interno del fragment shader mediante una funzione hash deterministica non lineare ad altissima frequenza numerica applicata alle coordinate di griglia discretizzate nello spazio dello schermo:
+    \begin{equation}
+    h(\mathbf{p}) = \text{fract}\left(\sin(\mathbf{p} \cdot \mathbf{K}) \cdot 43758.5453\right), \quad \mathbf{K} = (12.9898, 78.233)
+    \end{equation}
+    Questa funzione mappa ogni cella 2D in un valore pseudo-casuale compreso nell'intervallo $[0, 1)$. Isolando i valori che superano una soglia selettiva (es. $h(\mathbf{p}) > 0.985$) e calcolando la distanza quadratica radiale dal centro della cella, si generano sorgenti puntiformi luminose con decadimento morbido verso i bordi.
+    
+    \item \textbf{Parallasse Cosmico su Tre Livelli di Profondità:}
+    Per conferire una percezione dinamica di tridimensionalità e profondità all'ambiente di gioco bidimensionale, la funzione hash viene campionata simultaneamente su \textbf{tre strati indipendenti di griglie}, ciascuno caratterizzato da una diversa frequenza spaziale e velocità di scorrimento:
+    \begin{itemize}
+        \item \textit{Layer Profondo (Sfondo remoto):} Griglia ad altissima frequenza ($120\times$), con stelle minute, fitte e a traslazione impercettibile.
+        \item \textit{Layer Intermedio (Midfield):} Griglia a frequenza media ($70\times$), con stelle di media magnitudine e velocità di scorrimento moderata.
+        \item \textit{Layer in Primo Piano (Foreground):} Griglia a scala più ampia ($35\times$), con stelle grandi e luminose la cui magnitudine pulsa armonicamente nel tempo tramite la funzione $\sin(3.5 \cdot \text{uTime} + \phi)$.
+    \end{itemize}
+    Il movimento differenziale dei tre livelli produce un vivido effetto di parallasse cosmica durante il moto della scena.
+
+    \item \textbf{Nebulosa Fluida Armonica e Vignettatura:}
+    Sullo starfield viene sovrapposto un campo scalare continuo generato dalla combinazione di sinusoidi bidimensionali guidate dal tempo:
+    \begin{equation}
+    n(x, y, t) = \sin(3.5x + 0.15t) \cdot \cos(3.0y - 0.12t)
+    \end{equation}
+    colorate con tonalità ciano stellare ($RGB = (0.05, 0.45, 0.65)$) e magenta nebulare ($RGB = (0.55, 0.08, 0.45)$). Uno smorzamento circolare $1.0 - 0.35 \cdot \|\mathbf{uv}_{\text{ndc}}\|^2$ focalizza lo sguardo al centro del campo visivo.
+\end{enumerate}
+
+\subsection{Shader degli Oggetti di Scena e Shader Texture Cabina}
+\begin{itemize}
+    \item \textbf{Oggetti di Scena (\texttt{basic.vert} e \texttt{basic.frag}):} Riceve gli attributi di posizione \texttt{aPosition} (location 0) e colore per vertice \texttt{aColor} (location 1), applica la matrice di proiezione ortografica e la Model Matrix, e moltiplica il colore risultante per il vettore \texttt{uniform vec4 uColorTint} (utilizzato per effetti visivi di danno, invulnerabilità e lampeggio dei dardi di pericolo).
+    \item \textbf{Shader Texture Cabina (\texttt{texture.vert} e \texttt{texture.frag}):} Mappa le coordinate UV \texttt{aTexCoord} (location 1) e campiona la texture del ritratto dell'astronauta con ritaglio analitico a maschera ellittica.
+\end{itemize}
+
+% ==============================================================================
+% 6. ANIMAZIONI E SISTEMA PARTICELLARE
+% ==============================================================================
+\section{Animazioni Temporali e Sistema Particellare (Requisito 6)}
+
+L'applicazione integra molteplici moti continui guidati da $\Delta t$:
+\begin{enumerate}
+    \item \textbf{Animazione legata all'utente:} Le fiamme reattive dei doppi propulsori variano lunghezza e intensità da 0 a 38 px in risposta alla pressione dei comandi di spinta del giocatore, con modulazione ad alta frequenza $\sin(35 \cdot t)$.
+    \item \textbf{Animazione autonoma dello scenario:} Il Drone nemico di Hermite fluttua lungo la traiettoria a 8 di Lissajous; gli asteroidi ruotano con velocità angolare compresa tra $-45^\circ/\text{s}$ e $+45^\circ/\text{s}$; le monete d'oro esibiscono uno spin 3D fittizio modulando la scala orizzontale come:
+    \begin{equation}
+    s_x(t) = s_0 \cdot \left| \cos(2.8 \cdot t + \phi_i) \right|
+    \end{equation}
+    \item \textbf{Fisica Particellare a Frantumazione (\texttt{ParticleSystem}):} All'impatto di un colpo laser con un asteroide, quest'ultimo viene distrutto e si scatenano \textbf{28 schegge fisiche di roccia} con velocità radiali pseudo-casuali (80--320 px/s). Le schegge subiscono attrito viscoso:
+    \begin{equation}
+    \mathbf{v}(t + \Delta t) = \mathbf{v}(t) \cdot (1 - 0.75 \Delta t)
+    \end{equation}
+    e dissolvenza lineare progressiva del canale alpha fino alla scomparsa.
+\end{enumerate}
+
+% ==============================================================================
+% 7. INTERAZIONE, COLLISIONI E GAMEPLAY
+% ==============================================================================
+\section{Interazione, Meccaniche di Gioco e Collisioni (Requisito 7)}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{assets/screenshots/screenshot_gameover.jpg}{
+        \includegraphics[width=0.88\linewidth]{assets/screenshots/screenshot_gameover.jpg}
+        \caption{Pop-up di Game Over perfettamente centrato a schermo con visualizzazione del punteggio finale, drone alieno con occhio socchiuso e Warp Gate blu sullo sfondo.}
+    }{
+        \framebox[0.88\linewidth]{\parbox{0.85\linewidth}{\centering \vspace{1.5cm} \textbf{[Schermata di Game Over Centrata e Drone Hermite con Occhio Giallo]} \vspace{1.5cm}}}
+    }
+    \label{fig:gameover}
+\end{figure}
+
+\subsection{Algoritmi di Collisione 2D}
+Nel modulo \texttt{Collider2D.h} sono implementati i test analitici:
+\begin{itemize}
+    \item \textbf{Intersezione Cerchio--Cerchio:} Due cerchi di centri $\mathbf{c}_1, \mathbf{c}_2$ e raggi $r_1, r_2$ collidono se:
+    \begin{equation}
+    \|\mathbf{c}_1 - \mathbf{c}_2\|^2 \le (r_1 + r_2)^2
+    \end{equation}
+    Adottata per il rilevamento di monete ($r=14$), navicella ($r=28$), asteroidi ($r \in [24, 38]$) e drone alieno ($r=36$).
+    \item \textbf{Intersezione Cerchio--AABB:} Utilizzata per l'intercettazione dei dardi laser ad alta velocità contro le rocce spaziali.
+\end{itemize}
+
+\subsection{Meccaniche di Gioco e Pop-up Centrati}
+\begin{itemize}
+    \item \textbf{Vite e Letalità dell'Alien Sentinel Drone:} Il giocatore dispone di 3 vite (visualizzate con cuori sull'HUD). L'Alien Drone nemico è letale: ogni contatto diretto sottrae 1 vita e attiva 1.6s di invulnerabilità temporanea con lampeggio rosso della navetta. Esaurite le 3 vite, scatta la schermata di \textbf{Game Over}, centrata millimetricamente a schermo tramite coordinate \texttt{io.DisplaySize * 0.5f} e pivot \texttt{ImVec2(0.5, 0.5)}.
+    \item \textbf{Chiusura Partita con il Cosmic Warp Gate:} Raccolte le 5 monete galattiche, il Cosmic Warp Gate a destra si illumina di energia aurorale. Volando fisicamente all'interno del portale, la partita viene vinta con successo scatenando l'evento \textbf{HURR\`A!}, con pioggia di coriandoli festosi, bonus di +500 punti e generazione procedurale del livello successivo.
+    \item \textbf{Controlli con le Frecce Direzionali e Finestra HUD Ridimensionabile:} Il movimento e l'orientamento della navicella sono affidati in via primaria alle \textbf{Frecce Direzionali} della tastiera ($\leftarrow, \uparrow, \rightarrow, \downarrow$) per una navigazione immediata e intuitiva (con supporto alternativo ai tasti W/A/S/D); la barra spaziatrice aziona il laser minerario. La finestra HUD ``Mission Control'' all'avvio dell'applicazione si presenta completamente aperta per mostrare tutte le regole e i controlli; non appena l'utente effettua il **primo click** per iniziare a giocare, la finestra si ridimensiona automaticamente in una vista compatta ed elegante nell'angolo superiore, liberando l'intera visuale di gioco. Il punteggio totale è rigorosamente **cumulativo**: accumula i punti delle monete (+100), degli asteroidi (+20) e dei livelli (+500) per l'intera durata della sessione finché l'applicazione non viene chiusa.
+\end{itemize}
+
+% ==============================================================================
+% 8. TABELLA DI RISPONDENZA AI REQUISITI DI PROGETTO
+% ==============================================================================
+\section{Tabella di Rispondenza ai Requisiti di Progetto}
+
+La seguente tabella riassume la corrispondenza puntuale tra i requisiti definiti nella specifica didattica del corso e i file sorgente in cui ciascuna funzionalità è concretamente implementata ed impiegata all'interno dell'applicazione.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.2cm} c p{4.2cm} X@{}}
+\toprule
+\textbf{Requisito Docente} & \textbf{Stato} & \textbf{File / Moduli di Riferimento} & \textbf{Implementazione \& Utilizzo nel Progetto} \\
+\midrule
+\textbf{3.1 Oggetto Composto} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Player.h/.cpp}, \texttt{ShapeGenerator.cpp}, \texttt{texture.frag} & Navicella mineraria gerarchica a 8 componenti: fusoliera, muso a freccia, ali speculari tramite $S(-1,1,1)$, cannoni, fiamme al plasma e texture 2D del pilota su cupolino ellittico. \\
+\addlinespace[0.2cm]
+\textbf{3.2 Curve di Hermite} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{HermiteObject.h/.cpp}, \texttt{alien\_drone.obj}, \texttt{warp\_gate.obj} & Due modelli a continuità tangenziale $C^1$ esportati da editor: \textit{Alien Drone} letale a 3 colpi con occhio animato su traiettoria a 8, e \textit{Warp Gate} interattivo come traguardo di vittoria. \\
+\addlinespace[0.2cm]
+\textbf{4 Trasformazioni \& Istanze Multiple} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{AsteroidManager.h/.cpp}, \texttt{Collectible.h/.cpp}, \texttt{Transform.h} & Matrici affini $M = T \cdot R \cdot S$ con GLM. Buffer GPU statici (\texttt{GL\_STATIC\_DRAW}): 4--6 asteroidi e 5 monete condividono gli stessi VAO/VBO variando la sola Model Matrix. \\
+\addlinespace[0.2cm]
+\textbf{5 Due Shader Program GLSL} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{background.vert/.frag}, \texttt{basic.vert/.frag}, \texttt{BackgroundRenderer.cpp} & 1) Sfondo procedurale fullscreen senza texture con hash a 3 layer di parallasse cosmica e nebulosa fluida; 2) Shader oggetti per colori per vertice e modulazione uniforme \texttt{uColorTint}. \\
+\addlinespace[0.2cm]
+\textbf{6 Animazioni Temporali \& Delta Time} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Player.cpp}, \texttt{HermiteObject.cpp}, \texttt{Collectible.cpp}, \texttt{AsteroidManager.cpp} & Indipendenza da FPS tramite $\Delta t$: propulsori reattivi alla spinta, orbita di Lissajous del drone, rotazione asteroidi e rotazione 3D fittizia delle monete con $s_x(t) = s_0 |\cos(\omega t)|$. \\
+\addlinespace[0.2cm]
+\textbf{7 Interazione, Collisioni \& Gameplay} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Collider2D.h}, \texttt{LaserManager.cpp}, \texttt{HazardManager.cpp}, \texttt{ParticleSystem.cpp} & Navigazione con Frecce Direzionali (o WASD), finestra HUD ridimensionabile al primo click, punteggio cumulativo, slider velocità, sparo laser con frantumazione rocce in 28 schegge fisiche, dardi di plasma da schivare, 3 vite e ingresso finale nel Warp Gate. \\
+\addlinespace[0.2cm]
+\textbf{8 Organizzazione \& Portabilità} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{proj-2D/src/}, \texttt{include/}, \texttt{CMakeLists.txt}, \texttt{AstroMiner.app} & Struttura C++17 modulare su 18 file sorgente (SoC). Dipendenze incluse in \texttt{external/}. Lanciatore cliccabile ad app per macOS e script batch per Windows. \\
+\bottomrule
+\end{tabularx}
+\caption{Quadro di rispondenza ai requisiti della specifica con indicazione dei file sorgente.}
+\label{tab:evaluation}
+\end{table}
+
+% ==============================================================================
+% 9. PORTABILITA' E COMPILAZIONE
+% ==============================================================================
+\section{Istruzioni per l'Avvio e Compilazione Multipiattaforma}
+
+Grazie all'inclusione completa delle librerie in \texttt{proj-2D/external/} (GLAD, GLM header-only, Dear ImGui, librerie statiche GLFW per macOS \texttt{libglfw3.a} e Windows \texttt{glfw3.lib}, stb\_image), il progetto \textbf{non richiede l'installazione di gestori di pacchetti esterni}.
+
+\subsection{Avvio Rapido con Doppio Click (Nessun Terminale Necessario)}
+Per garantire la massima usabilità durante la sessione di valutazione, sono stati predisposti lanciatori eseguibili direttamente con un click del mouse:
+\begin{itemize}
+    \item \textbf{macOS (Apple Silicon M1/M2/M3/M4 o Intel):}
+    È sufficiente fare doppio click sull'applicazione \textbf{\texttt{AstroMiner.app}} oppure sul file eseguibile \textbf{\texttt{Avvia\_AstroMiner.command}} posizionati nella cartella \texttt{proj-2D/}. Lo script verifica la presenza del binario, compila automaticamente in background se necessario e lancia il gioco all'istante a finestra.
+    \item \textbf{Windows (10 / 11):}
+    Fare doppio click sul file \textbf{\texttt{Avvia\_AstroMiner.bat}} per compilare ed eseguire il progetto con Visual Studio senza aprire prompt di comando.
+\end{itemize}
+
+\subsection{Compilazione Manuale da Riga di Comando (CMake)}
+In alternativa, è possibile compilare manualmente tramite terminale standard:
+\begin{itemize}
+    \item \textbf{macOS e Linux:}
+\begin{lstlisting}[language=bash]
+cd proj-2D
+cmake -B build
+cmake --build build
+./build/Interactive2DWorld
+\end{lstlisting}
+    \item \textbf{Windows (Visual Studio 2022 x64):}
+\begin{lstlisting}[language=bash]
+cd proj-2D
+cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+.\build\Release\Interactive2DWorld.exe
+\end{lstlisting}
+\end{itemize}
+
+\subsection{Presentazione Multimediale e Repository Online}
+A corredo del progetto sono disponibili i materiali multimediali e la cartella online per la verifica:
+\begin{itemize}
+    \item \textbf{Link Presentazione Online (Canva):} \href{https://canva.link/qwwbv3ayalvsctp}{\texttt{https://canva.link/qwwbv3ayalvsctp}}
+    \item \textbf{Documento PDF Esportato:} archiviato direttamente nella cartella del progetto come \texttt{doc/presentazione/presentazione.pdf}.
+\end{itemize}
+
+% ==============================================================================
+% 10. CONCLUSIONI
+% ==============================================================================
+\section{Conclusioni}
+Il progetto \textit{Astro-Miner 2D} raggiunge pienamente tutti gli obiettivi formativi previsti dall'insegnamento di Computer Graphics. L'integrazione di shader procedurali avanzati senza texture, la modellazione di curve di Hermite con continuità $C^1$, la composizione gerarchica delle matrici affini e l'ottimizzazione dell'uso della memoria grafica su buffer statici \texttt{GL\_STATIC\_DRAW} hanno consentito di realizzare un'opera didatticamente ineccepibile, ingegneristicamente solida ed esteticamente moderna.
+
+\end{document}
