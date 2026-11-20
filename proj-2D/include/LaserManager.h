@@ -16,6 +16,8 @@
 #include "ParticleSystem.h"
 #include "AsteroidManager.h"
 
+class HermiteManager;
+
 // Struttura dati per un singolo colpo laser.
 struct LaserBullet
 {
@@ -36,8 +38,8 @@ public:
     // Spara un nuovo dardo laser partendo dalla posizione di origine nella direzione specificata.
     void fire(const glm::vec2& origin, const glm::vec2& direction);
 
-    // Aggiorna la posizione dei colpi, verifica le collisioni con gli asteroidi ed eroga punti bonus.
-    void update(float dt, AsteroidManager& asteroids, ParticleSystem& particles, int& score);
+    // Aggiorna la posizione dei colpi, verifica le collisioni con asteroidi e con il Drone Rosso ed eroga punti bonus.
+    void update(float dt, AsteroidManager& asteroids, HermiteManager& hermite, ParticleSystem& particles, int& score);
 
     // Renderizza tutti i proiettili laser orientandoli lungo il rispettivo vettore di propagazione.
     void draw(const Shader& shader);

@@ -251,3 +251,36 @@ void ParticleSystem::emitRelicEnergy(const glm::vec2& origin, int count)
         m_particles.push_back(p);
     }
 }
+
+// ============================================================================
+// Emissione Scintille Elettrificate all'Impatto Laser col Drone Rosso
+// ============================================================================
+void ParticleSystem::emitDroneHitSparks(const glm::vec2& origin, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        float angle = randRange(0.0f, 6.28318f);
+        float speed = randRange(70.0f, 260.0f);
+
+        Particle p;
+        p.pos = origin + glm::vec2(std::cos(angle), std::sin(angle)) * randRange(4.0f, 18.0f);
+        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
+
+        // Scintille ad alto contrasto: cremisi, oro rovente e azzurro ionico da dispersione di campo
+        static const glm::vec4 sparkColors[] = {
+            glm::vec4(1.0f, 0.2f, 0.35f, 1.0f),  // Cremisi vivo
+            glm::vec4(1.0f, 0.85f, 0.2f, 1.0f),  // Oro rovente
+            glm::vec4(0.3f, 0.9f, 1.0f, 1.0f),   // Azzurro laser ionizzato
+            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)    // Bianco plasma
+        };
+        p.color = sparkColors[rand() % 4];
+
+        p.size = randRange(7.0f, 16.0f);
+        p.rotation = randRange(0.0f, 360.0f);
+        p.rotSpeed = randRange(-320.0f, 320.0f);
+        p.maxLife = randRange(0.4f, 0.85f);
+        p.life = p.maxLife;
+
+        m_particles.push_back(p);
+    }
+}

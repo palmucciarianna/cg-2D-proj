@@ -43,6 +43,16 @@ public:
     // Rileva l'impatto fisico col Drone Alieno sentinella.
     bool checkDroneCollision(const CircleCollider& playerCol) const;
 
+    // Rileva l'impatto di un colpo laser sul Drone Rosso: lo indebolisce, ne decelera il moto e ne annulla gli scatti.
+    bool checkLaserHit(const glm::vec2& bulletPos, float bulletRadius, ParticleSystem& particles, int& score);
+
+    // Verifica se il Drone Rosso è attualmente nello stato indebolito (e ottiene i secondi residui).
+    bool isWeakened() const { return m_weakenedTimer > 0.0f; }
+    float getWeakenedTime() const { return m_weakenedTimer; }
+
+    // Resetta lo stato di indebolimento del Drone.
+    void resetWeakness() { m_weakenedTimer = 0.0f; m_hitFlashTimer = 0.0f; m_hitCount = 0; }
+
     // Attiva manualmente lo sbattimento dell'occhio del drone (durata 0.38 secondi).
     void triggerEyeBlink() { m_eyeBlinkTimer = 0.55f; }
 
@@ -79,10 +89,16 @@ private:
     bool m_wasPlayerOver = false;           // Memoria di stato per attivare il blink UNA SOLA volta per passaggio
 
     // Meccanica di scatto imprevedibile ("giri strani" casuali per poi tornare all'orbita):
+    float m_orbitPhase = 0.0f;              // Fase angolare accumulata lungo l'orbita di Lissajous
     float m_dashTimer = 0.0f;               // Timer attivo dello scatto
     float m_dashCooldown = 5.0f;            // Conto alla rovescia per il prossimo scatto imprevedibile
     glm::vec2 m_dashOffset{ 0.0f, 0.0f };   // Deviazione rapida momentanea dalla traiettoria base
     glm::vec2 m_dashDirection{ 1.0f, 0.0f };// Vettore di slancio dello scatto casuale
+
+    // Meccanica di indebolimento del Drone Rosso al colpo laser:
+    float m_weakenedTimer = 0.0f;           // Secondi rimanenti di stato indebolito
+    float m_hitFlashTimer = 0.0f;           // Timer del lampo bianco di impatto
+    int m_hitCount = 0;                     // Totale colpi laser andati a segno
 
     // Stato cinematico del Warp Gate:
     glm::vec2 m_gatePos{ 1080.0f, 560.0f }; // Posizione fluttuante in coordinate mondo

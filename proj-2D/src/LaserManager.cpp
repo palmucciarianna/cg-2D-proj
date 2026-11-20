@@ -10,6 +10,7 @@
 // ============================================================================
 
 #include "LaserManager.h"
+#include "HermiteObject.h"
 #include "ShapeGenerator.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
@@ -56,7 +57,7 @@ void LaserManager::fire(const glm::vec2& origin, const glm::vec2& direction)
 // ============================================================================
 // Aggiornamento Balistico e Risoluzione Collisioni
 // ============================================================================
-void LaserManager::update(float dt, AsteroidManager& asteroids, ParticleSystem& particles, int& score)
+void LaserManager::update(float dt, AsteroidManager& asteroids, HermiteManager& hermite, ParticleSystem& particles, int& score)
 {
     // Velocità di propagazione del colpo laser in pixel/secondo.
     const float speed = 720.0f;
@@ -70,7 +71,15 @@ void LaserManager::update(float dt, AsteroidManager& asteroids, ParticleSystem& 
         // 2. Decremento del tempo di vita residuo.
         it->life -= dt;
 
-        // 3. Verifica della collisione con gli asteroidi nella scena:
+        // 3. Verifica della collisione con l'Alien Sentinel Drone (quello Rosso):
+        // Se colpito, il Drone si indebolisce, rallenta drasticamente e annulla gli scatti aggressivi!
+        if (hermite.checkLaserHit(it->pos, 6.0f, particles, score))
+        {
+            it = m_bullets.erase(it); // Rimuove il proiettile andato a segno
+            continue;
+        }
+
+        // 4. Verifica della collisione con gli asteroidi nella scena:
         // Raggio d'impatto del proiettile = 6.0 pixel.
         if (asteroids.checkLaserHit(it->pos, 6.0f, particles))
         {
@@ -79,7 +88,7 @@ void LaserManager::update(float dt, AsteroidManager& asteroids, ParticleSystem& 
             continue;
         }
 
-        // 4. Se il proiettile ha esaurito il tempo di vita, lo dissolve.
+        // 5. Se il proiettile ha esaurito il tempo di vita, lo dissolve.
         if (it->life <= 0.0f)
         {
             it = m_bullets.erase(it);

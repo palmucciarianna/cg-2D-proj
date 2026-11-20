@@ -57,6 +57,9 @@ public:
     // Emette particelle energetiche ciano/viola dalla reliquia cosmica.
     void emitRelicEnergy(const glm::vec2& origin, int count = 20);
 
+    // Emette scintille ed energia di dispersione all'impatto laser con il Drone Rosso.
+    void emitDroneHitSparks(const glm::vec2& origin, int count = 18);
+
     // Cancella istantaneamente tutte le particelle attualmente attive.
     void clear() { m_particles.clear(); }
 

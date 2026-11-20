@@ -163,9 +163,9 @@ void GameWorld::update(float dt, GLFWwindow* window)
             m_player.resetFireCooldown(0.18f);
         }
 
-        // Aggiorna i colpi laser attivi e gestisce le collisioni con gli asteroidi (+50 punti).
+        // Aggiorna i colpi laser attivi e gestisce le collisioni con asteroidi e Drone Rosso.
         int score = m_player.score();
-        m_lasers.update(dt, m_asteroids, m_particles, score);
+        m_lasers.update(dt, m_asteroids, m_hermite, m_particles, score);
         if (score != m_player.score())
         {
             m_player.addScore(score - m_player.score());
@@ -192,13 +192,20 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // --------------------------------------------------------------------
-        // Collisione con l'Alien Sentinel Drone:
-        // Se il giocatore tocca il Drone, subisce 1 danno, perde una vita
+        // Collisione con l'Alien Sentinel Drone (quello Rosso):
+        // Se il giocatore tocca il Drone mentre è ATTIVO, subisce 1 danno, perde una vita
         // e attiva lo sbattimento dell'occhio del drone con un'esplosione di particelle.
+        // Se invece il Drone è stato INDEBOLITO dai colpi laser, diventa innocuo:
+        // non toglie vita e produce solo scintille di impatto ionico!
         // --------------------------------------------------------------------
         if (m_hermite.checkDroneCollision(m_player.getCollider()))
         {
-            if (!m_player.isInvulnerable())
+            if (m_hermite.isWeakened())
+            {
+                // Drone indebolito: innocuo! Scintille di rimbalzo senza perdita di vite
+                m_particles.emitDroneHitSparks(m_hermite.dronePosition(), 12);
+            }
+            else if (!m_player.isInvulnerable())
             {
                 m_player.takeDamage();
                 m_hermite.triggerEyeBlink();
@@ -375,6 +382,16 @@ void GameWorld::renderUI(float dt)
         ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.4f, 1.0f), ">> PORTALE ATTIVO! ENTRA NEL WARP GATE! <<");
     }
 
+    // Indicatore di Stato del Drone Rosso di Hermite:
+    if (m_hermite.isWeakened())
+    {
+        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "Drone Rosso: INDEBOLITO (%.1fs) - Innocuo!", m_hermite.getWeakenedTime());
+    }
+    else
+    {
+        ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.35f, 1.0f), "Drone Rosso: ATTIVO E PERICOLOSO");
+    }
+
     if (m_hudCompact)
     {
         // Vista Compatta: spunta rapida Wireframe e pulsante per riespandere i dettagli
@@ -394,13 +411,13 @@ void GameWorld::renderUI(float dt)
 
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.4f, 0.85f, 1.0f, 1.0f), "Regole di Gioco:");
-        ImGui::BulletText("Alien Drone (Nemico): ATTENZIONE! Se ci passi sopra 3 volte vieni distrutto!");
+        ImGui::BulletText("Alien Drone (Rosso): Colpiscilo con il laser per INDEBOLIRLO e renderlo innocuo!");
         ImGui::BulletText("Warp Gate (Portale): Raccogli 5 monete e volaci dentro per chiudere la partita!");
 
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.6f, 1.0f), "Comandi di Gioco:");
         ImGui::BulletText("Frecce Direzionali: Spostamento della navicella");
-        ImGui::BulletText("Barra Spazio: Sparo Laser per frantumare asteroidi");
+        ImGui::BulletText("Barra Spazio: Sparo Laser per frantumare asteroidi e indebolire il Drone Rosso");
 
         // Slider interattivo per la velocità di navigazione:
         float pSpeed = m_player.speed();
@@ -549,6 +566,7 @@ void GameWorld::nextLevel()
     m_hazards.reset();
     m_hazards.setLevel(m_currentLevel);
     m_hermite.setLevel(m_currentLevel);
+    m_hermite.resetWeakness();
 
     // Riposiziona il giocatore al centro dello schermo (punteggio mantenuto cumulativo).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
@@ -573,6 +591,7 @@ void GameWorld::restartGame()
     m_hazards.reset();
     m_hazards.setLevel(m_currentLevel);
     m_hermite.setLevel(m_currentLevel);
+    m_hermite.resetWeakness();
 
     // Ripristina la navicella (il punteggio cumulativo di sessione non si azzera).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));

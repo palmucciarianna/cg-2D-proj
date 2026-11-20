@@ -114,31 +114,57 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
 // ============================================================================
 void HermiteManager::update(float dt, float currentTime, const glm::vec2& playerPos)
 {
+    // Gestione del timer di lampo visivo da colpo laser
+    if (m_hitFlashTimer > 0.0f)
+    {
+        m_hitFlashTimer -= dt;
+    }
+
     // Calcolo della velocità base in funzione del livello:
     float speedMultiplier = 1.0f + (m_level - 1) * 0.12f;
+
+    // Se il Drone Rosso è stato colpito dal laser, entra in stato indebolito:
+    bool weakened = (m_weakenedTimer > 0.0f);
+    if (weakened)
+    {
+        m_weakenedTimer -= dt;
+        speedMultiplier *= 0.35f; // Rallentamento drastico del 65%: moto faticoso e vulnerabile
+    }
+
     float omega = 0.85f * speedMultiplier;
+    m_orbitPhase += omega * dt;
 
     // 1. Traiettoria orbitale armonica a figura di 8 (Curva di Lissajous con rapporto 1:2):
-    // x(t) = x_0 + A * cos(omega * t)
-    // y(t) = y_0 + B * sin(2 * omega * t)
+    // x(t) = x_0 + A * cos(phi)
+    // y(t) = y_0 + B * sin(2 * phi)
     // Ampiezza orizzontale A = 340px, ampiezza verticale B = 160px.
     glm::vec2 baseOrbit(
-        640.0f + 340.0f * std::cos(currentTime * omega),
-        380.0f + 160.0f * std::sin(currentTime * omega * 2.0f)
+        640.0f + 340.0f * std::cos(m_orbitPhase),
+        380.0f + 160.0f * std::sin(m_orbitPhase * 2.0f)
     );
 
     // 2. Meccanica dello scatto imprevedibile ("giri strani" casuali):
-    m_dashCooldown -= dt;
-    if (m_dashCooldown <= 0.0f)
+    // Quando è indebolito, il drone NON può eseguire scatti predatori!
+    if (!weakened)
     {
-        // Attiva una manovra rapida di 0.75s con direzione casuale:
-        m_dashTimer = 0.75f;
-        float randAngle = static_cast<float>(rand() % 360) * 0.0174533f;
-        m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle));
+        m_dashCooldown -= dt;
+        if (m_dashCooldown <= 0.0f)
+        {
+            // Attiva una manovra rapida di 0.75s con direzione casuale:
+            m_dashTimer = 0.75f;
+            float randAngle = static_cast<float>(rand() % 360) * 0.0174533f;
+            m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle));
 
-        // Prossimo scatto tra 4.5 e 8.0 secondi (più frequente nei livelli alti):
-        float minInterval = std::max(2.8f, 5.0f - (m_level - 1) * 0.4f);
-        m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f;
+            // Prossimo scatto tra 4.5 e 8.0 secondi (più frequente nei livelli alti):
+            float minInterval = std::max(2.8f, 5.0f - (m_level - 1) * 0.4f);
+            m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f;
+        }
+    }
+    else
+    {
+        // Se colpito durante uno scatto, azzera istantaneamente la deviazione
+        m_dashTimer = 0.0f;
+        m_dashOffset = glm::vec2(0.0f);
     }
 
     if (m_dashTimer > 0.0f)
@@ -159,9 +185,16 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     }
     else
     {
-        // Ritorno docile ed esatto all'orbita di Lissajous consueta:
         m_dashOffset = glm::vec2(0.0f);
-        m_droneAngle = 0.0f;
+        if (weakened)
+        {
+            // Se indebolito, la testa ondeggia in un moto stordito / barcollante:
+            m_droneAngle = std::sin(currentTime * 8.0f) * 12.0f;
+        }
+        else
+        {
+            m_droneAngle = 0.0f;
+        }
     }
 
     // Posizione effettiva del drone: orbita base + eventuale deviazione dello scatto
@@ -220,24 +253,49 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
     // ------------------------------------------------------------------------
     if (m_hasDrone)
     {
+        bool weakened = (m_weakenedTimer > 0.0f);
+        float currentScale = weakened ? 0.95f : 1.25f;
+
+        // Modulazione cromatica di danno e indebolimento:
+        if (m_hitFlashTimer > 0.0f)
+        {
+            // Flash bianco-oro rovente al momento dell'impatto laser
+            shader.setVec4("uColorTint", glm::vec4(2.2f, 2.0f, 1.3f, 1.0f));
+        }
+        else if (weakened)
+        {
+            // Tinta sbiadita/pulsante viola scuro e blu: energia vitale affievolita
+            float pulse = 0.70f + 0.25f * std::sin(currentTime * 9.0f);
+            shader.setVec4("uColorTint", glm::vec4(0.85f * pulse, 0.45f * pulse, 0.85f * pulse, 0.85f));
+        }
+        else
+        {
+            shader.setVec4("uColorTint", glm::vec4(1.0f));
+        }
+
         // Matrice radice posizionata sul punto della traiettoria di Lissajous.
         glm::mat4 headRoot = glm::mat4(1.0f);
         headRoot = glm::translate(headRoot, glm::vec3(m_dronePos, 0.0f));
         headRoot = glm::rotate(headRoot, glm::radians(m_droneAngle), glm::vec3(0, 0, 1));
-        headRoot = glm::scale(headRoot, glm::vec3(1.25f, 1.25f, 1.0f));
+        headRoot = glm::scale(headRoot, glm::vec3(currentScale, currentScale, 1.0f));
 
         // A) Disegna la testa cornuta rossa Hermite.
         shader.setMat4("model", headRoot);
         m_headGeo.draw();
 
         // B) Calcolo dell'ammiccamento: scala verticale Y dell'occhio da 1.0 a 0.08 e ritorno.
-        // Utilizziamo un semicerchio sinusoidale: S_y = |sin(progress * PI)|.
+        // Se indebolito, l'occhio rimane socchiuso e stordito!
         float eyeScaleY = 1.0f;
         if (m_eyeBlinkTimer > 0.0f)
         {
             float progress = m_eyeBlinkTimer / 0.38f;
             eyeScaleY = std::abs(std::sin(progress * 3.14159f));
             eyeScaleY = std::max(eyeScaleY, 0.08f); // Clamping per mantenere la fessura visibile
+        }
+        else if (weakened)
+        {
+            // Occhio socchiuso e stordito da impatto subito:
+            eyeScaleY = 0.25f + 0.12f * std::sin(currentTime * 5.0f);
         }
 
         // C) Occhio Giallo Centrale posizionato gerarchicamente rispetto alla testa.
@@ -270,6 +328,9 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         mouthMat = glm::scale(mouthMat, glm::vec3(22.0f, 8.0f, 1.0f));
         shader.setMat4("model", mouthMat);
         m_evilMouthGeo.draw();
+
+        // Ripristina uColorTint predefinito (1.0f) per le geometrie successive:
+        shader.setVec4("uColorTint", glm::vec4(1.0f));
     }
 
     // ------------------------------------------------------------------------
@@ -341,7 +402,49 @@ bool HermiteManager::checkDroneCollision(const CircleCollider& playerCol) const
 {
     if (!m_hasDrone) return false;
     float dist = glm::distance(playerCol.center, m_dronePos);
-    return dist <= (playerCol.radius + 36.0f);
+    float droneRadius = (m_weakenedTimer > 0.0f) ? 28.0f : 36.0f;
+    return dist <= (playerCol.radius + droneRadius);
+}
+
+// ============================================================================
+// Rilevamento Impatto Laser sul Drone Rosso (Indebolimento)
+// ============================================================================
+bool HermiteManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadius, ParticleSystem& particles, int& score)
+{
+    if (!m_hasDrone)
+    {
+        return false;
+    }
+
+    // Calcola la distanza cartesiana tra il dardo laser e il centro del Drone Rosso
+    float dist = glm::distance(bulletPos, m_dronePos);
+    float hitRadius = (m_weakenedTimer > 0.0f) ? 30.0f : 36.0f;
+
+    if (dist <= (hitRadius + bulletRadius))
+    {
+        // 1. Applica o estende lo stato di indebolimento (4.5 secondi di durata)
+        m_weakenedTimer = 4.5f;
+        m_hitFlashTimer = 0.18f;
+        m_hitCount++;
+
+        // 2. Interrompe istantaneamente qualsiasi scatto o virata violenta in corso
+        m_dashTimer = 0.0f;
+        m_dashOffset = glm::vec2(0.0f);
+        m_dashCooldown = 6.0f; // Rinvia il prossimo scatto aggressivo
+
+        // 3. Occhio socchiuso e ammiccante da stordimento
+        triggerEyeBlink();
+
+        // 4. Emissione particelle di scintille elettrificate e dispersione energetica
+        particles.emitDroneHitSparks(bulletPos, 18);
+
+        // 5. Assegna punti bonus al giocatore per aver indebolito la sentinella aliena
+        score += 35;
+
+        return true;
+    }
+
+    return false;
 }
 
 // ============================================================================
@@ -381,7 +484,7 @@ bool HermiteManager::checkRelicInteraction(const CircleCollider& playerCol, Part
 // ============================================================================
 CircleCollider HermiteManager::getDroneCollider() const
 {
-    return CircleCollider{ m_dronePos, 32.0f };
+    return CircleCollider{ m_dronePos, (m_weakenedTimer > 0.0f) ? 26.0f : 32.0f };
 }
 
 CircleCollider HermiteManager::getGateCollider() const
