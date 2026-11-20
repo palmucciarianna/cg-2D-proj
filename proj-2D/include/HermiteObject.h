@@ -66,6 +66,11 @@ public:
     const glm::vec2& dronePosition() const { return m_dronePos; }
     bool isRelicActive() const { return m_relicPulseTimer > 0.0f; }
 
+    // Controllo e tracciamento didattico della rotta orbitale a 8 (Curva di Lissajous):
+    bool showOrbit() const { return m_showOrbit; }
+    void setShowOrbit(bool s) { m_showOrbit = s; }
+    bool* getShowOrbitPtr() { return &m_showOrbit; }
+
 private:
     // Componenti della Faccina Cattiva Hermite (Alien Sentinel Drone):
     Geometry m_headGeo;        // Testa cornuta modellata con spline cubiche di Hermite
@@ -77,9 +82,11 @@ private:
     // Componenti del Portale Cosmico (Cosmic Warp Gate):
     Geometry m_gateGeo;        // Anello monumentale cavo Hermite
     Geometry m_vortexGeo;      // Vortice energetico rotante ad alta frequenza
+    Geometry m_orbitLineGeo;   // Tracciato visuale dell'orbita a figura di 8 di Lissajous
 
     bool m_hasDrone = false;   // Flag di caricamento completato per il drone
     bool m_hasGate = false;    // Flag di caricamento completato per il portale
+    bool m_showOrbit = true;   // Flag per mostrare a schermo il tracciato dell'orbita (Debug/Didattica)
 
     // Stato cinematico e animazione della Faccina Cattiva:
     int m_level = 1;                        // Livello di difficoltà corrente

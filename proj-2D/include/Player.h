@@ -73,6 +73,15 @@ public:
     // Angolo di beccheggio/rotta corrente in gradi rispetto all'asse X.
     float angle() const { return m_angle; }
 
+    // Versore di direzione verso cui punta la navetta.
+    glm::vec2 direction() const {
+        float r = glm::radians(m_angle);
+        return glm::vec2(std::cos(r), std::sin(r));
+    }
+
+    // Intensità istantanea di spinta dei motori [0.0..1.0].
+    float thrustIntensity() const { return m_thrustIntensity; }
+
     // Velocità lineare di traslazione in pixel al secondo.
     float speed() const { return m_speed; }
 

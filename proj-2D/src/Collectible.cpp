@@ -100,6 +100,26 @@ void CollectibleManager::update(float dt, float currentTime)
 // ============================================================================
 void CollectibleManager::draw(const Shader& shader, float currentTime)
 {
+    // 1. Pass Glow Additivo: alone aureo pulsante attorno a ciascuna moneta attiva
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    for (const auto& c : m_coins)
+    {
+        if (!c.collected)
+        {
+            float pulse = 1.35f + 0.12f * std::sin(currentTime * 4.5f + c.phaseOffset);
+            glm::mat4 mGlow = glm::mat4(1.0f);
+            mGlow = glm::translate(mGlow, glm::vec3(c.currentPos, 0.0f));
+            mGlow = glm::scale(mGlow, glm::vec3(pulse, pulse, 1.0f));
+            shader.setMat4("model", mGlow);
+            shader.setVec4("uColorTint", glm::vec4(1.0f, 0.85f, 0.25f, 0.22f));
+            m_coinGeo.draw();
+        }
+    }
+    // Ripristina blending standard per la superficie metallica solida
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    shader.setVec4("uColorTint", glm::vec4(1.0f));
+
+    // 2. Rendering primario della moneta con rotazione pseudo-3D
     for (const auto& c : m_coins)
     {
         if (!c.collected)

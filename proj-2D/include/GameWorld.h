@@ -33,6 +33,14 @@ enum class GameState
     GAME_OVER            // Esaurimento delle vite o distruzione da parte dei pericoli letali
 };
 
+// Struttura dati per le voci della classifica globale / piloti d'élite.
+struct LeaderboardEntry
+{
+    std::string name;
+    int score;
+    int level;
+};
+
 class GameWorld
 {
 public:
@@ -61,6 +69,17 @@ public:
     bool wireframe() const { return m_wireframe; }
     void setWireframe(bool enabled) { m_wireframe = enabled; }
 
+    // Controllo del fattore di scala temporale (Slow-Motion didattico per esame):
+    float timeScale() const { return m_timeScale; }
+    void setTimeScale(float ts) { m_timeScale = ts; }
+
+    // Innesca il trauma della telecamera 2D (Screen Shake) per impatti ed esplosioni:
+    void triggerScreenShake(float duration = 0.25f, float intensity = 8.0f);
+
+    // Gestione della classifica piloti:
+    void submitScore(const std::string& name, int score, int level);
+    const std::vector<LeaderboardEntry>& leaderboard() const { return m_leaderboard; }
+
 
 private:
     int m_screenWidth;  // Larghezza logica della finestra in pixel (1280)
@@ -88,4 +107,15 @@ private:
     bool m_hudCompact = false;           // Stato di compressione dell'HUD (aperto all'avvio, compatto dopo il primo click)
     bool m_wireframe = false;            // Spunta Wireframe: visualizza le mesh in modalità reticolare (Laboratorio di CG)
     float m_psychedelic = 0.40f;         // Intensità dell'effetto spaziale psichedelico / warp (0.0..1.0)
+
+    // Meccaniche avanzate post-consegna (v2):
+    float m_timeScale = 1.0f;            // Fattore di scala temporale per slow-motion (0.1..2.0x)
+    float m_shakeTimer = 0.0f;           // Timer residuo dello scuotimento telecamera
+    float m_shakeDuration = 0.0f;        // Durata iniziale dello shake
+    float m_shakeIntensity = 0.0f;       // Ampiezza dell'oscillazione
+    glm::vec2 m_shakeOffset{ 0.0f };     // Vettore di spostamento camera 2D
+
+    std::vector<LeaderboardEntry> m_leaderboard; // Classifica piloti
+    bool m_showLeaderboard = false;              // Finestra classifica aperta/chiusa
+    bool m_scoreSubmitted = false;               // Flag di invio punteggio partita
 };

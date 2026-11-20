@@ -107,6 +107,24 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     );
     m_vortexGeo.setData(vortexData.positions, vortexData.colors, vortexData.primitiveType);
     m_vortexGeo.upload();
+
+    // ------------------------------------------------------------------------
+    // 4. Tracciato dell'Orbita di Lissajous a 8 (Visualizzazione Didattica)
+    // ------------------------------------------------------------------------
+    std::vector<glm::vec3> orbitPos;
+    std::vector<glm::vec4> orbitCol;
+    const int segments = 120;
+    for (int i = 0; i <= segments; ++i)
+    {
+        float t = (i * 6.2831853f) / static_cast<float>(segments);
+        float x = 640.0f + 340.0f * std::cos(t);
+        float y = 380.0f + 160.0f * std::sin(t * 2.0f);
+        orbitPos.push_back(glm::vec3(x, y, 0.0f));
+        // Ciano fluorescente con alpha morbido per eleganza visiva
+        orbitCol.push_back(glm::vec4(0.25f, 0.95f, 0.85f, 0.38f));
+    }
+    m_orbitLineGeo.setData(orbitPos, orbitCol, GL_LINE_STRIP);
+    m_orbitLineGeo.upload();
 }
 
 // ============================================================================
@@ -249,6 +267,16 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
 void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActive)
 {
     // ------------------------------------------------------------------------
+    // 0. Tracciato Didattico dell'Orbita di Lissajous a 8
+    // ------------------------------------------------------------------------
+    if (m_showOrbit)
+    {
+        shader.setMat4("model", glm::mat4(1.0f));
+        shader.setVec4("uColorTint", glm::vec4(1.0f));
+        m_orbitLineGeo.draw();
+    }
+
+    // ------------------------------------------------------------------------
     // 1. Disegno dell'Alien Sentinel Drone
     // ------------------------------------------------------------------------
     if (m_hasDrone)
@@ -346,6 +374,14 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         {
             // Portale Attivo: pulsazione luminosa radiale ad alta frequenza (10 rad/s).
             float pulse = 1.0f + 0.18f * std::sin(currentTime * 10.0f);
+
+            // Alone al plasma "Neon Glow" attorno al portale attivo (Blending Additivo):
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glm::mat4 glowMat = glm::scale(gateRoot, glm::vec3(1.75f * pulse, 1.75f * pulse, 1.0f));
+            shader.setVec4("uColorTint", glm::vec4(0.2f, 0.85f, 1.0f, 0.25f));
+            shader.setMat4("model", glowMat);
+            m_vortexGeo.draw();
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             // Vortice attivo a rotazione accelerata.
             glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 1.5f), glm::vec3(0, 0, 1));

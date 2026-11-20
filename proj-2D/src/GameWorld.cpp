@@ -102,6 +102,43 @@ void GameWorld::init(const std::string& assetDir)
     // ------------------------------------------------------------------------
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+
+    // ------------------------------------------------------------------------
+    // 4. Inizializzazione della Classifica Piloti (Leaderboard)
+    // ------------------------------------------------------------------------
+    m_leaderboard = {
+        { "Arianna (Top Ace)", 2450, 5 },
+        { "Star Pioneer", 1820, 4 },
+        { "Vanguard 07", 1340, 3 },
+        { "Cosmic Scout", 880, 2 },
+        { "Space Rookie", 450, 1 }
+    };
+}
+
+// ============================================================================
+// Innesco del Trauma della Telecamera (Screen Shake)
+// ============================================================================
+void GameWorld::triggerScreenShake(float duration, float intensity)
+{
+    m_shakeDuration = duration;
+    m_shakeTimer = duration;
+    m_shakeIntensity = intensity;
+}
+
+// ============================================================================
+// Inserimento e Ordinamento Punteggio nella Leaderboard
+// ============================================================================
+void GameWorld::submitScore(const std::string& name, int score, int level)
+{
+    std::string pilotName = name.empty() ? "Arianna" : name;
+    m_leaderboard.push_back(LeaderboardEntry{ pilotName, score, level });
+    std::sort(m_leaderboard.begin(), m_leaderboard.end(), [](const LeaderboardEntry& a, const LeaderboardEntry& b) {
+        return a.score > b.score;
+    });
+    if (m_leaderboard.size() > 10)
+    {
+        m_leaderboard.resize(10);
+    }
 }
 
 // ============================================================================
@@ -111,14 +148,31 @@ void GameWorld::update(float dt, GLFWwindow* window)
 {
     float currentTime = static_cast<float>(glfwGetTime());
 
+    // Integrazione dello Screen Shake (decadimento sinusoidale smorzato):
+    if (m_shakeTimer > 0.0f)
+    {
+        m_shakeTimer -= dt;
+        float progress = std::max(0.0f, m_shakeTimer / m_shakeDuration);
+        float currentAmp = m_shakeIntensity * progress;
+        m_shakeOffset = glm::vec2(
+            std::sin(currentTime * 52.0f) * currentAmp,
+            std::cos(currentTime * 44.0f) * currentAmp
+        );
+    }
+    else
+    {
+        m_shakeOffset = glm::vec2(0.0f);
+    }
+
+    // Calcolo del delta-time scalato per la modalità didattica Slow-Motion (0.1..2.0x):
+    float simDt = dt * m_timeScale;
+
     // ------------------------------------------------------------------------
     // STATO 1: PARTITA IN CORSO (PLAYING)
     // ------------------------------------------------------------------------
     if (m_state == GameState::PLAYING)
     {
         // Regolazione interattiva della velocità della navicella da tastiera:
-        // Tasti '+' o ']' oppure 'Shift + Freccia Su' aumentano la velocità fino a 850 px/s.
-        // Tasti '-' o '[' oppure 'Shift + Freccia Giù' riducono la velocità fino a 120 px/s.
         float currentSpeed = m_player.speed();
         if (glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS ||
            (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS))
@@ -133,11 +187,19 @@ void GameWorld::update(float dt, GLFWwindow* window)
             m_player.setSpeed(currentSpeed);
         }
 
-        // Aggiorna cinematica navicella (gestione WASD e Frecce Direzionali).
-        m_player.update(dt, window, m_screenWidth, m_screenHeight);
+        // Aggiorna cinematica navicella (gestione WASD e Frecce Direzionali con simDt).
+        m_player.update(simDt, window, m_screenWidth, m_screenHeight);
+
+        // Emissione particellare della scia di plasma dai motori quando la navetta accelera:
+        if (m_player.isAlive() && m_player.thrustIntensity() > 0.08f)
+        {
+            glm::vec2 shipDir = m_player.direction();
+            glm::vec2 backPos = m_player.position() - shipDir * 30.0f;
+            m_particles.emitThrusterTrail(backPos, shipDir, m_player.thrustIntensity());
+        }
 
         // Aggiorna le minacce spaziali laterali (proiettili ad alta velocità).
-        m_hazards.update(dt, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), m_particles);
+        m_hazards.update(simDt, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), m_particles);
 
         // Controllo impatto con un raggio perimetrale di pericolo:
         if (m_hazards.checkPlayerHit(m_player.getCollider(), m_particles))
@@ -146,6 +208,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
             {
                 m_player.takeDamage(); // Toglie 1 vita su 3
                 m_particles.emitAsteroidExplosion(m_player.position(), 24);
+                triggerScreenShake(0.35f, 14.0f);
             }
         }
 
@@ -164,18 +227,20 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // Aggiorna i colpi laser attivi e gestisce le collisioni con asteroidi e Drone Rosso.
-        int score = m_player.score();
-        m_lasers.update(dt, m_asteroids, m_hermite, m_particles, score);
-        if (score != m_player.score())
+        int prevScore = m_player.score();
+        int score = prevScore;
+        m_lasers.update(simDt, m_asteroids, m_hermite, m_particles, score);
+        if (score != prevScore)
         {
-            m_player.addScore(score - m_player.score());
+            m_player.addScore(score - prevScore);
+            triggerScreenShake(0.16f, 5.0f);
         }
 
-        // Aggiorna le entità del mondo.
-        m_asteroids.update(dt);
-        m_collectibles.update(dt, currentTime);
-        m_hermite.update(dt, currentTime, m_player.position());
-        m_particles.update(dt);
+        // Aggiorna le entità del mondo con il delta-time di simulazione.
+        m_asteroids.update(simDt);
+        m_collectibles.update(simDt, currentTime);
+        m_hermite.update(simDt, currentTime, m_player.position());
+        m_particles.update(simDt);
 
         // Raccolta delle Monete d'Oro (+100 punti per ciascuna moneta):
         int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles);
@@ -193,10 +258,6 @@ void GameWorld::update(float dt, GLFWwindow* window)
 
         // --------------------------------------------------------------------
         // Collisione con l'Alien Sentinel Drone (quello Rosso):
-        // Se il giocatore tocca il Drone mentre è ATTIVO, subisce 1 danno, perde una vita
-        // e attiva lo sbattimento dell'occhio del drone con un'esplosione di particelle.
-        // Se invece il Drone è stato INDEBOLITO dai colpi laser, diventa innocuo:
-        // non toglie vita e produce solo scintille di impatto ionico!
         // --------------------------------------------------------------------
         if (m_hermite.checkDroneCollision(m_player.getCollider()))
         {
@@ -210,6 +271,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
                 m_player.takeDamage();
                 m_hermite.triggerEyeBlink();
                 m_particles.emitAsteroidExplosion(m_player.position(), 24);
+                triggerScreenShake(0.35f, 13.0f);
             }
         }
 
@@ -218,18 +280,23 @@ void GameWorld::update(float dt, GLFWwindow* window)
         {
             m_player.takeDamage();
             m_particles.emitAsteroidExplosion(m_player.position(), 16);
+            triggerScreenShake(0.30f, 11.0f);
         }
 
         // Se le vite sono terminate, scatta il Game Over:
         if (!m_player.isAlive())
         {
             m_state = GameState::GAME_OVER;
+            triggerScreenShake(0.45f, 16.0f);
+            if (!m_scoreSubmitted && m_player.score() > 0)
+            {
+                submitScore("Arianna", m_player.score(), m_currentLevel);
+                m_scoreSubmitted = true;
+            }
         }
 
         // --------------------------------------------------------------------
         // Condizione di Chiusura Partita / Salto nel Cosmic Warp Gate:
-        // 1. Si devono raccogliere prima tutte e 5 le monete d'oro (gateActive = true)
-        // 2. Il giocatore deve volare fisicamente DENTRO l'anello del portale a destra.
         // --------------------------------------------------------------------
         bool gateActive = m_collectibles.allCollected();
         if (gateActive && m_hermite.checkPlayerGateEnter(m_player.getCollider(), gateActive))
@@ -237,8 +304,14 @@ void GameWorld::update(float dt, GLFWwindow* window)
             m_state = GameState::LEVEL_CLEARED_HURRA;
             m_hurraTimer = 2.8f;    // Celebrazione di 2.8 secondi
             m_player.addScore(500); // 500 punti bonus per il salto dimensionale
+            triggerScreenShake(0.40f, 9.0f);
             // Emette fuochi d'artificio e coriandoli a schermo.
             m_particles.emitHurraCelebration(static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 135);
+            if (!m_scoreSubmitted && m_player.score() > 0)
+            {
+                submitScore("Arianna", m_player.score(), m_currentLevel);
+                m_scoreSubmitted = true;
+            }
         }
     }
     // ------------------------------------------------------------------------
@@ -247,8 +320,8 @@ void GameWorld::update(float dt, GLFWwindow* window)
     else if (m_state == GameState::LEVEL_CLEARED_HURRA)
     {
         m_hurraTimer -= dt;
-        m_particles.update(dt);
-        m_hermite.update(dt, currentTime, m_player.position());
+        m_particles.update(simDt);
+        m_hermite.update(simDt, currentTime, m_player.position());
 
         // Al termine del timer di celebrazione, avanza automaticamente al livello successivo.
         if (m_hurraTimer <= 0.0f)
@@ -261,7 +334,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
     // ------------------------------------------------------------------------
     else if (m_state == GameState::GAME_OVER)
     {
-        m_particles.update(dt);
+        m_particles.update(simDt);
     }
 }
 
@@ -290,6 +363,13 @@ void GameWorld::render(float currentTime)
         0.0f, static_cast<float>(m_screenHeight),
         -1.0f, 1.0f
     );
+
+    // Applicazione del trauma della telecamera (Screen Shake) per impatti ed esplosioni:
+    if (glm::length(m_shakeOffset) > 0.001f)
+    {
+        projection = glm::translate(projection, glm::vec3(m_shakeOffset, 0.0f));
+    }
+
     m_basicShader->setMat4("projection", projection);
     m_basicShader->setVec4("uColorTint", glm::vec4(1.0f));
 
@@ -403,6 +483,9 @@ void GameWorld::renderUI(float dt)
             m_hudCompact = false;
         }
         ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
+
+        ImGui::SliderFloat("Slow-Motion", &m_timeScale, 0.1f, 2.0f, "%.2fx");
+        ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
     }
     else
     {
@@ -416,7 +499,7 @@ void GameWorld::renderUI(float dt)
 
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.6f, 1.0f), "Comandi di Gioco:");
-        ImGui::BulletText("Frecce Direzionali: Spostamento della navicella");
+        ImGui::BulletText("Frecce Direzionali: Spostamento della navicella (con scia al plasma)");
         ImGui::BulletText("Barra Spazio: Sparo Laser per frantumare asteroidi e indebolire il Drone Rosso");
 
         // Slider interattivo per la velocità di navigazione:
@@ -427,10 +510,24 @@ void GameWorld::renderUI(float dt)
         }
         ImGui::TextDisabled("Scorciatoia: premi Shift + Su/Giu o +/- per regolare la velocita'");
 
+        // Controlli Simulazione Didattica (v2):
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.3f, 0.95f, 1.0f, 1.0f), "Controlli Simulazione & Debug (v2):");
+        ImGui::SliderFloat("Velocita' Simulazione (Slow-Mo)", &m_timeScale, 0.1f, 2.0f, "%.2fx");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("0.25x (Matrix)")) m_timeScale = 0.25f;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("1.0x (Normale)")) m_timeScale = 1.0f;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("2.0x (Rapido)")) m_timeScale = 2.0f;
+
+        ImGui::Checkbox("Mostra Traiettoria Hermite (Lissajous)", m_hermite.getShowOrbitPtr());
+        ImGui::SameLine();
+        ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
+
         // Regolazione interattiva dell'effetto psichedelico dello sfondo
         ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
         ImGui::Text("FPS: %.1f (dt: %.4f s)", io.Framerate, dt);
-
 
         if (ImGui::Button("Riavvia Partita"))
         {
@@ -453,6 +550,45 @@ void GameWorld::renderUI(float dt)
         }
     }
     ImGui::End();
+
+    // ------------------------------------------------------------------------
+    // Finestra Classifica Piloti (Leaderboard)
+    // ------------------------------------------------------------------------
+    if (m_showLeaderboard)
+    {
+        ImGui::SetNextWindowSize(ImVec2(360, 270), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Classifica Piloti Cosmici (Leaderboard)", &m_showLeaderboard))
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "TOP PILOTI ASTRO-MINER (v2)");
+            ImGui::Separator();
+
+            if (ImGui::BeginTable("LeaderboardTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+            {
+                ImGui::TableSetupColumn("Pos", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+                ImGui::TableSetupColumn("Nome Pilota", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Punti (Liv)", ImGuiTableColumnFlags_WidthFixed, 95.0f);
+                ImGui::TableHeadersRow();
+
+                for (size_t i = 0; i < m_leaderboard.size(); ++i)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    if (i == 0) ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.1f, 1.0f), "#%zu", i + 1);
+                    else if (i == 1) ImGui::TextColored(ImVec4(0.85f, 0.85f, 0.9f, 1.0f), "#%zu", i + 1);
+                    else if (i == 2) ImGui::TextColored(ImVec4(0.85f, 0.55f, 0.2f, 1.0f), "#%zu", i + 1);
+                    else ImGui::Text("#%zu", i + 1);
+
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::Text("%s", m_leaderboard[i].name.c_str());
+
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::Text("%d (L%d)", m_leaderboard[i].score, m_leaderboard[i].level);
+                }
+                ImGui::EndTable();
+            }
+        }
+        ImGui::End();
+    }
 
     // Funzione lambda per centrare orizzontalmente le scritte all'interno dei banner ImGui.
     auto renderCenteredText = [](const char* text, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
@@ -567,6 +703,7 @@ void GameWorld::nextLevel()
     m_hazards.setLevel(m_currentLevel);
     m_hermite.setLevel(m_currentLevel);
     m_hermite.resetWeakness();
+    m_scoreSubmitted = false;
 
     // Riposiziona il giocatore al centro dello schermo (punteggio mantenuto cumulativo).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
@@ -592,6 +729,7 @@ void GameWorld::restartGame()
     m_hazards.setLevel(m_currentLevel);
     m_hermite.setLevel(m_currentLevel);
     m_hermite.resetWeakness();
+    m_scoreSubmitted = false;
 
     // Ripristina la navicella (il punteggio cumulativo di sessione non si azzera).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));

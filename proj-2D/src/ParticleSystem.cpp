@@ -284,3 +284,40 @@ void ParticleSystem::emitDroneHitSparks(const glm::vec2& origin, int count)
         m_particles.push_back(p);
     }
 }
+
+// ============================================================================
+// Emissione Scia di Plasma dai Post-Bruciatori della Navicella
+// ============================================================================
+void ParticleSystem::emitThrusterTrail(const glm::vec2& origin, const glm::vec2& shipDir, float intensity)
+{
+    // Emette da 1 a 3 particelle per frame proporzionali all'intensità di spinta
+    int count = (intensity > 0.6f) ? 2 : 1;
+    for (int i = 0; i < count; ++i)
+    {
+        // Vettore opposto alla rotta della navetta con dispersione angolare casuale (+/- 25 gradi)
+        float baseAngle = std::atan2(-shipDir.y, -shipDir.x);
+        float spread = randRange(-0.45f, 0.45f);
+        float angle = baseAngle + spread;
+        float speed = randRange(70.0f, 180.0f) * intensity;
+
+        Particle p;
+        p.pos = origin + glm::vec2(randRange(-3.0f, 3.0f), randRange(-3.0f, 3.0f));
+        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
+
+        // Gradiente plasma termico: azzurro ciano elettrico, arancio dorato e bianco rovente
+        static const glm::vec4 trailColors[] = {
+            glm::vec4(0.2f, 0.85f, 1.0f, 0.85f),  // Ciano plasma
+            glm::vec4(1.0f, 0.65f, 0.15f, 0.85f), // Arancio reattore
+            glm::vec4(0.9f, 0.95f, 1.0f, 0.95f)   // Bianco ionizzato
+        };
+        p.color = trailColors[rand() % 3];
+
+        p.size = randRange(5.0f, 12.0f);
+        p.rotation = randRange(0.0f, 360.0f);
+        p.rotSpeed = randRange(-180.0f, 180.0f);
+        p.maxLife = randRange(0.25f, 0.50f);
+        p.life = p.maxLife;
+
+        m_particles.push_back(p);
+    }
+}

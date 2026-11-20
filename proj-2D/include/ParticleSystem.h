@@ -60,6 +60,9 @@ public:
     // Emette scintille ed energia di dispersione all'impatto laser con il Drone Rosso.
     void emitDroneHitSparks(const glm::vec2& origin, int count = 18);
 
+    // Emette la scia di plasma particellare dietro i post-bruciatori della navicella in spinta.
+    void emitThrusterTrail(const glm::vec2& origin, const glm::vec2& shipDir, float intensity);
+
     // Cancella istantaneamente tutte le particelle attualmente attive.
     void clear() { m_particles.clear(); }
 
