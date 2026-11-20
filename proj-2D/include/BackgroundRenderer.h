@@ -25,8 +25,8 @@ public:
     BackgroundRenderer(const BackgroundRenderer&) = delete;
     BackgroundRenderer& operator=(const BackgroundRenderer&) = delete;
 
-    // Disegna il quad a schermo intero passando il tempo globale (in secondi) per l'animazione delle stelle e della nebulosa.
-    void draw(float timeSeconds) const;
+    // Disegna il quad a schermo intero passando tempo globale, intensità psichedelica e livello di gioco.
+    void draw(float timeSeconds, float psychedelic = 0.35f, int level = 1) const;
 
 private:
     const Shader& m_shader; // Riferimento immutabile allo shader procedurale del background

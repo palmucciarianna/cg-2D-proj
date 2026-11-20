@@ -87,4 +87,5 @@ private:
     bool m_showColliders = false;        // Flag di debug per visualizzare i volumi di collisione
     bool m_hudCompact = false;           // Stato di compressione dell'HUD (aperto all'avvio, compatto dopo il primo click)
     bool m_wireframe = false;            // Spunta Wireframe: visualizza le mesh in modalità reticolare (Laboratorio di CG)
+    float m_psychedelic = 0.40f;         // Intensità dell'effetto spaziale psichedelico / warp (0.0..1.0)
 };

@@ -264,7 +264,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
 void GameWorld::render(float currentTime)
 {
     // 1. Disegna il background cosmico procedurale (stelle e nebulosa in NDC).
-    m_bgRenderer->draw(currentTime);
+    m_bgRenderer->draw(currentTime, m_psychedelic, m_currentLevel);
 
     // 2. Modalità Wireframe (Requisito didattico di laboratorio):
     // Se la spunta è attiva, imposta la rasterizzazione reticolare (GL_LINE)
@@ -385,6 +385,7 @@ void GameWorld::renderUI(float dt)
         {
             m_hudCompact = false;
         }
+        ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
     }
     else
     {
@@ -408,6 +409,9 @@ void GameWorld::renderUI(float dt)
             m_player.setSpeed(pSpeed);
         }
         ImGui::TextDisabled("Scorciatoia: premi Shift + Su/Giu o +/- per regolare la velocita'");
+
+        // Regolazione interattiva dell'effetto psichedelico dello sfondo
+        ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
         ImGui::Text("FPS: %.1f (dt: %.4f s)", io.Framerate, dt);
 
 

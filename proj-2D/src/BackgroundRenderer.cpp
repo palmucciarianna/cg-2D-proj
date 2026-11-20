@@ -71,29 +71,22 @@ BackgroundRenderer::~BackgroundRenderer()
 }
 
 // ============================================================================
-// Disegno dello Sfondo Procedurale con Animazione Temporale
+// Disegno dello Sfondo Procedurale con Animazione Temporale ed Effetti
 // ============================================================================
-void BackgroundRenderer::draw(float timeSeconds) const
+void BackgroundRenderer::draw(float timeSeconds, float psychedelic, int level) const
 {
     // 1. Attiva il programma shader dedicato al background cosmico.
     m_shader.use();
 
-    // 2. Recupera l'handle del programma attivo e cerca la uniform "uTime".
-    GLint currentProgram = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-    const GLint timeLocation = glGetUniformLocation(static_cast<GLuint>(currentProgram), "uTime");
+    // 2. Invia i parametri dinamici uniformi alla GPU:
+    m_shader.setFloat("uTime", timeSeconds);
+    m_shader.setFloat("uPsychedelic", psychedelic);
+    m_shader.setInt("uLevel", level);
 
-    // 3. Se la uniform è presente, vi invia il tempo corrente in secondi.
-    // Il fragment shader utilizzerà questo valore per far pulsare le stelle e muovere la nebulosa.
-    if (timeLocation >= 0)
-    {
-        glUniform1f(timeLocation, timeSeconds);
-    }
-
-    // 4. Lega il VAO del quad ed emette la draw call per i 6 vertici (2 triangoli).
+    // 3. Lega il VAO del quad ed emette la draw call per i 6 vertici (2 triangoli).
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // 5. Ripristina il binding a 0.
+    // 4. Ripristina il binding a 0.
     glBindVertexArray(0);
 }
