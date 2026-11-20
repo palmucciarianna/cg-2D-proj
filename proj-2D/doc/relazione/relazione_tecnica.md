@@ -140,14 +140,15 @@ La medesima mesh dell'asteroide (`m_asteroidGeo`) viene condivisa da **4–6 ist
   2. *Layer Intermedio (Midfield):* Griglia media ($70\times$), stelle di media magnitudine a velocità moderata.
   3. *Layer in Primo Piano (Foreground):* Griglia ampia ($35\times$), stelle luminose con pulsazione armonica luminosa $\sin(3.5 \cdot uTime + \phi)$.
   Il moto asincrono dei tre strati genera un effetto di parallasse tridimensionale naturale.
-* **Nebulosa Fluida Armonica:** Sovrapposizione di onde sinusoidali bidimensionali a doppia frequenza con palette ciano e magenta stellare.
+* **Nebulosa Fluida Armonica & Domain Warping Psichedelico:** Sovrapposizione di onde sinusoidali bidimensionali a doppia frequenza combinate con **domain warping trigonometrico** ($p' = p + \alpha (\sin(2.5 y + \omega t), \cos(2.5 x - \omega t))$) e coordinate polari $(r, \theta)$ per simulare flussi energetici e spirali cosmiche.
+* **Alternanza Palette per Livello & Slider ImGui:** Alternanza discreta di temi cromatici tra livelli dispari (Ciano/Magenta) e pari (Oro/Viola cosmico), modulabili dinamicamente con lo slider `Effetto Psichedelico` nell'HUD.
 
 ---
 
 ## 6. Animazione e Gestione del Tempo (Requisito 6)
 
 * **Animazione Legata all'Utente:** Fiamme dei propulsori modulate in lunghezza e larghezza in base all'intensità di spinta e oscillate con $\sin(35 \cdot t)$.
-* **Animazione Autonoma dello Scenario:** Il Drone nemico descrive una traiettoria piana a 8 di Lissajous ($x(t) = 640 + 340 \cos(0.85 t)$, $y(t) = 380 + 160 \sin(1.70 t)$); gli asteroidi ruotano tra $-45^\circ/\text{s}$ e $+45^\circ/\text{s}$; le monete d'oro ruotano in 3D fittizio tramite $s_x(t) = s_0 \cdot |\cos(2.8 t + \phi)|$.
+* **Animazione Autonoma dello Scenario:** Il Drone nemico descrive una traiettoria piana a 8 di Lissajous ($x(t) = 640 + 340 \cos(0.85 t)$, $y(t) = 380 + 160 \sin(1.70 t)$); scala la propria velocità con il livello ($1.0 + 0.12(L-1)$) e compie improvvisi **scatti predatori non lineari** con rollata d'attacco ed evoluzioni a campana sinusoidale prima di riallinearsi alla traiettoria; gli asteroidi ruotano stazionari sul proprio asse tra $-45^\circ/\text{s}$ e $+45^\circ/\text{s}$; le monete d'oro ruotano in 3D fittizio tramite $s_x(t) = s_0 \cdot |\cos(2.8 t + \phi)|$.
 * **Fisica Particellare a Frantumazione:** All'impatto laser con un asteroide, si generano 28 schegge di roccia dotate di velocità radiale, attrito viscoso ($v(t+\Delta t) = v(t) \cdot (1 - 0.75 \Delta t)$) e dissolvenza alpha.
 
 ---
@@ -156,7 +157,8 @@ La medesima mesh dell'asteroide (`m_asteroidGeo`) viene condivisa da **4–6 ist
 
 * **Algoritmi di Collisione:** Intersezione Cerchio-Cerchio ($\|c_1 - c_2\|^2 \le (r_1 + r_2)^2$) per navicella, monete, asteroidi e drone; Cerchio-AABB per i proiettili laser.
 * **3 Vite e Letalità dell'Alien Drone:** L'Alien Drone nemico è letale: ogni collisione toglie 1 vita e attiva 1.6s di invulnerabilità con lampeggio rosso; dopo 3 impatti la partita termina con il **Game Over** (banner centrato a schermo con pivot `(0.5, 0.5)`).
-* **Vittoria tramite Cosmic Warp Gate:** All'acquisizione delle 5 monete, il Cosmic Warp Gate a destra si accende; volandovi fisicamente dentro la partita si conclude con successo scatenando l'**HURRÀ!**, pioggia di coriandoli e passaggio al Livello 2.
+* **Scaling Difficoltà e Raggi Pericolosi:** La frequenza dei pericoli e la velocità dei proiettili scalano con il livello. Dal **Livello 5** compaiono dardi laser verticali discendenti dall'alto con allarmi orizzontali lampeggianti.
+* **Vittoria tramite Cosmic Warp Gate:** All'acquisizione delle 5 monete, il Cosmic Warp Gate a destra si accende; volandovi fisicamente dentro la partita si conclude con successo scatenando l'**HURRÀ!**, pioggia di coriandoli e passaggio al livello successivo.
 * **Controlli con le Frecce Direzionali e Finestra HUD Ridimensionabile:** Movimento omnidirezionale affidato principalmente alle **Frecce Direzionali** (o tasti WASD); slider per la velocità di volo da 120 a 850 px/s (con scorciatoie Shift + Su/Giù e +/-); finestra HUD che all'avvio è aperta con tutte le istruzioni e al **primo click del mouse** si ridimensiona automaticamente in una vista compatta ed elegante; punteggio **cumulativo** persistente per l'intera sessione di gioco finché non si chiude l'app.
 * **Spunta Wireframe Didattica (Laboratorio 22 Ottobre):** Controllo interattivo `ImGui::Checkbox("Wireframe", &m_wireframe)` che commuta il rasterizzatore su `glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)` per mostrare in tempo reale la maglia triangolata di navicella, asteroidi e spline di Hermite, ripristinando automaticamente `GL_FILL` per l'interfaccia utente.
 

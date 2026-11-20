@@ -379,7 +379,18 @@ Il fragment shader dello sfondo (\texttt{background.frag}) viene eseguito su un 
     \begin{equation}
     n(x, y, t) = \sin(3.5x + 0.15t) \cdot \cos(3.0y - 0.12t)
     \end{equation}
-    colorate con tonalità ciano stellare ($RGB = (0.05, 0.45, 0.65)$) e magenta nebulare ($RGB = (0.55, 0.08, 0.45)$). Uno smorzamento circolare $1.0 - 0.35 \cdot \|\mathbf{uv}_{\text{ndc}}\|^2$ focalizza lo sguardo al centro del campo visivo.
+    Uno smorzamento circolare $1.0 - 0.35 \cdot \|\mathbf{uv}_{\text{ndc}}\|^2$ focalizza lo sguardo al centro del campo visivo.
+
+    \item \textbf{Domain Warping Trigonometrico e Coordinate Polari Psichedeliche:}
+    Per rendere lo sfondo cosmico avvincente, dinamico e ipnotico senza ricorrere a tecniche esterne al programma didattico, le coordinate normalizzate subiscono una distorsione ciclica (\textit{domain warping}):
+    \begin{equation}
+    \mathbf{p}' = \mathbf{p} + 0.18 \cdot uPsychedelic \cdot \begin{pmatrix} \sin(2.5 p_y + 0.35 t) \\ \cos(2.5 p_x - 0.28 t) \end{pmatrix}
+    \end{equation}
+    dove il parametro \texttt{uPsychedelic} $\in [0, 1]$ è regolabile in tempo reale dall'utente tramite lo slider dedicato nell'HUD ImGui. Inoltre, impiegando le coordinate polari $(r, \theta)$ con $r = \|\mathbf{p}'\|$ e $\theta = \text{atan2}(p'_y, p'_x)$, vengono sintetizzati raggi e spirali energetiche armoniche:
+    \begin{equation}
+    w(\theta, r, t) = \sin(6\theta + 3.0r - 0.5t)
+    \end{equation}
+    Lo shader gestisce infine un'\textbf{alternanza discreta di due temi cromatici per livello}: i livelli dispari presentano riflessi Ciano Stellare e Magenta Nebulare, mentre i livelli pari adottano una palette Oro Solare e Viola Cosmico Profondo.
 \end{enumerate}
 
 \subsection{Shader degli Oggetti di Scena e Shader Texture Cabina}
@@ -396,7 +407,7 @@ Il fragment shader dello sfondo (\texttt{background.frag}) viene eseguito su un 
 L'applicazione integra molteplici moti continui guidati da $\Delta t$:
 \begin{enumerate}
     \item \textbf{Animazione legata all'utente:} Le fiamme reattive dei doppi propulsori variano lunghezza e intensità da 0 a 38 px in risposta alla pressione dei comandi di spinta del giocatore, con modulazione ad alta frequenza $\sin(35 \cdot t)$.
-    \item \textbf{Animazione autonoma dello scenario:} Il Drone nemico di Hermite fluttua lungo la traiettoria a 8 di Lissajous; gli asteroidi ruotano con velocità angolare compresa tra $-45^\circ/\text{s}$ e $+45^\circ/\text{s}$; le monete d'oro esibiscono uno spin 3D fittizio modulando la scala orizzontale come:
+    \item \textbf{Animazione autonoma dello scenario e Dinamica Predatoria del Drone:} Il Drone nemico di Hermite fluttua lungo la traiettoria a 8 di Lissajous con velocità scalata in base al livello ($v_{\text{mult}} = 1.0 + 0.12 \cdot (L - 1)$). A intervalli pseudo-casuali (4.5--8~s), il drone esegue improvvisi \textbf{scatti predatori ed evoluzioni non lineari}: una deviazione a campana sinusoidale $\sin(\pi \tau)$ per una durata di $0.75$~s con rotazione d'attacco e loop veloci, per poi riallinearsi con continuità $C^1$ all'orbita ordinaria. Gli asteroidi ruotano in modo stazionario sul proprio baricentro tra $-45^\circ/\text{s}$ e $+45^\circ/\text{s}$, mantenendo pulizia visiva e aderenza ai vincoli di istanziazione; le monete d'oro esibiscono uno spin 3D fittizio modulando la scala orizzontale come:
     \begin{equation}
     s_x(t) = s_0 \cdot \left| \cos(2.8 \cdot t + \phi_i) \right|
     \end{equation}
@@ -438,6 +449,7 @@ Nel modulo \texttt{Collider2D.h} sono implementati i test analitici:
 \begin{itemize}
     \item \textbf{Vite e Letalità dell'Alien Sentinel Drone:} Il giocatore dispone di 3 vite (visualizzate con cuori sull'HUD). L'Alien Drone nemico è letale: ogni contatto diretto sottrae 1 vita e attiva 1.6s di invulnerabilità temporanea con lampeggio rosso della navetta. Esaurite le 3 vite, scatta la schermata di \textbf{Game Over}, centrata millimetricamente a schermo tramite coordinate \texttt{io.DisplaySize * 0.5f} e pivot \texttt{ImVec2(0.5, 0.5)}.
     \item \textbf{Chiusura Partita con il Cosmic Warp Gate:} Raccolte le 5 monete galattiche, il Cosmic Warp Gate a destra si illumina di energia aurorale. Volando fisicamente all'interno del portale, la partita viene vinta con successo scatenando l'evento \textbf{HURR\`A!}, con pioggia di coriandoli festosi, bonus di +500 punti e generazione procedurale del livello successivo.
+    \item \textbf{Difficoltà Progressiva e Pericoli Perimetrali Scalabili (\texttt{HazardManager}):} Il gameplay si arricchisce di una curva di sfida dinamica: all'aumentare dei livelli, la frequenza di comparsa dei pericoli perimetrali aumenta (il tempo di ricarica decresce da 3.2~s a 1.2~s) e la velocità di traslazione dei dardi plasma scala da 420 a 780~px/s. A partire dal \textbf{Livello 5}, viene sbloccata una nuova direttrice letale dall'alto verso il basso (\texttt{HazardSide::TOP}): dardi laser verticali che piovono dallo zenith, preceduti da segnali di avviso stroboscopici orizzontali ad alta visibilità, costringendo il pilota a repentine manovre evasive su più dimensioni.
     \item \textbf{Controlli con le Frecce Direzionali e Finestra HUD Ridimensionabile:} Il movimento e l'orientamento della navicella sono affidati in via primaria alle \textbf{Frecce Direzionali} della tastiera ($\leftarrow, \uparrow, \rightarrow, \downarrow$) per una navigazione immediata e intuitiva (con supporto alternativo ai tasti W/A/S/D); la barra spaziatrice aziona il laser minerario. La finestra HUD ``Mission Control'' all'avvio dell'applicazione si presenta completamente aperta per mostrare tutte le regole e i controlli; non appena l'utente effettua il **primo click** per iniziare a giocare, la finestra si ridimensiona automaticamente in una vista compatta ed elegante nell'angolo superiore, liberando l'intera visuale di gioco. Il punteggio totale è rigorosamente **cumulativo**: accumula i punti delle monete (+100), degli asteroidi (+20) e dei livelli (+500) per l'intera durata della sessione finché l'applicazione non viene chiusa.
 \end{itemize}
 
@@ -461,11 +473,11 @@ La seguente tabella riassume la corrispondenza puntuale tra i requisiti definiti
 \addlinespace[0.2cm]
 \textbf{4 Trasformazioni \& Istanze Multiple} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{AsteroidManager.h/.cpp}, \texttt{Collectible.h/.cpp}, \texttt{Transform.h} & Matrici affini $M = T \cdot R \cdot S$ con GLM. Buffer GPU statici (\texttt{GL\_STATIC\_DRAW}): 4--6 asteroidi e 5 monete condividono gli stessi VAO/VBO variando la sola Model Matrix. \\
 \addlinespace[0.2cm]
-\textbf{5 Due Shader Program GLSL} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{background.vert/.frag}, \texttt{basic.vert/.frag}, \texttt{BackgroundRenderer.cpp} & 1) Sfondo procedurale fullscreen senza texture con hash a 3 layer di parallasse cosmica e nebulosa fluida; 2) Shader oggetti per colori per vertice e modulazione uniforme \texttt{uColorTint}. \\
+\textbf{5 Due Shader Program GLSL} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{background.vert/.frag}, \texttt{basic.vert/.frag}, \texttt{BackgroundRenderer.cpp} & 1) Sfondo procedurale fullscreen senza texture con hash a 3 layer di parallasse cosmica, domain warping trigonometrico e alternanza palette per livello; 2) Shader oggetti per colori per vertice e modulazione uniforme \texttt{uColorTint}. \\
 \addlinespace[0.2cm]
-\textbf{6 Animazioni Temporali \& Delta Time} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Player.cpp}, \texttt{HermiteObject.cpp}, \texttt{Collectible.cpp}, \texttt{AsteroidManager.cpp} & Indipendenza da FPS tramite $\Delta t$: propulsori reattivi alla spinta, orbita di Lissajous del drone, rotazione asteroidi e rotazione 3D fittizia delle monete con $s_x(t) = s_0 |\cos(\omega t)|$. \\
+\textbf{6 Animazioni Temporali \& Delta Time} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Player.cpp}, \texttt{HermiteObject.cpp}, \texttt{Collectible.cpp}, \texttt{AsteroidManager.cpp} & Indipendenza da FPS tramite $\Delta t$: propulsori reattivi, orbita di Lissajous e scatti predatori del drone con scaling di velocità, rotazione asteroidi e rotazione 3D fittizia delle monete con $s_x(t) = s_0 |\cos(\omega t)|$. \\
 \addlinespace[0.2cm]
-\textbf{7 Interazione, Collisioni \& Gameplay} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Collider2D.h}, \texttt{LaserManager.cpp}, \texttt{HazardManager.cpp}, \texttt{ParticleSystem.cpp} & Navigazione con Frecce Direzionali (o WASD), finestra HUD ridimensionabile al primo click, punteggio cumulativo, slider velocità, sparo laser con frantumazione rocce in 28 schegge fisiche, dardi di plasma da schivare, 3 vite e ingresso finale nel Warp Gate. \\
+\textbf{7 Interazione, Collisioni \& Gameplay} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{Collider2D.h}, \texttt{LaserManager.cpp}, \texttt{HazardManager.cpp}, \texttt{ParticleSystem.cpp} & Frecce/WASD, HUD dinamico, punteggio cumulativo, slider velocità e sfondo psichedelico, sparo laser con particelle fisiche, dardi di plasma scalabili con laser dall'alto da liv.~5, 3 vite e Warp Gate. \\
 \addlinespace[0.2cm]
 \textbf{8 Organizzazione \& Portabilità} & {\color{checkGreen}\textbf{$\checkmark$}} & \texttt{proj-2D/src/}, \texttt{include/}, \texttt{CMakeLists.txt}, \texttt{AstroMiner.app} & Struttura C++17 modulare su 18 file sorgente (SoC). Dipendenze incluse in \texttt{external/}. Lanciatore cliccabile ad app per macOS e script batch per Windows. \\
 \bottomrule

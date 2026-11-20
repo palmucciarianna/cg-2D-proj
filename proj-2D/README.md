@@ -21,7 +21,7 @@ Il progetto implementa un sistema di **particelle fisiche** (esplosione delle ro
 | **Spazio** | Sparo Laser minerario per distruggere gli asteroidi in mille pezzi |
 | **Shift + Freccia Su** oppure **`+`** / **`]`** | Incrementa la velocità massima della navicella (aggiorna lo slider HUD) |
 | **Shift + Freccia Giù** oppure **`-`** / **`[`** | Diminuisce la velocità della navicella |
-| **Mouse (Interfaccia ImGui)** | Spunta Wireframe (mesh reticolari), regolazione parametri, reset partita, monitoraggio FPS e vite |
+| **Mouse (Interfaccia ImGui)** | Spunta Wireframe (mesh reticolari), regolazione parametri (Velocità Navicella, Slider **Effetto Psichedelico Sfondo**), reset partita, monitoraggio FPS e vite |
 | **ESC** | Chiusura applicazione |
 
 ---
@@ -79,28 +79,28 @@ cmake --build build
 
 2. **Curve Cubiche di Hermite (Requisito 3.2)**:
    * Sono inclusi **due oggetti distinti** a continuità $C^1$ modellati con spline di Hermite ed esportati in formato OBJ/MTL triangolato (`assets/models/`):
-     * **Alien Sentinel Drone** (`alien_drone.obj`): Oggetto dinamico che pattuglia lo spazio con moto armonico continuo a 8. È un ostacolo letale: ogni passaggio del giocatore sopra il drone toglie 1 vita e dopo 3 passaggi la navicella viene distrutta (Game Over). L'occhio giallo sbatte le palpebre al contatto!
+     * **Alien Sentinel Drone** (`alien_drone.obj`): Oggetto dinamico che pattuglia lo spazio con moto armonico continuo a 8. È un ostacolo letale: ogni passaggio del giocatore sopra il drone toglie 1 vita e dopo 3 passaggi la navicella viene distrutta (Game Over). L'occhio giallo sbatte le palpebre al contatto! Con l'avanzare dei livelli la sua velocità aumenta e compie **scatti predatori improvvisi ed erratici** con loop di manovra e rollata d'attacco prima di riallinearsi alla traiettoria principale.
      * **Cosmic Warp Gate** (`warp_gate.obj`): Oggetto interattivo ad anello e vortice. Una volta raccolte le 5 monete d'oro, il portale si attiva con luce dorata/ciano: per chiudere la partita e superare il livello il giocatore deve pilotare la navicella dentro il portale!
 
 3. **Trasformazioni Geometriche e Istanze Condivise (Requisito 4)**:
    * Tutti i dati geometrici risiedono in buffer statici GPU (`GL_STATIC_DRAW`). Nessuna coordinata viene riscritta su CPU durante il frame loop.
-   * Il gestore asteroidi (`src/AsteroidManager.cpp`) riutilizza **lo stesso identico VAO/VBO** per 4–6 istanze contemporanee con scale, orientamenti e velocità di rotazione indipendenti.
+   * Il gestore asteroidi (`src/AsteroidManager.cpp`) riutilizza **lo stesso identico VAO/VBO** per 4–6 istanze contemporanee con scale, orientamenti e velocità di rotazione indipendenti (rotazione stazionaria su se stessi senza movimenti caotici per garantire massima leggibilità).
    * La stessa tecnica di condivisione mesh è applicata alle 5 monete d'oro.
 
 4. **Shader Dedicato allo Sfondo e Pipeline (Requisito 5)**:
-   * **Shader di Sfondo** (`shaders/background.frag`): Calcola proceduralmente (senza uso di texture) uno starfield multi-livello con stelle scintillanti e una nebulosa galattica fluida sfumata nel tempo con `uTime`.
+   * **Shader di Sfondo Psichedelico** (`shaders/background.frag`): Calcola proceduralmente (senza uso di texture) uno starfield multi-livello e una nebulosa fluida ipnotica potenziata con **domain warping trigonometrico** ($\sin/\cos$) e coordinate polari ($r, \theta$) per fasci e spirali energetiche. Include **alternanza discreta di due palette cromatiche tra livelli pari e dispari** (Ciano/Magenta galattico vs. Oro/Viola nebulare) e uno **slider interattivo ImGui `Effetto Psichedelico`** per modulare in tempo reale l'intensità della distorsione.
    * **Shader Oggetti** (`shaders/basic.frag`): Shader dedicato con attributi di vertice, matrici ortografiche/model e uniform per il tint dinamico.
 
 5. **Animazioni e Tempo (Requisito 6)**:
    * Animazione legata all'utente: fiamme dei doppi reattori che vibrano e si allungano dinamicamente in base alla spinta (`thrustIntensity`) e al delta time.
-   * Animazioni autonome dello scenario: traiettoria sinusoidale del drone alieno, rotazione degli asteroidi e rotazione 3D fittizia delle monete con $\cos(\omega t)$.
+   * Animazioni autonome dello scenario: traiettoria sinusoidale del drone alieno con scatti d'attacco a campana sinusoidale, rotazione stazionaria degli asteroidi e rotazione 3D fittizia delle monete con $\cos(\omega t)$.
 
 6. **Interazione, Meccaniche e Collisioni (Requisito 7)**:
    * Movimento fluido con regolazione della velocità da tastiera e slider.
    * Raccolta di **5 Monete Cosmiche** con emissione di scintille dorate e aggiornamento contatore HUD.
-   * **Doppia Meccanica Aggiuntiva**:
+   * **Sistema di Difficoltà Progressiva e Pericoli**:
      * **Cannone Laser**: Distrugge gli asteroidi in circa 30 frammenti fisici animati (`ParticleSystem`).
-     * **Raggi di Pericolo dai Lati**: Dardi al plasma ad alta velocità con segnale di allerta pre-sparo da schivare per evitare la distruzione della navetta.
+     * **Raggi di Pericolo Scalabili**: Dardi al plasma ad alta velocità con segnale di allerta stroboscopico. Al salire dei livelli la frequenza di sparo e la velocità dei proiettili aumentano; **dal Livello 5 in poi si sbloccano laser verticali dall'alto verso il basso**, costringendo a un dodging dinamico su più direttrici.
    * Evento **"HURRÀ!"**: entrando fisicamente nel Warp Gate attivo a destra si scatena la festa con pioggia di coriandoli, bonus +500 punti e generazione del livello successivo.
 
 7. **Organizzazione del Codice (Requisito 8)**:
