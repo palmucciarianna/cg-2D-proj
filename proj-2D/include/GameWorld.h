@@ -57,6 +57,9 @@ public:
     // Avanza al livello successivo incrementando la difficoltà e rigenerando monete ed asteroidi.
     void nextLevel();
 
+    // Accesso alla modalità di disegno wireframe (Requisito didattico di laboratorio)
+    bool wireframe() const { return m_wireframe; }
+    void setWireframe(bool enabled) { m_wireframe = enabled; }
 
 
 private:
@@ -83,4 +86,5 @@ private:
 
     bool m_showColliders = false;        // Flag di debug per visualizzare i volumi di collisione
     bool m_hudCompact = false;           // Stato di compressione dell'HUD (aperto all'avvio, compatto dopo il primo click)
+    bool m_wireframe = false;            // Spunta Wireframe: visualizza le mesh in modalità reticolare (Laboratorio di CG)
 };

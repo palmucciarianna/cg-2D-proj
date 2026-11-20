@@ -266,6 +266,13 @@ void GameWorld::render(float currentTime)
     // 1. Disegna il background cosmico procedurale (stelle e nebulosa in NDC).
     m_bgRenderer->draw(currentTime);
 
+    // 2. Modalità Wireframe (Requisito didattico di laboratorio):
+    // Se la spunta è attiva, imposta la rasterizzazione reticolare (GL_LINE)
+    // per esaminare la triangolazione di tutte le mesh 2D della scena.
+    if (m_wireframe)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
 
     // 3. Configura la matrice di Proiezione Ortografica per lo spazio di gioco:
     // Mappa lo spazio [0, screenWidth] su X e [0, screenHeight] su Y.
@@ -304,6 +311,13 @@ void GameWorld::render(float currentTime)
         m_player.draw(*m_basicShader, currentTime, projection);
     }
 
+    // 4. Ripristino Modalità Piena (GL_FILL):
+    // Assicura che l'interfaccia Dear ImGui e i testi vengano sempre disegnati
+    // in modalità solida (senza artefatti reticolari sui caratteri).
+    if (m_wireframe)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 }
 
 // ============================================================================
@@ -363,6 +377,10 @@ void GameWorld::renderUI(float dt)
 
     if (m_hudCompact)
     {
+        // Vista Compatta: spunta rapida Wireframe e pulsante per riespandere i dettagli
+        ImGui::Separator();
+        ImGui::Checkbox("Wireframe", &m_wireframe);
+        ImGui::SameLine();
         if (ImGui::SmallButton("Espandi Dettagli [+]"))
         {
             m_hudCompact = false;
