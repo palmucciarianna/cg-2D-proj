@@ -547,6 +547,7 @@ void GameWorld::nextLevel()
     m_state = GameState::PLAYING;
     m_lasers.clear();
     m_hazards.reset();
+    m_hazards.setLevel(m_currentLevel);
 
     // Riposiziona il giocatore al centro dello schermo (punteggio mantenuto cumulativo).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
@@ -569,6 +570,7 @@ void GameWorld::restartGame()
     m_lasers.clear();
     m_particles.clear();
     m_hazards.reset();
+    m_hazards.setLevel(m_currentLevel);
 
     // Ripristina la navicella (il punteggio cumulativo di sessione non si azzera).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));

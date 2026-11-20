@@ -52,6 +52,9 @@ public:
     // Ripristina lo stato del gestore delle minacce.
     void reset();
 
+    // Imposta il livello corrente per scalare la frequenza e le direzioni di attacco.
+    void setLevel(int level) { m_level = level; }
+
     // Aggiorna timer di spawn casuale, animazione dei preavvisi e moto dei proiettili.
     void update(float dt, float screenWidth, float screenHeight, ParticleSystem& particles);
 
@@ -65,6 +68,7 @@ public:
     void clear() { m_hazards.clear(); }
 
 private:
+    int m_level = 1;                    // Livello corrente: incrementa la frequenza e abilita attacchi dall'alto (>= 5)
     float m_spawnCooldown = 3.5f;       // Cooldown tra lanci consecutivi di pericoli
     std::vector<HazardShot> m_hazards;  // Vettore delle minacce attive
 

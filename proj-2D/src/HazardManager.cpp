@@ -52,11 +52,11 @@ void HazardManager::init()
 void HazardManager::reset()
 {
     m_hazards.clear();
-    m_spawnCooldown = 3.0f;
+    m_spawnCooldown = 2.5f;
 }
 
 // ============================================================================
-// Aggiornamento Logica di Spawn e Volo Balistico
+// Aggiornamento Logica di Spawn e Volo Balistico (con scaling di difficoltà)
 // ============================================================================
 void HazardManager::update(float dt, float screenWidth, float screenHeight, ParticleSystem& particles)
 {
@@ -65,34 +65,46 @@ void HazardManager::update(float dt, float screenWidth, float screenHeight, Part
     if (m_spawnCooldown <= 0.0f)
     {
         HazardShot shot;
-        // Scelta equiprobabile del lato di partenza: 0 = sinistra verso destra, 1 = destra verso sinistra.
-        int sideChoice = rand() % 2;
+        // Scelta della direzione di provenienza:
+        // - Livelli 1-4: Da sinistra o da destra (2 lati)
+        // - Livelli >= 5: Anche dall'alto (3 lati, aggiunge traiettoria verticale discendente)
+        int numSides = (m_level >= 5) ? 3 : 2;
+        int sideChoice = rand() % numSides;
 
-        if (sideChoice == 0) // Da sinistra
+        if (sideChoice == 0) // Da sinistra verso destra
         {
             shot.side = HazardSide::LEFT;
             float y = 70.0f + static_cast<float>(rand() % static_cast<int>(screenHeight - 140.0f));
             shot.pos = glm::vec2(0.0f, y);
             shot.dir = glm::vec2(1.0f, 0.0f);
         }
-        else // Da destra
+        else if (sideChoice == 1) // Da destra verso sinistra
         {
             shot.side = HazardSide::RIGHT;
             float y = 70.0f + static_cast<float>(rand() % static_cast<int>(screenHeight - 140.0f));
             shot.pos = glm::vec2(screenWidth, y);
             shot.dir = glm::vec2(-1.0f, 0.0f);
         }
+        else // Da sopra verso il basso (Sbloccato a partire dal livello 5)
+        {
+            shot.side = HazardSide::TOP;
+            float x = 70.0f + static_cast<float>(rand() % static_cast<int>(screenWidth - 140.0f));
+            shot.pos = glm::vec2(x, screenHeight);
+            shot.dir = glm::vec2(0.0f, -1.0f);
+        }
 
-        shot.speed = 880.0f;       // Velocità supersonica per testare i riflessi del giocatore
+        shot.speed = 880.0f + std::min((m_level - 1) * 35.0f, 220.0f); // Leggero boost di velocità per livello
         shot.radius = 16.0f;       // Bounding radius
-        shot.warningTimer = 0.85f; // Finestra di telegrafia (preavviso di 0.85s)
+        shot.warningTimer = std::max(0.60f, 0.85f - (m_level - 1) * 0.04f); // Finestra di telegrafia più serrata
         shot.fired = false;
         shot.active = true;
 
         m_hazards.push_back(shot);
 
-        // Intervallo di ricarica per il prossimo colpo: tra 3.2 e 5.7 secondi.
-        m_spawnCooldown = 3.2f + static_cast<float>(rand() % 25) * 0.1f;
+        // Frequenza di ricarica che si accorcia con i livelli:
+        float minWait = std::max(1.4f, 3.2f - (m_level - 1) * 0.35f);
+        float randAdd = std::max(0.8f, 2.5f - (m_level - 1) * 0.25f);
+        m_spawnCooldown = minWait + static_cast<float>(rand() % 20) * (randAdd / 20.0f);
     }
 
     // Aggiornamento dello stato dei colpi esistenti:
@@ -120,7 +132,8 @@ void HazardManager::update(float dt, float screenWidth, float screenHeight, Part
             }
 
             // Rimuove il proiettile se ha superato completamente i margini dello schermo.
-            if (it->pos.x < -80.0f || it->pos.x > screenWidth + 80.0f)
+            if (it->pos.x < -80.0f || it->pos.x > screenWidth + 80.0f ||
+                it->pos.y < -80.0f || it->pos.y > screenHeight + 80.0f)
             {
                 it = m_hazards.erase(it);
             }
@@ -137,8 +150,6 @@ void HazardManager::update(float dt, float screenWidth, float screenHeight, Part
 // ============================================================================
 void HazardManager::draw(const Shader& shader, float currentTime, float screenWidth, float screenHeight)
 {
-    (void)screenHeight;
-
     for (const auto& h : m_hazards)
     {
         if (!h.fired)
@@ -149,8 +160,16 @@ void HazardManager::draw(const Shader& shader, float currentTime, float screenWi
             if (blink > -0.2f)
             {
                 glm::mat4 m = glm::mat4(1.0f);
-                float posX = (h.side == HazardSide::LEFT) ? 20.0f : screenWidth - 20.0f;
-                m = glm::translate(m, glm::vec3(posX, h.pos.y, 0.0f));
+                if (h.side == HazardSide::TOP)
+                {
+                    m = glm::translate(m, glm::vec3(h.pos.x, screenHeight - 20.0f, 0.0f));
+                    m = glm::rotate(m, glm::radians(90.0f), glm::vec3(0, 0, 1));
+                }
+                else
+                {
+                    float posX = (h.side == HazardSide::LEFT) ? 20.0f : screenWidth - 20.0f;
+                    m = glm::translate(m, glm::vec3(posX, h.pos.y, 0.0f));
+                }
                 m = glm::scale(m, glm::vec3(1.6f, 1.8f, 1.0f));
 
                 // Tinta rosso vivo
