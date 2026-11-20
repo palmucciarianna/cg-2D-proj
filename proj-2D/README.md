@@ -79,7 +79,7 @@ cmake --build build
 
 2. **Curve Cubiche di Hermite (Requisito 3.2)**:
    * Sono inclusi **due oggetti distinti** a continuità $C^1$ modellati con spline di Hermite ed esportati in formato OBJ/MTL triangolato (`assets/models/`):
-     * **Alien Sentinel Drone** (`alien_drone.obj`): Oggetto dinamico che pattuglia lo spazio con moto armonico continuo a 8. È un ostacolo letale: ogni passaggio del giocatore sopra il drone toglie 1 vita e dopo 3 passaggi la navicella viene distrutta (Game Over). L'occhio giallo sbatte le palpebre al contatto! Con l'avanzare dei livelli la sua velocità aumenta e compie **scatti predatori improvvisi ed erratici** con loop di manovra e rollata d'attacco prima di riallinearsi alla traiettoria principale.
+     * **Alien Sentinel Drone** (`alien_drone.obj`): Oggetto dinamico che pattuglia lo spazio con moto armonico continuo a 8. È un ostacolo letale: ogni passaggio del giocatore sopra il drone attivo toglie 1 vita e dopo 3 passaggi la navicella viene distrutta (Game Over). L'occhio giallo sbatte le palpebre al contatto! Con l'avanzare dei livelli la sua velocità aumenta e compie **scatti predatori improvvisi ed erratici** con loop di manovra e rollata d'attacco prima di riallinearsi alla traiettoria principale. **Meccanica di Indebolimento Balistico**: colpendolo con il laser, il Drone Rosso **si indebolisce** per 4.5 secondi (velocità ridotta del 65%, scatti aggressivi azzerati, scala ridotta, occhio stordito, tinta visiva pulsante ed emissione di scintille elettrificate): mentre è indebolito diventa **innocuo**, non infligge danni alla navicella ed eroga +35 punti bonus.
      * **Cosmic Warp Gate** (`warp_gate.obj`): Oggetto interattivo ad anello e vortice. Una volta raccolte le 5 monete d'oro, il portale si attiva con luce dorata/ciano: per chiudere la partita e superare il livello il giocatore deve pilotare la navicella dentro il portale!
 
 3. **Trasformazioni Geometriche e Istanze Condivise (Requisito 4)**:
@@ -99,7 +99,7 @@ cmake --build build
    * Movimento fluido con regolazione della velocità da tastiera e slider.
    * Raccolta di **5 Monete Cosmiche** con emissione di scintille dorate e aggiornamento contatore HUD.
    * **Sistema di Difficoltà Progressiva e Pericoli**:
-     * **Cannone Laser**: Distrugge gli asteroidi in circa 30 frammenti fisici animati (`ParticleSystem`).
+     * **Cannone Laser**: Distrugge gli asteroidi in circa 30 frammenti fisici animati (`ParticleSystem`) e colpisce l'Alien Drone Rosso indebolendolo per 4.5s con scintille ioniche.
      * **Raggi di Pericolo Scalabili**: Dardi al plasma ad alta velocità con segnale di allerta stroboscopico. Al salire dei livelli la frequenza di sparo e la velocità dei proiettili aumentano; **dal Livello 5 in poi si sbloccano laser verticali dall'alto verso il basso**, costringendo a un dodging dinamico su più direttrici.
    * Evento **"HURRÀ!"**: entrando fisicamente nel Warp Gate attivo a destra si scatena la festa con pioggia di coriandoli, bonus +500 punti e generazione del livello successivo.
 
