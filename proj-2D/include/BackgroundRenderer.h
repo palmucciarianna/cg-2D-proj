@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include "Shader.h"
 
 class BackgroundRenderer

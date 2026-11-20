@@ -347,12 +347,14 @@ void GameWorld::render(float currentTime)
     m_bgRenderer->draw(currentTime, m_psychedelic, m_currentLevel);
 
     // 2. Modalità Wireframe (Requisito didattico di laboratorio):
+#ifndef __EMSCRIPTEN__
     // Se la spunta è attiva, imposta la rasterizzazione reticolare (GL_LINE)
     // per esaminare la triangolazione di tutte le mesh 2D della scena.
     if (m_wireframe)
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
+#endif
 
     // 3. Configura la matrice di Proiezione Ortografica per lo spazio di gioco:
     // Mappa lo spazio [0, screenWidth] su X e [0, screenHeight] su Y.
@@ -398,6 +400,7 @@ void GameWorld::render(float currentTime)
         m_player.draw(*m_basicShader, currentTime, projection);
     }
 
+#ifndef __EMSCRIPTEN__
     // 4. Ripristino Modalità Piena (GL_FILL):
     // Assicura che l'interfaccia Dear ImGui e i testi vengano sempre disegnati
     // in modalità solida (senza artefatti reticolari sui caratteri).
@@ -405,6 +408,7 @@ void GameWorld::render(float currentTime)
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+#endif
 }
 
 // ============================================================================

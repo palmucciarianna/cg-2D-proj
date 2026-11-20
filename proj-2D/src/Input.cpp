@@ -7,7 +7,7 @@
 //              utilizzando variabili statiche con visibilità limitata al file di traduzione.
 // ============================================================================
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include "Input.h"
 
 namespace Input

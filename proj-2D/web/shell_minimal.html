@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Astro-Miner 2D: Cosmic Coin Rush (Web Edition)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #08090f;
+            color: #d8e2ec;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #header {
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        #header h1 {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #4ef0d0;
+            text-shadow: 0 0 10px rgba(78, 240, 208, 0.4);
+        }
+        #header p {
+            font-size: 0.85rem;
+            color: #8c9cb0;
+        }
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 0 35px rgba(20, 90, 180, 0.35);
+            border: 2px solid #1c2b3e;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+        canvas.emscripten {
+            display: block;
+            border: 0px none;
+            outline: none;
+            width: 1280px;
+            height: 720px;
+            max-width: 95vw;
+            max-height: 80vh;
+            aspect-ratio: 16 / 9;
+        }
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 9, 15, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #1e293b;
+            border-top: 4px solid #4ef0d0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #status-text {
+            font-size: 1rem;
+            color: #cbd5e1;
+            letter-spacing: 1px;
+        }
+        #footer {
+            margin-top: 12px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        button.action-btn {
+            background: #142032;
+            border: 1px solid #2a4165;
+            color: #7dd3fc;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        button.action-btn:hover {
+            background: #1e3250;
+            border-color: #38bdf8;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Astro-Miner 2D: Cosmic Coin Rush</h1>
+        <p>WebAssembly + WebGL 2.0 Edition | Comandi: W/A/S/D o Frecce (Navetta), Spazio (Laser), Tab (HUD)</p>
+    </div>
+
+    <div id="canvas-container">
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            <div id="status-text">Caricamento WebAssembly in corso...</div>
+        </div>
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    </div>
+
+    <div id="footer">
+        <button class="action-btn" onclick="toggleFullscreen()">Schermo Intero</button>
+        <span style="font-size: 0.8rem; color: #64748b;">Powered by WebGL 2.0 &amp; Dear ImGui</span>
+    </div>
+
+    <script type="text/javascript">
+        var statusElement = document.getElementById('status-text');
+        var loadingOverlay = document.getElementById('loading-overlay');
+        var canvasElement = document.getElementById('canvas');
+
+        var Module = {
+            preRun: [],
+            postRun: [function() {
+                setTimeout(function() {
+                    if (loadingOverlay) {
+                        loadingOverlay.style.opacity = '0';
+                        setTimeout(function() { loadingOverlay.style.display = 'none'; }, 500);
+                    }
+                    canvasElement.focus();
+                }, 200);
+            }],
+            print: function(text) {
+                console.log("[WASM stdout]:", text);
+            },
+            printErr: function(text) {
+                console.error("[WASM stderr]:", text);
+            },
+            canvas: (function() {
+                canvasElement.addEventListener("webglcontextlost", function(e) {
+                    alert('WebGL context lost. Please reload the page.');
+                    e.preventDefault();
+                }, false);
+                return canvasElement;
+            })(),
+            setStatus: function(text) {
+                if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+                if (text === Module.setStatus.last.text) return;
+                var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                var now = Date.now();
+                if (m && now - Module.setStatus.last.time < 30) return; // limit rate
+                Module.setStatus.last.time = now;
+                Module.setStatus.last.text = text;
+                if (text && statusElement) {
+                    statusElement.innerText = text;
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparazione risorse (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')...' : 'Pronto per il lancio!');
+            }
+        };
+
+        window.onerror = function() {
+            if (statusElement) statusElement.innerText = 'Si è verificato un errore durante l\'esecuzione WebAssembly.';
+        };
+
+        function toggleFullscreen() {
+            var el = document.getElementById('canvas');
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.mozRequestFullScreen) {
+                el.mozRequestFullScreen();
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen();
+            }
+        }
+
+        // Impedisce lo scrolling della finestra del browser con Spazio o Frecce
+        window.addEventListener('keydown', function(e) {
+            if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+                e.preventDefault();
+            }
+        }, false);
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

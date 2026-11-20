@@ -17,11 +17,11 @@ Il progetto implementa un sistema di **particelle fisiche** (esplosione delle ro
 
 | Tasto | Azione |
 | :--- | :--- |
-| **W / A / S / D** oppure **Frecce Direzionali** | Movimento della navicella in tutte le direzioni con propulsione reattiva |
-| **Spazio** | Sparo Laser minerario per distruggere gli asteroidi in mille pezzi |
+| **W / A / S / D** oppure **Frecce Direzionali** | Movimento della navicella in tutte le direzioni con propulsione reattiva e scia di particelle di plasma ionico |
+| **Spazio** | Sparo Laser minerario per distruggere gli asteroidi e indebolire il Drone Alieno Sentinella |
 | **Shift + Freccia Su** oppure **`+`** / **`]`** | Incrementa la velocità massima della navicella (aggiorna lo slider HUD) |
 | **Shift + Freccia Giù** oppure **`-`** / **`[`** | Diminuisce la velocità della navicella |
-| **Mouse (Interfaccia ImGui)** | Spunta Wireframe (mesh reticolari), regolazione parametri (Velocità Navicella, Slider **Effetto Psichedelico Sfondo**), reset partita, monitoraggio FPS e vite |
+| **Mouse (Interfaccia ImGui)** | Spunta Wireframe, regolazione Slider **Slow-Motion** (0.1x..2.0x con preset Matrix/Normale/Rapido), Slider **Effetto Psichedelico Sfondo**, Spunta **Traiettoria Hermite Drone**, Visualizzazione **Leaderboard Piloti**, reset partita, monitoraggio FPS e vite |
 | **ESC** | Chiusura applicazione |
 
 ---
@@ -67,7 +67,22 @@ cmake --build build
 ./build/Interactive2DWorld
 ```
 
-*(La compilazione copia automaticamente gli asset di shader e modelli poligonali `.obj` nella cartella di destinazione del binario).*
+### D) Web (WebAssembly / WebGL 2.0 via Emscripten SDK)
+Il progetto supporta nativamente la compilazione per browser Web tramite Emscripten:
+```bash
+# Avvio script automatico dalla root o da proj-2D:
+./build_web.sh
+
+# Oppure manualmente con CMake:
+emcmake cmake -B build-web -S proj-2D -DCMAKE_BUILD_TYPE=Release
+cmake --build build-web --config Release
+
+# Avvio server HTTP locale per testare nel browser:
+python3 -m http.server 8080 --directory build-web
+# Apri http://localhost:8080/Interactive2DWorld.html
+```
+
+*(La compilazione copia o precarica automaticamente gli asset di shader e modelli poligonali `.obj`).*
 
 ---
 
@@ -113,7 +128,37 @@ cmake --build build
 
 ---
 
-## 5. Struttura del Repository e Cartelle
+## 5. Nuove Funzionalità Avanzate (Branch `v2`)
+
+Sul branch `v2` sono state introdotte evoluzioni grafiche e di gameplay all'avanguardia:
+
+1. **Slow-Motion Simulation Slider (Controllo Temporale Relativistico)**:
+   * Slider continuo nel pannello HUD (da `0.1x` a `2.0x`) con pulsanti preset istantanei: `0.25x (Effetto Matrix)`, `1.0x (Normale)`, `2.0x (Rapido)`.
+   * Modula la fisica di gioco (`simDt = dt * m_timeScale`) mantenendo il framerate dell'interfaccia ImGui e delle animazioni GUI a 60/120 Hz costanti.
+
+2. **Screen Shake (Camera Trauma Sinusoidale)**:
+   * Sistema di trauma della telecamera con decadimento esponenziale armonico `m_shakeOffset = glm::vec2(sin(52t) * amp, cos(44t) * amp) * progress`.
+   * Integrato direttamente nella matrice di proiezione ortografica `glm::ortho` per impatti navetta (14px), frangibilità laser degli asteroidi (5px) e salti nel portale Warp (9px).
+
+3. **Neon Glow Aura con Additive Blending (`GL_SRC_ALPHA, GL_ONE`)**:
+   * Alone luminoso al plasma attorno al monumentale Warp Gate attivo e alle monete d'oro cosmiche, ottenuto con blending additivo hardware a zero overhead.
+
+4. **Scia Particellare al Plasma dei Propulsori (Thruster Ion Trail)**:
+   * Generazione dinamica di particelle ioniche multicolore (ciano, arancio, bianco) dagli ugelli di poppa della navetta, proporzionale all'intensità di spinta e orientata in direzione opposta al vettore prua.
+
+5. **Tracciamento Parametrico della Curva di Hermite del Drone**:
+   * Visualizzazione opzionale tramite checkbox della traiettoria a 8 (Lissajous-8) del Drone Sentinella con 120 segmenti `GL_LINE_STRIP` in ciano neon.
+
+6. **Sistema Multi-Utente / Leaderboard Piloti (Classifica Punteggi)**:
+   * Tabella ranking con registrazione automatica dei migliori piloti al completamento dei livelli o a fine partita.
+
+7. **Architettura Web Cross-Platform (Emscripten / WebGL 2.0 / WASM)**:
+   * Compilazione ed esecuzione nativa nei browser moderni (Chrome, Safari, Firefox, Edge) tramite WebAssembly e WebGL 2.0.
+   * Header unificato `OpenGL_Headers.h`, adattamento dinamico GLSL in runtime e template HTML5 reattivo in `web/shell_minimal.html`.
+
+---
+
+## 6. Struttura del Repository e Cartelle
 
 ```text
 proj-2D/
@@ -145,7 +190,7 @@ proj-2D/
 
 ---
 
-## 6. Documentazione e Link alla Presentazione
+## 7. Documentazione e Link alla Presentazione
 
 * 📁 **Cartella di Consegna Ufficiale (UniBo OneDrive):** [computer-graphics-2D-proj-AriannaPalmucci](https://liveunibo-my.sharepoint.com/:f:/g/personal/arianna_palmucci_studio_unibo_it/IgDtSYn5HvOoRoAC68fzldEYAbE0YNStANN4Z3mLvcDBN14?e=bU2ap4)
 * 🎨 **Presentazione Online (Canva):** [https://canva.link/qwwbv3ayalvsctp](https://canva.link/qwwbv3ayalvsctp)

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include <GLFW/glfw3.h>
 
 class ShaderMaker

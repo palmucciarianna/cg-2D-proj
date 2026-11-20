@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include <glm/glm.hpp>
 #include <vector>
 

@@ -11,7 +11,7 @@
 #pragma once
 
 #include "MeshData.h"
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <cmath>

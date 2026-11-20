@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include <string>
 #include <glm/glm.hpp>
 

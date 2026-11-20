@@ -7,13 +7,33 @@
 //              e degli errori di linking del programma eseguibile (glGetProgramiv).
 // ============================================================================
 
-#include <glad/glad.h>
+#include "OpenGL_Headers.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <string>
 #include "ShaderMaker.h"
 
 // Disabilita i warning di deprecazione fopen su compilatori MSVC Windows.
 #pragma warning(disable:4996)
+
+#ifdef __EMSCRIPTEN__
+// Adatta gli header GLSL 3.30 Core alle specifiche WebGL 2.0 / OpenGL ES 3.0
+static std::string adaptShaderForWebGL(const char* source)
+{
+    if (!source) return "";
+    std::string s(source);
+    size_t pos = s.find("#version 330");
+    if (pos != std::string::npos)
+    {
+        size_t endLine = s.find('\n', pos);
+        if (endLine != std::string::npos)
+        {
+            s.replace(pos, endLine - pos + 1, "#version 300 es\nprecision highp float;\nprecision highp int;\n");
+        }
+    }
+    return s;
+}
+#endif
 
 // ============================================================================
 // Lettura del Codice Sorgente dello Shader da File di Testo
@@ -74,8 +94,13 @@ GLuint ShaderMaker::createProgram(const char* vertexfilename, const char* fragme
     GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
 
     // Associa la stringa di testo GLSL all'oggetto shader appena allocato.
-    // Parametri: shader handle, numero di stringhe (1), puntatore a puntatore di caratteri, lunghezze (NULL = null-terminated).
+#ifdef __EMSCRIPTEN__
+    std::string webglVert = adaptShaderForWebGL(vertexSource);
+    const char* vSrc = webglVert.c_str();
+    glShaderSource(vertexShaderId, 1, &vSrc, nullptr);
+#else
     glShaderSource(vertexShaderId, 1, (const char**)&vertexSource, nullptr);
+#endif
 
     // Avvia la compilazione del codice sorgente nel microcodice GPU per il vertex stage.
     glCompileShader(vertexShaderId);
@@ -111,7 +136,13 @@ GLuint ShaderMaker::createProgram(const char* vertexfilename, const char* fragme
     GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
 
     // Carica il testo sorgente del fragment shader.
+#ifdef __EMSCRIPTEN__
+    std::string webglFrag = adaptShaderForWebGL(fragmentSource);
+    const char* fSrc = webglFrag.c_str();
+    glShaderSource(fragmentShaderId, 1, &fSrc, nullptr);
+#else
     glShaderSource(fragmentShaderId, 1, (const char**)&fragmentSource, nullptr);
+#endif
 
     // Compila il fragment shader.
     glCompileShader(fragmentShaderId);

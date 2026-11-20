@@ -8,10 +8,8 @@
 //              esegue il game-loop a framerate controllato (con gestione del delta-time).
 // ============================================================================
 
-// Disabilita l'inclusione automatica degli header OpenGL legacy da parte di GLFW,
-// poiché utilizzeremo GLAD per caricare il profilo Core di OpenGL 3.3.
-#define GLFW_INCLUDE_NONE
-#include <glad/glad.h>
+// Inclusione centralizzata cross-platform OpenGL / WebGL
+#include "OpenGL_Headers.h"
 #include <GLFW/glfw3.h>
 
 // Header ufficiali della libreria Dear ImGui per l'interfaccia utente grafica (HUD).
@@ -25,10 +23,75 @@
 
 #include <iostream>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 // Dimensioni logiche iniziali della finestra di gioco in pixel.
 // Il sistema di coordinate ortografiche del mondo mapperà lo spazio [0, 1280] x [0, 720].
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
+
+// Contesto di esecuzione per il frame loop (permette l'integrazione sia del while loop desktop
+// che del callback asincrono del browser tramite emscripten_set_main_loop_arg)
+struct MainLoopContext
+{
+    GLFWwindow* window;
+    GameWorld* gameWorld;
+    float lastTime;
+};
+
+// Funzione eseguita ad ogni singolo frame di rendering e logica
+void mainLoopIteration(MainLoopContext& ctx)
+{
+    // A. Calcolo del Delta-Time (Tempo trascorso tra due frame consecutivi)
+    float currentTime = static_cast<float>(glfwGetTime());
+    float deltaTime = currentTime - ctx.lastTime;
+    ctx.lastTime = currentTime;
+
+    // "Delta-Time Clamping": limita il delta time a un massimo di 50 millisecondi (0.05s).
+    if (deltaTime > 0.05f) 
+        deltaTime = 0.05f;
+
+    // B. Elaborazione degli Eventi di Sistema GLFW (Tastiera, Mouse, Finestra)
+    glfwPollEvents();
+
+    // C. Inizio del Frame Grafico ImGui
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // D. Aggiornamento della Logica del Gioco (Fisica, IA, Collisioni)
+    ctx.gameWorld->update(deltaTime, ctx.window);
+
+    // E. Preparazione del Viewport e Pulizia del Framebuffer
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(ctx.window, &fbWidth, &fbHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // F. Rendering della Scena 2D (Sfondo, Navicella, Asteroidi, Spline, Particelle)
+    ctx.gameWorld->render(currentTime);
+
+    // G. Costruzione dell'Interfaccia Utente Grafica (HUD di Missione)
+    ctx.gameWorld->renderUI(deltaTime);
+
+    // H. Disegno Effettivo di ImGui tramite OpenGL
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    // I. Scambio dei Buffer (Double Buffering)
+    glfwSwapBuffers(ctx.window);
+}
+
+#ifdef __EMSCRIPTEN__
+static void emscriptenMainLoop(void* arg)
+{
+    MainLoopContext* ctx = static_cast<MainLoopContext*>(arg);
+    mainLoopIteration(*ctx);
+}
+#endif
 
 int main()
 {
@@ -43,8 +106,13 @@ int main()
         return -1;
     }
 
-    // Specifica i requisiti minimi del contesto OpenGL: versione 3.3 Core Profile.
-    // Questo esclude tutte le funzioni a pipeline fissa deprecate (glBegin, glEnd, glMatrixMode).
+    // Specifica i requisiti minimi del contesto OpenGL / WebGL
+#ifdef __EMSCRIPTEN__
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#else
+    // Versione 3.3 Core Profile su Desktop.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -52,6 +120,7 @@ int main()
 #ifdef __APPLE__
     // Su macOS è obbligatorio abilitare il forward compatibility per i contesti OpenGL >= 3.2.
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
 #endif
 
     // Crea la finestra GLFW e il contesto OpenGL associato.
@@ -91,6 +160,7 @@ int main()
     // 2. INIZIALIZZAZIONE DI GLAD (Caricatore Funzioni OpenGL)
     // ========================================================================
 
+#ifndef __EMSCRIPTEN__
     // GLAD carica dinamicamente a runtime i puntatori a funzione OpenGL implementati dal driver GPU.
     // Passiamo glfwGetProcAddress come caricatore di indirizzi di sistema.
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -98,6 +168,7 @@ int main()
         std::cerr << "[ERRORE] Inizializzazione GLAD fallita!\n";
         return -1;
     }
+#endif
 
     // Stampa su console le specifiche del dispositivo grafico e della versione del driver.
     std::cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl;
@@ -128,9 +199,13 @@ int main()
     ImGui::StyleColorsDark();
 
     // Inizializza i backend ImGui per GLFW (gestione eventi finestra/input)
-    // e per OpenGL 3.3 Core Profile (rendering dei vertici della GUI).
+    // e per OpenGL 3.3 Core Profile o WebGL 2.0 (rendering dei vertici della GUI).
     ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplOpenGL3_Init("#version 300 es");
+#else
     ImGui_ImplOpenGL3_Init("#version 330 core");
+#endif
 
     // ========================================================================
     // 4. INIZIALIZZAZIONE DEL MONDO DI GIOCO (GameWorld)
@@ -148,72 +223,18 @@ int main()
     // 5. GAME-LOOP PRINCIPALE (Ciclo di Aggiornamento e Rendering)
     // ========================================================================
 
+    MainLoopContext context{ window, &gameWorld, lastTime };
+
+#ifdef __EMSCRIPTEN__
+    // In ambiente WebAssembly (browser), cediamo il ciclo di rendering al browser loop
+    emscripten_set_main_loop_arg(emscriptenMainLoop, &context, 0, true);
+#else
     // Esegue finché l'utente non richiede la chiusura della finestra (es. premendo la X o ESC).
     while (!glfwWindowShouldClose(window))
     {
-        // --------------------------------------------------------------------
-        // A. Calcolo del Delta-Time (Tempo trascorso tra due frame consecutivi)
-        // --------------------------------------------------------------------
-        float currentTime = static_cast<float>(glfwGetTime());
-        float deltaTime = currentTime - lastTime;
-        lastTime = currentTime;
-
-        // "Delta-Time Clamping": limita il delta time a un massimo di 50 millisecondi (0.05s).
-        // Se la finestra viene spostata o l'applicazione va in pausa momentanea, questo clamping
-        // impedisce glitch fisici catastrofici (es. la navicella che attraversa i muri o le rocce).
-        if (deltaTime > 0.05f) 
-            deltaTime = 0.05f;
-
-        // --------------------------------------------------------------------
-        // B. Elaborazione degli Eventi di Sistema GLFW (Tastiera, Mouse, Finestra)
-        // --------------------------------------------------------------------
-        glfwPollEvents();
-
-        // --------------------------------------------------------------------
-        // C. Inizio del Frame Grafico ImGui
-        // --------------------------------------------------------------------
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        // --------------------------------------------------------------------
-        // D. Aggiornamento della Logica del Gioco (Fisica, IA, Collisioni)
-        // --------------------------------------------------------------------
-        gameWorld.update(deltaTime, window);
-
-        // --------------------------------------------------------------------
-        // E. Preparazione del Viewport e Pulizia del Framebuffer
-        // --------------------------------------------------------------------
-        int fbWidth, fbHeight;
-        // Recupera la reale dimensione del framebuffer in pixel (fondamentale su display Retina/HiDPI).
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-        // Imposta il rettangolo di disegno OpenGL sulla totalità dei pixel della finestra.
-        glViewport(0, 0, fbWidth, fbHeight);
-        // Pulisce il buffer colore e il buffer di profondità prima di iniziare a disegnare.
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // --------------------------------------------------------------------
-        // F. Rendering della Scena 2D (Sfondo, Navicella, Asteroidi, Spline, Particelle)
-        // --------------------------------------------------------------------
-        gameWorld.render(currentTime);
-
-        // --------------------------------------------------------------------
-        // G. Costruzione dell'Interfaccia Utente Grafica (HUD di Missione)
-        // --------------------------------------------------------------------
-        gameWorld.renderUI(deltaTime);
-
-        // --------------------------------------------------------------------
-        // H. Disegno Effettivo di ImGui tramite OpenGL
-        // --------------------------------------------------------------------
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // --------------------------------------------------------------------
-        // I. Scambio dei Buffer (Double Buffering)
-        // --------------------------------------------------------------------
-        // Scambia il back-buffer (in cui abbiamo appena renderizzato) con il front-buffer (visibile).
-        glfwSwapBuffers(window);
+        mainLoopIteration(context);
     }
+#endif
 
     // ========================================================================
     // 6. TERMINAZIONE E DEALLOCAZIONE DELLE RISORSE
