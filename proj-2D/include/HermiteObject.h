@@ -25,6 +25,9 @@ public:
     // Carica le mesh Hermite dai file OBJ su disco e inizializza i sotto-componenti geometrici su GPU.
     void init(const std::string& alienObjPath, const std::string& warpGateObjPath);
 
+    // Imposta il livello di gioco corrente per scalare l'aggressività e la frequenza degli scatti.
+    void setLevel(int level) { m_level = level; }
+
     // Aggiorna l'orbita di Lissajous del Drone alieno, il timer di sbattimento dell'occhio e la rotazione del Warp Gate.
     void update(float dt, float currentTime, const glm::vec2& playerPos);
 
@@ -69,10 +72,17 @@ private:
     bool m_hasGate = false;    // Flag di caricamento completato per il portale
 
     // Stato cinematico e animazione della Faccina Cattiva:
+    int m_level = 1;                        // Livello di difficoltà corrente
     glm::vec2 m_dronePos{ 640.0f, 480.0f }; // Posizione istantanea lungo l'orbita di Lissajous
-    float m_droneAngle = 0.0f;              // Angolo di inclinazione
+    float m_droneAngle = 0.0f;              // Angolo di inclinazione / rollio istantaneo
     float m_eyeBlinkTimer = 0.0f;           // Timer per l'animazione di chiusura dell'occhio (blink)
     bool m_wasPlayerOver = false;           // Memoria di stato per attivare il blink UNA SOLA volta per passaggio
+
+    // Meccanica di scatto imprevedibile ("giri strani" casuali per poi tornare all'orbita):
+    float m_dashTimer = 0.0f;               // Timer attivo dello scatto
+    float m_dashCooldown = 5.0f;            // Conto alla rovescia per il prossimo scatto imprevedibile
+    glm::vec2 m_dashOffset{ 0.0f, 0.0f };   // Deviazione rapida momentanea dalla traiettoria base
+    glm::vec2 m_dashDirection{ 1.0f, 0.0f };// Vettore di slancio dello scatto casuale
 
     // Stato cinematico del Warp Gate:
     glm::vec2 m_gatePos{ 1080.0f, 560.0f }; // Posizione fluttuante in coordinate mondo

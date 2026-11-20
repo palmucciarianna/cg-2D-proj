@@ -114,12 +114,58 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
 // ============================================================================
 void HermiteManager::update(float dt, float currentTime, const glm::vec2& playerPos)
 {
-    // Traiettoria orbitale a forma di 8 (Curva di Lissajous con rapporto armonico 1:2):
+    // Calcolo della velocità base in funzione del livello:
+    float speedMultiplier = 1.0f + (m_level - 1) * 0.12f;
+    float omega = 0.85f * speedMultiplier;
+
+    // 1. Traiettoria orbitale armonica a figura di 8 (Curva di Lissajous con rapporto 1:2):
     // x(t) = x_0 + A * cos(omega * t)
     // y(t) = y_0 + B * sin(2 * omega * t)
     // Ampiezza orizzontale A = 340px, ampiezza verticale B = 160px.
-    m_dronePos.x = 640.0f + 340.0f * std::cos(currentTime * 0.85f);
-    m_dronePos.y = 380.0f + 160.0f * std::sin(currentTime * 1.70f);
+    glm::vec2 baseOrbit(
+        640.0f + 340.0f * std::cos(currentTime * omega),
+        380.0f + 160.0f * std::sin(currentTime * omega * 2.0f)
+    );
+
+    // 2. Meccanica dello scatto imprevedibile ("giri strani" casuali):
+    m_dashCooldown -= dt;
+    if (m_dashCooldown <= 0.0f)
+    {
+        // Attiva una manovra rapida di 0.75s con direzione casuale:
+        m_dashTimer = 0.75f;
+        float randAngle = static_cast<float>(rand() % 360) * 0.0174533f;
+        m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle));
+
+        // Prossimo scatto tra 4.5 e 8.0 secondi (più frequente nei livelli alti):
+        float minInterval = std::max(2.8f, 5.0f - (m_level - 1) * 0.4f);
+        m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f;
+    }
+
+    if (m_dashTimer > 0.0f)
+    {
+        m_dashTimer -= dt;
+        float progress = 1.0f - (m_dashTimer / 0.75f); // 0.0 all'inizio, 1.0 alla fine
+
+        // Profilo a campana sinusoidale (starts at 0, peaks at 1, returns to 0):
+        float bell = std::sin(progress * 3.14159f);
+
+        // Giro strano: slancio direzionale combinato con un loop a vortice ad alta frequenza
+        float loopRadius = 60.0f * bell;
+        float loopAngle = progress * 6.28318f * 2.5f; // 2.5 rotazioni complete durante lo scatto
+        m_dashOffset = m_dashDirection * (bell * 110.0f) + glm::vec2(std::cos(loopAngle) * loopRadius, std::sin(loopAngle) * loopRadius);
+
+        // Rollio della testa del drone durante la manovra
+        m_droneAngle = std::sin(progress * 6.28318f * 2.0f) * 45.0f;
+    }
+    else
+    {
+        // Ritorno docile ed esatto all'orbita di Lissajous consueta:
+        m_dashOffset = glm::vec2(0.0f);
+        m_droneAngle = 0.0f;
+    }
+
+    // Posizione effettiva del drone: orbita base + eventuale deviazione dello scatto
+    m_dronePos = baseOrbit + m_dashOffset;
 
     // Fluttuazione armonica del portale cosmico in alto a destra.
     m_gatePos.x = 1080.0f + 25.0f * std::cos(currentTime * 0.5f);
@@ -177,6 +223,7 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         // Matrice radice posizionata sul punto della traiettoria di Lissajous.
         glm::mat4 headRoot = glm::mat4(1.0f);
         headRoot = glm::translate(headRoot, glm::vec3(m_dronePos, 0.0f));
+        headRoot = glm::rotate(headRoot, glm::radians(m_droneAngle), glm::vec3(0, 0, 1));
         headRoot = glm::scale(headRoot, glm::vec3(1.25f, 1.25f, 1.0f));
 
         // A) Disegna la testa cornuta rossa Hermite.
