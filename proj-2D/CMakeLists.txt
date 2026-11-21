@@ -167,6 +167,7 @@ else() # COMPILAZIONE DESKTOP (macOS, Windows, Linux)
             "-framework IOKit"
             "-framework CoreVideo"
             "-framework QuartzCore"
+            "-framework AudioToolbox"
         )
     elseif(UNIX AND NOT APPLE)
         target_link_libraries(Interactive2DWorld PRIVATE
