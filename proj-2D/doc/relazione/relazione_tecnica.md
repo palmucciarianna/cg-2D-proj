@@ -131,7 +131,7 @@ La medesima mesh dell'asteroide (`m_asteroidGeo`) viene condivisa da **4–6 ist
 ## 5. Pipeline di Rendering e Shader GLSL (Requisito 5)
 
 ### Q&A Shading: Come funziona lo sfondo cosmico senza texture?
-* **Zero Memoria Texture (Procedurale Puro):** Lo sfondo non carica immagini bitmap o skybox precalcolate; è interamente sintetizzato matematicamente pixel per pixel all'interno del fragment shader (`background.frag`) su un quadrilatero fullscreen a coordinate normalizzate NDC $[-1, 1]$.
+* **Zero Memoria Texture (Procedurale Puro):** Lo sfondo non carica immagini bitmap o skybox precalcolate; è gestito dalla classe `BackgroundRenderer`, la quale incapsula i buffer GPU seguendo il pattern **RAII** e la **Rule of Five** (disabilitazione copia ed assegnamento per azzerare memory leak). Alloca un **Fullscreen Quad** composto da 2 triangoli complanari in coordinate normalizzate NDC $[-1, 1]$ che coprono esattamente l'intero schermo senza necessità di matrici Model o Projection, eseguendo il fragment shader (`background.frag`) direttamente su ogni singolo pixel del viewport.
 * **Funzione Hash Pseudo-Casuale ad Alta Frequenza:** I pixel delle stelle sono generati matematicamente applicando una funzione hash deterministica alle coordinate di griglia discretizzate nello spazio dello schermo:
   $$h(p) = \text{fract}\left(\sin(p \cdot (12.9898, 78.233)) \cdot 43758.5453\right)$$
   Isolando i valori con $h(p) > 0.985$ e calcolando la distanza radiale rispetto al centro della cella, si generano sorgenti puntiformi luminose con decadimento morbido verso i bordi.

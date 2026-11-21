@@ -354,7 +354,13 @@ La medesima tecnica governa le 5 monete galattiche (\texttt{Collectible.cpp}), c
 Come prescritto dalla specifica, l'applicazione disaccoppia completamente le fasi visive impiegando programmi shader GLSL distinti.
 
 \subsection{Shader Dedicato allo Sfondo Procedurale Senza Texture (Requisito 5.1)}
-Il fragment shader dello sfondo (\texttt{background.frag}) viene eseguito su un quadrilatero fullscreen a coordinate normalizzate NDC $[-1, 1]$ e sintetizza matematicamente l'intero spazio profondo \textbf{senza l'impiego di alcuna texture precalcolata}.
+Il rendering dello sfondo cosmico è incapsulato nella classe dedicata \texttt{BackgroundRenderer} (\texttt{include/BackgroundRenderer.h}, \texttt{src/BackgroundRenderer.cpp}), implementata secondo il principio cardine \textbf{RAII (Resource Acquisition Is Initialization)} e conforme alla \textbf{Rule of Five} (con disabilitazione esplicita del costruttore di copia e dell'operatore di assegnamento tramite \texttt{= delete}) per prevenire memory leak sulla GPU e garantire il rilascio sicuro delle risorse (\texttt{glDeleteVertexArrays}, \texttt{glDeleteBuffers}) nel distruttore.
+
+Dal punto di vista della pipeline geometrica, la classe alloca nella memoria GPU un \textbf{Fullscreen Quad} formato da due triangoli complanari nello spazio delle coordinate normalizzate di dispositivo (\textbf{NDC}, \textit{Normalized Device Coordinates}) nell'intervallo $[-1, 1]$ su entrambi gli assi:
+\begin{equation}
+V_{\text{quad}} = \{ (-1,-1), (1,-1), (1,1), (-1,-1), (1,1), (-1,1) \}
+\end{equation}
+Questa configurazione azzera il costo di trasformazione geometrica su CPU (non richiedendo matrici Model né Projection), consentendo l'esecuzione del fragment shader dedicato (\texttt{background.frag}) direttamente su ogni singolo frammento del viewport per sintetizzare matematicamente l'intero spazio profondo \textbf{senza l'impiego di alcuna texture precalcolata}.
 
 \paragraph{Spiegazione Tecnica: Come funziona lo sfondo senza texture?}
 \begin{enumerate}
