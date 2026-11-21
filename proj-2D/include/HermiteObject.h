@@ -71,6 +71,15 @@ public:
     void setShowOrbit(bool s) { m_showOrbit = s; }
     bool* getShowOrbitPtr() { return &m_showOrbit; }
 
+    // Evoluzione Drone Alieno: Modalita' Boss Hunter & Mini-Droni Scorta (v2):
+    void setBossMode(bool b) { m_isBoss = b; if (b && m_bossHp <= 0) m_bossHp = m_bossMaxHp; }
+    bool isBoss() const { return m_isBoss; }
+    bool* getBossModePtr() { return &m_isBoss; }
+    int bossHp() const { return m_bossHp; }
+    int bossMaxHp() const { return m_bossMaxHp; }
+    bool isEscortActive(int i) const { return (i >= 0 && i < 2) ? m_escortsActive[i] : false; }
+    const glm::vec2& escortPos(int i) const { return m_escortsPos[i]; }
+
 private:
     // Componenti della Faccina Cattiva Hermite (Alien Sentinel Drone):
     Geometry m_headGeo;        // Testa cornuta modellata con spline cubiche di Hermite
@@ -113,4 +122,14 @@ private:
     float m_vortexRotation = 0.0f;          // Angolo di rotazione del vortice dimensionale
     float m_relicPulseTimer = 0.0f;         // Timer del bagliore ad onda di risonanza
     bool m_wasPlayerNearRelic = false;      // Stato di prossimità per l'interazione
+
+    // Modalita' Boss Hunter e scorta (v2):
+    bool m_isBoss = false;
+    int m_bossHp = 8;
+    int m_bossMaxHp = 8;
+    bool m_escortsActive[2] = { true, true };
+    glm::vec2 m_escortsPos[2]{ glm::vec2(0.0f), glm::vec2(0.0f) };
+    bool m_targetingActive = false;
+    glm::vec2 m_targetAimPos{ 0.0f };
+    Geometry m_targetingLineGeo;
 };

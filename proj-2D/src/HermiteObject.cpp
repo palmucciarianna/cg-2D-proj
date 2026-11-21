@@ -218,6 +218,28 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     // Posizione effettiva del drone: orbita base + eventuale deviazione dello scatto
     m_dronePos = baseOrbit + m_dashOffset;
 
+    // Aggiornamento droni di scorta e raggio di puntamento (Boss Mode v2):
+    if (m_isBoss)
+    {
+        float escSpeed = 2.4f;
+        m_escortsPos[0] = m_dronePos + glm::vec2(std::cos(currentTime * escSpeed), std::sin(currentTime * escSpeed)) * 64.0f;
+        m_escortsPos[1] = m_dronePos + glm::vec2(std::cos(currentTime * escSpeed + 3.14159f), std::sin(currentTime * escSpeed + 3.14159f)) * 64.0f;
+
+        if (!weakened && m_dashCooldown <= 0.85f)
+        {
+            m_targetingActive = true;
+            m_targetAimPos = playerPos;
+        }
+        else
+        {
+            m_targetingActive = false;
+        }
+    }
+    else
+    {
+        m_targetingActive = false;
+    }
+
     // Fluttuazione armonica del portale cosmico in alto a destra.
     m_gatePos.x = 1080.0f + 25.0f * std::cos(currentTime * 0.5f);
     m_gatePos.y = 560.0f + 20.0f * std::sin(currentTime * 0.7f);
@@ -357,6 +379,43 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         shader.setMat4("model", mouthMat);
         m_evilMouthGeo.draw();
 
+        // H) Disegno Droni di Scorta e Puntamento Laser (Boss Mode v2)
+        if (m_isBoss)
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                if (m_escortsActive[i])
+                {
+                    glm::mat4 escMat = glm::translate(glm::mat4(1.0f), glm::vec3(m_escortsPos[i], 0.0f));
+                    escMat = glm::scale(escMat, glm::vec3(0.52f, 0.52f, 1.0f));
+                    shader.setMat4("model", escMat);
+                    shader.setVec4("uColorTint", glm::vec4(1.3f, 0.45f, 0.45f, 1.0f));
+                    m_headGeo.draw();
+                }
+            }
+
+            if (m_targetingActive)
+            {
+                float blink = std::sin(currentTime * 24.0f);
+                if (blink > 0.0f)
+                {
+                    std::vector<glm::vec3> linePts = {
+                        glm::vec3(m_dronePos, 0.0f),
+                        glm::vec3(m_targetAimPos, 0.0f)
+                    };
+                    std::vector<glm::vec4> lineCols = {
+                        glm::vec4(1.0f, 0.1f, 0.1f, 0.90f),
+                        glm::vec4(1.0f, 0.3f, 0.3f, 0.20f)
+                    };
+                    m_targetingLineGeo.setData(linePts, lineCols, GL_LINES);
+                    m_targetingLineGeo.upload();
+                    shader.setMat4("model", glm::mat4(1.0f));
+                    shader.setVec4("uColorTint", glm::vec4(1.0f));
+                    m_targetingLineGeo.draw();
+                }
+            }
+        }
+
         // Ripristina uColorTint predefinito (1.0f) per le geometrie successive:
         shader.setVec4("uColorTint", glm::vec4(1.0f));
     }
@@ -452,30 +511,68 @@ bool HermiteManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadiu
         return false;
     }
 
+    // Modalita' Boss Hunter: verifica prima l'impatto con i droni di scorta
+    if (m_isBoss)
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            if (m_escortsActive[i] && glm::distance(bulletPos, m_escortsPos[i]) < (18.0f + bulletRadius))
+            {
+                m_escortsActive[i] = false;
+                particles.emitDroneHitSparks(m_escortsPos[i], 24);
+                score += 80;
+                return true;
+            }
+        }
+    }
+
     // Calcola la distanza cartesiana tra il dardo laser e il centro del Drone Rosso
     float dist = glm::distance(bulletPos, m_dronePos);
-    float hitRadius = (m_weakenedTimer > 0.0f) ? 30.0f : 36.0f;
+    float hitRadius = (m_weakenedTimer > 0.0f) ? 30.0f : (m_isBoss ? 42.0f : 36.0f);
 
     if (dist <= (hitRadius + bulletRadius))
     {
-        // 1. Applica o estende lo stato di indebolimento (4.5 secondi di durata)
-        m_weakenedTimer = 4.5f;
-        m_hitFlashTimer = 0.18f;
+        m_hitFlashTimer = 0.20f;
         m_hitCount++;
 
-        // 2. Interrompe istantaneamente qualsiasi scatto o virata violenta in corso
-        m_dashTimer = 0.0f;
-        m_dashOffset = glm::vec2(0.0f);
-        m_dashCooldown = 6.0f; // Rinvia il prossimo scatto aggressivo
+        if (m_isBoss)
+        {
+            m_bossHp--;
+            particles.emitDroneHitSparks(bulletPos, 22);
 
-        // 3. Occhio socchiuso e ammiccante da stordimento
-        triggerEyeBlink();
+            if (m_bossHp <= 0)
+            {
+                // Boss sconfitto e stordito a lungo!
+                m_weakenedTimer = 8.0f;
+                m_bossHp = m_bossMaxHp;
+                m_escortsActive[0] = true;
+                m_escortsActive[1] = true;
+                score += 350; // Super bonus boss
+            }
+            else
+            {
+                score += 40;
+            }
+        }
+        else
+        {
+            // 1. Applica o estende lo stato di indebolimento (4.5 secondi di durata)
+            m_weakenedTimer = 4.5f;
 
-        // 4. Emissione particelle di scintille elettrificate e dispersione energetica
-        particles.emitDroneHitSparks(bulletPos, 18);
+            // 2. Interrompe istantaneamente qualsiasi scatto o virata violenta in corso
+            m_dashTimer = 0.0f;
+            m_dashOffset = glm::vec2(0.0f);
+            m_dashCooldown = 6.0f; // Rinvia il prossimo scatto aggressivo
 
-        // 5. Assegna punti bonus al giocatore per aver indebolito la sentinella aliena
-        score += 35;
+            // 3. Occhio socchiuso e ammiccante da stordimento
+            triggerEyeBlink();
+
+            // 4. Emissione particelle di scintille elettrificate e dispersione energetica
+            particles.emitDroneHitSparks(bulletPos, 18);
+
+            // 5. Assegna punti bonus al giocatore per aver indebolito la sentinella aliena
+            score += 35;
+        }
 
         return true;
     }
