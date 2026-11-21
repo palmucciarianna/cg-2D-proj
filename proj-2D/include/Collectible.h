@@ -49,6 +49,14 @@ public:
     // raccoglie la moneta, genera scintille particellari dorate e restituisce il numero di monete colte.
     int checkCollisions(const CircleCollider& playerCol, ParticleSystem& particles);
 
+    // Attrazione magnetica delle monete verso la navicella quando il power-up Calamita e' attivo (v2):
+    void applyMagnetAttraction(const glm::vec2& playerPos, float magnetRadius, float magnetSpeed, float dt);
+
+    // Accesso alla lista monete per radar HUD o debug:
+    const std::vector<CosmicCoin>& coins() const { return m_coins; }
+    void spawnOne(const glm::vec2& pos);
+    void clear() { m_coins.clear(); m_collectedCount = 0; }
+
     // Metodi di ispezione dello stato della missione:
     int totalCoins() const { return static_cast<int>(m_coins.size()); }
     int collectedCoins() const { return m_collectedCount; }

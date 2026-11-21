@@ -173,3 +173,38 @@ int CollectibleManager::checkCollisions(const CircleCollider& playerCol, Particl
 
     return newlyCollected;
 }
+
+// ============================================================================
+// Attrazione Magnetica delle Monete (v2)
+// ============================================================================
+void CollectibleManager::applyMagnetAttraction(const glm::vec2& playerPos, float magnetRadius, float magnetSpeed, float dt)
+{
+    for (auto& coin : m_coins)
+    {
+        if (coin.collected) continue;
+
+        float dist = glm::distance(coin.currentPos, playerPos);
+        if (dist > 0.001f && dist <= magnetRadius)
+        {
+            glm::vec2 pullDir = glm::normalize(playerPos - coin.currentPos);
+            float strength = (1.0f - dist / magnetRadius) * magnetSpeed + 140.0f;
+            coin.basePos += pullDir * strength * dt;
+            coin.currentPos += pullDir * strength * dt;
+        }
+    }
+}
+
+// ============================================================================
+// Generazione di una Singola Moneta (v2 - Sandbox / Editor)
+// ============================================================================
+void CollectibleManager::spawnOne(const glm::vec2& pos)
+{
+    CosmicCoin c;
+    c.basePos = pos;
+    c.currentPos = pos;
+    c.phaseOffset = static_cast<float>(m_coins.size() * 1.25f);
+    c.radius = 22.0f;
+    c.collected = false;
+
+    m_coins.push_back(c);
+}
