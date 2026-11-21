@@ -86,13 +86,16 @@ void AsteroidManager::spawnLevel(int levelCount, float screenWidth, float screen
         // Contrassegna l'istanza come attiva e integra.
         a.active = true;
 
+        // Asteroide cristallino raro con riflessi prismatici (1 su 3) (v2)
+        a.isCrystal = (i % 3 == 0);
+
         // Aggiunge l'istanza al vettore.
         m_asteroids.push_back(a);
     }
 }
 
 // ============================================================================
-// Aggiornamento della Rotazione delle Istanze
+// Aggiornamento della Rotazione e Cinematica delle Istanze
 // ============================================================================
 void AsteroidManager::update(float dt)
 {
@@ -102,6 +105,13 @@ void AsteroidManager::update(float dt)
         if (a.active)
         {
             a.rotation += a.rotSpeed * dt;
+
+            // Integrazione cinematica impulso EMP (v2):
+            if (glm::length(a.velocity) > 0.01f)
+            {
+                a.pos += a.velocity * dt;
+                a.velocity *= std::max(0.0f, 1.0f - dt * 2.8f);
+            }
         }
     }
 }
@@ -111,8 +121,6 @@ void AsteroidManager::update(float dt)
 // ============================================================================
 void AsteroidManager::draw(const Shader& shader, float currentTime)
 {
-    (void)currentTime;
-
     // Itera su tutte le istanze attive:
     // Ciascun asteroide calcola la propria Model Matrix M = T * R * S,
     // la invia come Uniform allo shader e invoca m_asteroidGeo.draw().
@@ -129,10 +137,23 @@ void AsteroidManager::draw(const Shader& shader, float currentTime)
             // Aggiorna la variabile uniform 'model' nello shader attivo.
             shader.setMat4("model", m);
 
+            if (a.isCrystal)
+            {
+                // Bagliore prismatico ciano-magenta per gli asteroidi cristallini rari
+                float pulse = 0.85f + 0.15f * std::sin(currentTime * 5.0f + a.pos.x * 0.02f);
+                shader.setVec4("uColorTint", glm::vec4(0.45f * pulse, 0.90f * pulse, 1.35f * pulse, 1.0f));
+            }
+            else
+            {
+                shader.setVec4("uColorTint", glm::vec4(1.0f));
+            }
+
             // Emette la draw call per l'istanza corrente.
             m_asteroidGeo.draw();
         }
     }
+
+    shader.setVec4("uColorTint", glm::vec4(1.0f));
 }
 
 // ============================================================================
@@ -195,4 +216,39 @@ int AsteroidManager::activeCount() const
         if (a.active) c++;
     }
     return c;
+}
+
+// ============================================================================
+// Generazione di un Singolo Asteroide (v2 - Sandbox / Editor)
+// ============================================================================
+void AsteroidManager::spawnOne(const glm::vec2& pos, float scale, bool crystal)
+{
+    Asteroid a;
+    a.pos = pos;
+    a.rotation = static_cast<float>(rand() % 360);
+    a.rotSpeed = (rand() % 2 == 0 ? 1.0f : -1.0f) * (20.0f + rand() % 45);
+    a.scale = scale;
+    a.radius = 30.0f * scale;
+    a.active = true;
+    a.isCrystal = crystal;
+
+    m_asteroids.push_back(a);
+}
+
+// ============================================================================
+// Applicazione Impulso Fisico da Onda EMP (v2)
+// ============================================================================
+void AsteroidManager::applyImpulse(const glm::vec2& center, float maxForce, float radius)
+{
+    for (auto& a : m_asteroids)
+    {
+        if (!a.active) continue;
+        float d = glm::distance(a.pos, center);
+        if (d < radius && d > 1.0f)
+        {
+            glm::vec2 dir = glm::normalize(a.pos - center);
+            float strength = (1.0f - d / radius) * maxForce;
+            a.velocity += dir * strength;
+        }
+    }
 }

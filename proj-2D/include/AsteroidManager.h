@@ -26,6 +26,8 @@ struct Asteroid
     float scale;        // Fattore di scala dimensionale (variazione di grandezza)
     float radius;       // Raggio effettivo del collider circolare (30px * scale)
     bool active = true; // Stato di vita: true = intatto e visibile, false = distrutto dal laser
+    bool isCrystal = false;    // Asteroide cristallino raro con riflessi prismatici (v2)
+    glm::vec2 velocity{ 0.0f }; // Velocita' cinematica per impulsi fisici EMP (v2)
 };
 
 class AsteroidManager
@@ -55,6 +57,14 @@ public:
 
     // Restituisce il conteggio degli asteroidi ancora intatti nella scena.
     int activeCount() const;
+
+    // Accesso alla collezione per radar scanner ed editor (v2):
+    const std::vector<Asteroid>& asteroids() const { return m_asteroids; }
+    void spawnOne(const glm::vec2& pos, float scale = 1.0f, bool crystal = false);
+    void clear() { m_asteroids.clear(); }
+
+    // Applica un impulso fisico di repulsione circolare da detonazione (es. Onda EMP v2):
+    void applyImpulse(const glm::vec2& center, float maxForce, float radius);
 
 private:
     std::vector<Asteroid> m_asteroids; // Collezione delle istanze di asteroidi residenti nel livello
