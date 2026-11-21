@@ -71,6 +71,9 @@ void mainLoopIteration(MainLoopContext& ctx)
     glViewport(0, 0, fbWidth, fbHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Allinea la risoluzione del buffer FBO al framebuffer effettivo (supporto Retina/HiDPI)
+    ctx.gameWorld->postProcess().resize(fbWidth, fbHeight);
+
     // F. Rendering della Scena 2D (Sfondo, Navicella, Asteroidi, Spline, Particelle)
     ctx.gameWorld->render(currentTime);
 

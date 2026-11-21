@@ -35,10 +35,14 @@ public:
     void setMat4(const char* name, const glm::mat4& matrix) const;
     // - setVec4: invia un vettore a 4 dimensioni (es. colore RGBA)
     void setVec4(const char* name, const glm::vec4& value) const;
+    // - setVec2: invia un vettore a 2 dimensioni (es. coordinate UV o offset)
+    void setVec2(const char* name, const glm::vec2& value) const;
     // - setFloat: invia un valore in virgola mobile a 32 bit (es. tempo 'u_time' o opacità 'u_alpha')
     void setFloat(const char* name, float value) const;
     // - setInt: invia un intero a 32 bit (es. unità texture per i sampler2D o flag booleani)
     void setInt(const char* name, int value) const;
+    // - setBool: invia un flag booleano come intero 0 o 1
+    void setBool(const char* name, bool value) const { setInt(name, value ? 1 : 0); }
 
     // Restituisce l'identificatore numerico del programma OpenGL.
     GLuint id() const { return m_programId; }

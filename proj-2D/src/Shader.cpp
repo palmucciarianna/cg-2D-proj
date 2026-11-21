@@ -83,6 +83,20 @@ void Shader::setVec4(const char* name, const glm::vec4& value) const
 }
 
 // ============================================================================
+// Impostazione di un Vettore 2D (Uniform vec2)
+// ============================================================================
+void Shader::setVec2(const char* name, const glm::vec2& value) const
+{
+    if (m_programId == 0) return;
+
+    GLint location = glGetUniformLocation(m_programId, name);
+    if (location != -1)
+    {
+        glUniform2fv(location, 1, glm::value_ptr(value));
+    }
+}
+
+// ============================================================================
 // Impostazione di uno Scalare Float (Uniform float)
 // ============================================================================
 void Shader::setFloat(const char* name, float value) const
