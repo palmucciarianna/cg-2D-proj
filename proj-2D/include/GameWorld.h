@@ -22,6 +22,11 @@
 #include "HermiteObject.h"
 #include "ParticleSystem.h"
 #include "HazardManager.h"
+#include "PostProcessing.h"
+#include "PowerUpManager.h"
+#include "BlackHole.h"
+#include "MissileManager.h"
+#include "CosmicDust.h"
 
 struct GLFWwindow;
 
@@ -80,6 +85,22 @@ public:
     void submitScore(const std::string& name, int score, int level);
     const std::vector<LeaderboardEntry>& leaderboard() const { return m_leaderboard; }
 
+    // Accesso al gestore di Post-Processing (FBO, CRT, Shockwaves, Vignette)
+    PostProcessing& postProcess() { return m_postProcess; }
+
+    // Accesso ai power-up e al buco nero (v2):
+    PowerUpManager& powerUps() { return m_powerUps; }
+    BlackHole& blackHole() { return m_blackHole; }
+
+    // Bomba a Impulsi Elettromagnetici EMP (v2):
+    void triggerEmpBomb();
+    float empCooldown() const { return m_empCooldown; }
+    bool isEmpReady() const { return m_empCooldown <= 0.0f; }
+
+    // Modalita' Fotografica / Freeze Frame (v2):
+    bool isPhotoMode() const { return m_photoMode; }
+    void setPhotoMode(bool p) { m_photoMode = p; }
+
 
 private:
     int m_screenWidth;  // Larghezza logica della finestra in pixel (1280)
@@ -102,6 +123,10 @@ private:
     HermiteManager m_hermite;            // Gestore del Drone alieno e del portale cosmico Warp Gate
     ParticleSystem m_particles;          // Motore particellare per esplosioni, scintille e coriandoli
     HazardManager m_hazards;             // Gestore dei raggi letali da schivare provenienti dai bordi
+    PowerUpManager m_powerUps;           // Gestore delle capsule e dei power-up (Scudo, Laser Triplo, Magnete)
+    BlackHole m_blackHole;               // Anomalia gravitazionale del Buco Nero (v2)
+    MissileManager m_missiles;           // Gestore missili intelligenti a ricerca termica (v2)
+    CosmicDust m_cosmicDust;             // Pulviscolo stellare reattivo (v2)
 
     bool m_showColliders = false;        // Flag di debug per visualizzare i volumi di collisione
     bool m_hudCompact = false;           // Stato di compressione dell'HUD (aperto all'avvio, compatto dopo il primo click)
@@ -109,13 +134,31 @@ private:
     float m_psychedelic = 0.40f;         // Intensità dell'effetto spaziale psichedelico / warp (0.0..1.0)
 
     // Meccaniche avanzate post-consegna (v2):
+    PostProcessing m_postProcess;        // Pipeline di Post-Processing basata su FBO
     float m_timeScale = 1.0f;            // Fattore di scala temporale per slow-motion (0.1..2.0x)
     float m_shakeTimer = 0.0f;           // Timer residuo dello scuotimento telecamera
     float m_shakeDuration = 0.0f;        // Durata iniziale dello shake
     float m_shakeIntensity = 0.0f;       // Ampiezza dell'oscillazione
     glm::vec2 m_shakeOffset{ 0.0f };     // Vettore di spostamento camera 2D
 
+    // Bomba a Impulsi Elettromagnetici EMP (v2):
+    float m_empCooldown = 0.0f;
+    float m_maxEmpCooldown = 10.0f;
+
+    // Modalita' Fotografica & Studio Screenshot (v2):
+    bool m_photoMode = false;
+    float m_photoZoom = 1.0f;
+    glm::vec2 m_photoPan{ 0.0f, 0.0f };
+    bool m_showCustomizer = false;
+
     std::vector<LeaderboardEntry> m_leaderboard; // Classifica piloti
     bool m_showLeaderboard = false;              // Finestra classifica aperta/chiusa
     bool m_scoreSubmitted = false;               // Flag di invio punteggio partita
+
+    // Sottosistemi audio, scanner radar e sandbox (v2):
+    bool m_showRadar = true;                     // Finestra Scanner Radar Olografico
+    bool m_sandboxMode = false;                  // Modalita' Sandbox / Editor attiva
+    int m_sandboxSpawnType = 0;                  // Tipo di entita' selezionata per lo spawn
+
+    void renderRadar(float currentTime);         // Rendering del radar vettoriale ImGui
 };

@@ -321,3 +321,63 @@ void ParticleSystem::emitThrusterTrail(const glm::vec2& origin, const glm::vec2&
         m_particles.push_back(p);
     }
 }
+
+// ============================================================================
+// Emissione Onda di Archi Elettrici per la Bomba EMP (v2)
+// ============================================================================
+void ParticleSystem::emitEmpWave(const glm::vec2& origin, float radius, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        float angle = (i * 6.28318f) / count + randRange(-0.05f, 0.05f);
+        float speed = randRange(radius * 0.8f, radius * 1.3f);
+
+        Particle p;
+        p.pos = origin;
+        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
+
+        static const glm::vec4 empColors[] = {
+            glm::vec4(0.2f, 0.9f, 1.0f, 1.0f),  // Ciano elettrico
+            glm::vec4(0.5f, 0.7f, 1.0f, 0.9f),  // Azzurro etereo
+            glm::vec4(0.9f, 1.0f, 1.0f, 1.0f)   // Bianco fulmine
+        };
+        p.color = empColors[rand() % 3];
+        p.size = randRange(8.0f, 16.0f);
+        p.rotation = randRange(0.0f, 360.0f);
+        p.rotSpeed = randRange(-300.0f, 300.0f);
+        p.maxLife = randRange(0.40f, 0.75f);
+        p.life = p.maxLife;
+
+        m_particles.push_back(p);
+    }
+}
+
+// ============================================================================
+// Emissione Scintille Prismatiche Cristalline (v2)
+// ============================================================================
+void ParticleSystem::emitCrystalSparkles(const glm::vec2& origin, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        float angle = randRange(0.0f, 6.28318f);
+        float speed = randRange(80.0f, 260.0f);
+
+        Particle p;
+        p.pos = origin;
+        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
+
+        static const glm::vec4 crystalColors[] = {
+            glm::vec4(0.3f, 0.95f, 1.0f, 1.0f), // Turchese diamante
+            glm::vec4(0.9f, 0.35f, 1.0f, 1.0f), // Magenta zaffiro
+            glm::vec4(0.7f, 0.50f, 1.0f, 1.0f)  // Ametista
+        };
+        p.color = crystalColors[rand() % 3];
+        p.size = randRange(6.0f, 14.0f);
+        p.rotation = randRange(0.0f, 360.0f);
+        p.rotSpeed = randRange(-240.0f, 240.0f);
+        p.maxLife = randRange(0.5f, 1.1f);
+        p.life = p.maxLife;
+
+        m_particles.push_back(p);
+    }
+}

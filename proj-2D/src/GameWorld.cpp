@@ -11,6 +11,7 @@
 // ============================================================================
 
 #include "GameWorld.h"
+#include "AudioEngine.h"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include "imgui.h"
@@ -91,6 +92,10 @@ void GameWorld::init(const std::string& assetDir)
     m_collectibles.init();
     m_asteroids.init();
     m_lasers.init();
+    m_powerUps.init();
+    m_blackHole.init();
+    m_missiles.init();
+    m_cosmicDust.init(static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 160);
 
     // Carica i modelli poligonali delle spline di Hermite (Drone Nemico e Portale Warp Gate).
     std::string alienObj = resolveAsset(assetDir, "models/alien_drone.obj");
@@ -102,6 +107,12 @@ void GameWorld::init(const std::string& assetDir)
     // ------------------------------------------------------------------------
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+
+    // Inizializza la pipeline FBO di Post-Processing (Shockwave, CRT, Aberrazione Cromatica)
+    m_postProcess.init(m_screenWidth, m_screenHeight, assetDir);
+
+    // Inizializza il motore audio procedurale in tempo reale (v2)
+    AudioEngine::instance().init();
 
     // ------------------------------------------------------------------------
     // 4. Inizializzazione della Classifica Piloti (Leaderboard)
@@ -148,6 +159,9 @@ void GameWorld::update(float dt, GLFWwindow* window)
 {
     float currentTime = static_cast<float>(glfwGetTime());
 
+    // Aggiornamento degli effetti di post-processing (onde d'urto, flash scafo)
+    m_postProcess.update(dt);
+
     // Integrazione dello Screen Shake (decadimento sinusoidale smorzato):
     if (m_shakeTimer > 0.0f)
     {
@@ -166,6 +180,41 @@ void GameWorld::update(float dt, GLFWwindow* window)
 
     // Calcolo del delta-time scalato per la modalità didattica Slow-Motion (0.1..2.0x):
     float simDt = dt * m_timeScale;
+
+    // Gestione tasto Photo Mode (P):
+    static bool lastKeyP = false;
+    bool currKeyP = (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS);
+    if (currKeyP && !lastKeyP)
+    {
+        m_photoMode = !m_photoMode;
+    }
+    lastKeyP = currKeyP;
+
+    // Gestione tasto Fari (L):
+    static bool lastKeyL = false;
+    bool currKeyL = (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS);
+    if (currKeyL && !lastKeyL)
+    {
+        m_player.setHeadlights(!m_player.headlightsActive());
+    }
+    lastKeyL = currKeyL;
+
+    // In Modalita' Fotografica si sospende l'avanzamento fisico del mondo
+    if (m_photoMode)
+    {
+        return;
+    }
+
+    if (m_empCooldown > 0.0f)
+    {
+        m_empCooldown -= dt;
+    }
+
+    // Modalita' Boss attiva a partire dal Livello 3:
+    if (m_currentLevel >= 3)
+    {
+        m_hermite.setBossMode(true);
+    }
 
     // ------------------------------------------------------------------------
     // STATO 1: PARTITA IN CORSO (PLAYING)
@@ -206,24 +255,66 @@ void GameWorld::update(float dt, GLFWwindow* window)
         {
             if (!m_player.isInvulnerable())
             {
-                m_player.takeDamage(); // Toglie 1 vita su 3
+                bool tookDmg = m_player.takeDamage(); // Toglie 1 vita o viene deflesso dallo scudo
                 m_particles.emitAsteroidExplosion(m_player.position(), 24);
                 triggerScreenShake(0.35f, 14.0f);
+                m_postProcess.triggerDamageFlash(1.0f);
+                m_postProcess.triggerShockwave(m_player.position(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.045f, 0.45f);
+                if (tookDmg) AudioEngine::instance().playExplosion();
+                else AudioEngine::instance().playShieldDeflect();
             }
         }
 
         // Sparo Laser con Barra Spaziatrice:
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && m_player.canFire())
         {
-            // Calcola il versore di direzione balistica in base all'angolo della navicella.
             float rad = glm::radians(m_player.angle());
             glm::vec2 dir(std::cos(rad), std::sin(rad));
 
-            // Spara il raggio con offset di 36px in avanti rispetto alla prua.
-            m_lasers.fire(m_player.position() + dir * 36.0f, dir);
+            if (m_player.isSpreadShotActive())
+            {
+                // Modalità Laser Triplo a Ventaglio: 3 raggi con divergenza angolare +/- 14 gradi
+                float radLeft = glm::radians(m_player.angle() - 14.0f);
+                float radRight = glm::radians(m_player.angle() + 14.0f);
+                glm::vec2 dirLeft(std::cos(radLeft), std::sin(radLeft));
+                glm::vec2 dirRight(std::cos(radRight), std::sin(radRight));
 
-            // Imposta il cooldown di ricarica cannone a 0.18s.
+                m_lasers.fire(m_player.position() + dir * 36.0f, dir);
+                m_lasers.fire(m_player.position() + dirLeft * 32.0f, dirLeft);
+                m_lasers.fire(m_player.position() + dirRight * 32.0f, dirRight);
+            }
+            else
+            {
+                // Spara il raggio singolo con offset di 36px in avanti rispetto alla prua.
+                m_lasers.fire(m_player.position() + dir * 36.0f, dir);
+            }
+
+            AudioEngine::instance().playLaser();
             m_player.resetFireCooldown(0.18f);
+        }
+
+        // --------------------------------------------------------------------
+        // Lancio Missili Intelligenti a Ricerca Termica (Tasto Q):
+        // --------------------------------------------------------------------
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && m_missiles.canFire())
+        {
+            glm::vec2 pDir = m_player.direction();
+            glm::vec2 pSide(-pDir.y, pDir.x);
+            m_missiles.fire(m_player.position() + pSide * 26.0f, pDir);
+            m_missiles.fire(m_player.position() - pSide * 26.0f, pDir);
+            m_missiles.resetCooldown(0.85f);
+            AudioEngine::instance().playLaser();
+        }
+
+        // --------------------------------------------------------------------
+        // Attivazione Bomba a Impulsi Elettromagnetici EMP (Tasto E o Click Destro):
+        // --------------------------------------------------------------------
+        ImGuiIO& io = ImGui::GetIO();
+        bool ePressed = (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS);
+        bool rmbPressed = (!io.WantCaptureMouse && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+        if ((ePressed || rmbPressed) && m_empCooldown <= 0.0f)
+        {
+            triggerEmpBomb();
         }
 
         // Aggiorna i colpi laser attivi e gestisce le collisioni con asteroidi e Drone Rosso.
@@ -234,7 +325,20 @@ void GameWorld::update(float dt, GLFWwindow* window)
         {
             m_player.addScore(score - prevScore);
             triggerScreenShake(0.16f, 5.0f);
+            AudioEngine::instance().playExplosion();
         }
+
+        // Aggiorna i Missili Intelligenti a Ricerca (v2):
+        int mScore = 0;
+        m_missiles.update(simDt, m_asteroids, m_hermite, m_particles, mScore);
+        if (mScore > 0)
+        {
+            m_player.addScore(mScore);
+            triggerScreenShake(0.20f, 7.0f);
+        }
+
+        // Aggiorna il pulviscolo stellare reattivo (v2):
+        m_cosmicDust.update(simDt, currentTime, m_player.position(), m_player.angle(), m_player.headlightsActive(), m_blackHole.position(), m_blackHole.isActive());
 
         // Aggiorna le entità del mondo con il delta-time di simulazione.
         m_asteroids.update(simDt);
@@ -242,11 +346,33 @@ void GameWorld::update(float dt, GLFWwindow* window)
         m_hermite.update(simDt, currentTime, m_player.position());
         m_particles.update(simDt);
 
+        // Aggiorna l'anomalia gravitazionale del Buco Nero (v2):
+        m_blackHole.update(simDt, m_player, m_asteroids);
+
+        // Attrazione magnetica delle monete verso la navetta (se power-up Calamita e' attivo):
+        if (m_player.isMagnetActive())
+        {
+            m_collectibles.applyMagnetAttraction(m_player.position(), 380.0f, 260.0f, simDt);
+        }
+
+        // Aggiorna capsule e collezionabili speciali Power-Up (v2):
+        m_powerUps.update(simDt);
+        int puScore = 0;
+        PowerUpType pu = m_powerUps.checkPlayerCollision(m_player.getCollider(), m_player, m_particles, puScore);
+        if (pu != PowerUpType::NONE)
+        {
+            m_player.addScore(puScore);
+            triggerScreenShake(0.20f, 7.0f);
+            m_postProcess.triggerShockwave(m_player.position(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.045f, 0.45f);
+            AudioEngine::instance().playPowerUp();
+        }
+
         // Raccolta delle Monete d'Oro (+100 punti per ciascuna moneta):
         int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles);
         if (collectedNow > 0)
         {
             m_player.addScore(collectedNow * 100);
+            AudioEngine::instance().playCoin();
         }
 
         // Interazione facoltativa di prossimità con la reliquia monumentale (+50 punti bonus):
@@ -254,6 +380,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
         if (!m_collectibles.allCollected() && m_hermite.checkRelicInteraction(m_player.getCollider(), m_particles, relicScore))
         {
             m_player.addScore(relicScore);
+            AudioEngine::instance().playCoin();
         }
 
         // --------------------------------------------------------------------
@@ -265,22 +392,31 @@ void GameWorld::update(float dt, GLFWwindow* window)
             {
                 // Drone indebolito: innocuo! Scintille di rimbalzo senza perdita di vite
                 m_particles.emitDroneHitSparks(m_hermite.dronePosition(), 12);
+                AudioEngine::instance().playDroneHit();
             }
             else if (!m_player.isInvulnerable())
             {
-                m_player.takeDamage();
+                bool tookDmg = m_player.takeDamage();
                 m_hermite.triggerEyeBlink();
                 m_particles.emitAsteroidExplosion(m_player.position(), 24);
                 triggerScreenShake(0.35f, 13.0f);
+                m_postProcess.triggerDamageFlash(1.0f);
+                m_postProcess.triggerShockwave(m_player.position(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.055f, 0.55f);
+                if (tookDmg) AudioEngine::instance().playExplosion();
+                else AudioEngine::instance().playShieldDeflect();
             }
         }
 
         // Collisione con gli asteroidi rocciosi in transito:
         if (m_asteroids.checkPlayerCollision(m_player.getCollider()))
         {
-            m_player.takeDamage();
+            bool tookDmg = m_player.takeDamage();
             m_particles.emitAsteroidExplosion(m_player.position(), 16);
             triggerScreenShake(0.30f, 11.0f);
+            m_postProcess.triggerDamageFlash(0.85f);
+            m_postProcess.triggerShockwave(m_player.position(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.04f, 0.45f);
+            if (tookDmg) AudioEngine::instance().playExplosion();
+            else AudioEngine::instance().playShieldDeflect();
         }
 
         // Se le vite sono terminate, scatta il Game Over:
@@ -305,6 +441,8 @@ void GameWorld::update(float dt, GLFWwindow* window)
             m_hurraTimer = 2.8f;    // Celebrazione di 2.8 secondi
             m_player.addScore(500); // 500 punti bonus per il salto dimensionale
             triggerScreenShake(0.40f, 9.0f);
+            m_postProcess.triggerShockwave(m_hermite.gatePosition(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.085f, 0.95f);
+            AudioEngine::instance().playWarp();
             // Emette fuochi d'artificio e coriandoli a schermo.
             m_particles.emitHurraCelebration(static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 135);
             if (!m_scoreSubmitted && m_player.score() > 0)
@@ -343,6 +481,9 @@ void GameWorld::update(float dt, GLFWwindow* window)
 // ============================================================================
 void GameWorld::render(float currentTime)
 {
+    // 0. Attiva l'FBO per catturare la scena nella texture di post-processing
+    m_postProcess.bind();
+
     // 1. Disegna il background cosmico procedurale (stelle e nebulosa in NDC).
     m_bgRenderer->draw(currentTime, m_psychedelic, m_currentLevel);
 
@@ -366,14 +507,25 @@ void GameWorld::render(float currentTime)
         -1.0f, 1.0f
     );
 
-    // Applicazione del trauma della telecamera (Screen Shake) per impatti ed esplosioni:
-    if (glm::length(m_shakeOffset) > 0.001f)
+    // Gestione zoom e pan in Modalita' Foto (v2) oppure Screen Shake:
+    if (m_photoMode)
+    {
+        glm::vec2 camCenter = m_player.position() + m_photoPan;
+        projection = glm::translate(glm::mat4(1.0f), glm::vec3(m_screenWidth * 0.5f, m_screenHeight * 0.5f, 0.0f)) *
+                     glm::scale(glm::mat4(1.0f), glm::vec3(m_photoZoom, m_photoZoom, 1.0f)) *
+                     glm::translate(glm::mat4(1.0f), glm::vec3(-camCenter, 0.0f)) *
+                     glm::ortho(0.0f, static_cast<float>(m_screenWidth), 0.0f, static_cast<float>(m_screenHeight), -1.0f, 1.0f);
+    }
+    else if (glm::length(m_shakeOffset) > 0.001f)
     {
         projection = glm::translate(projection, glm::vec3(m_shakeOffset, 0.0f));
     }
 
     m_basicShader->setMat4("projection", projection);
     m_basicShader->setVec4("uColorTint", glm::vec4(1.0f));
+
+    // 0) Rendering del Pulviscolo Stellare Reattivo (v2):
+    m_cosmicDust.draw(*m_basicShader);
 
     // A) Rendering delle istanze condivise di asteroidi:
     m_asteroids.draw(*m_basicShader, currentTime);
@@ -388,11 +540,20 @@ void GameWorld::render(float currentTime)
     // D) Rendering dei colpi laser al plasma:
     m_lasers.draw(*m_basicShader);
 
+    // D2) Rendering dei Missili Intelligenti a Ricerca Termica (v2):
+    m_missiles.draw(*m_basicShader);
+
     // E) Rendering dei pericoli laterali e dei segnali stroboscopici di allerta:
     m_hazards.draw(*m_basicShader, currentTime, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 
     // F) Rendering del sistema particellare (detriti, scintille, coriandoli):
     m_particles.draw(*m_basicShader);
+
+    // H) Rendering dell'Anomalia Gravitazionale del Buco Nero (v2):
+    m_blackHole.draw(*m_basicShader, currentTime);
+
+    // I) Rendering delle capsule speciali Power-Up (v2):
+    m_powerUps.draw(*m_basicShader, currentTime);
 
     // G) Rendering gerarchico della navicella Starfighter del giocatore:
     if (m_player.isAlive())
@@ -409,6 +570,12 @@ void GameWorld::render(float currentTime)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 #endif
+
+    // 5. Ripristina il Framebuffer di default a schermo
+    m_postProcess.unbind();
+
+    // 6. Esegue il rendering del quad a tutto schermo con shader di post-process (Shockwave, CRT, ecc.)
+    m_postProcess.draw(currentTime);
 }
 
 // ============================================================================
@@ -417,6 +584,77 @@ void GameWorld::render(float currentTime)
 void GameWorld::renderUI(float dt)
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    // ------------------------------------------------------------------------
+    // Studio Fotografico Spaziale (Photo Mode v2):
+    // ------------------------------------------------------------------------
+    if (m_photoMode)
+    {
+        ImGui::SetNextWindowPos(ImVec2(24, 24), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(340, 430), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Studio Fotografico Spaziale (Photo Mode)", &m_photoMode))
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "[MODALITA' FOTO ATTIVA - PAUSA]");
+            ImGui::Separator();
+
+            ImGui::SliderFloat("Zoom Ottico", &m_photoZoom, 0.4f, 3.5f, "%.2fx");
+            ImGui::SliderFloat("Pan Orizzontale (X)", &m_photoPan.x, -500.0f, 500.0f, "%.0f px");
+            ImGui::SliderFloat("Pan Verticale (Y)", &m_photoPan.y, -350.0f, 350.0f, "%.0f px");
+            if (ImGui::SmallButton("Reset Centro Navicella"))
+            {
+                m_photoPan = glm::vec2(0.0f);
+                m_photoZoom = 1.0f;
+            }
+
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(0.3f, 0.9f, 1.0f, 1.0f), "Fari & Illuminazione Dinamica 2D:");
+            ImGui::Checkbox("Fari Volumetrici Navicella", &m_player.headlightsRef());
+            ImGui::SliderFloat("Sfondo Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
+
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.9f, 1.0f), "Filtri Ottici (FBO Post-Process):");
+            ImGui::Checkbox("Filtro CRT Retro-Arcade", &m_postProcess.crtEnabled());
+            if (m_postProcess.crtEnabled())
+            {
+                ImGui::SliderFloat("Scanlines", &m_postProcess.scanlineIntensity(), 0.0f, 1.0f, "%.2f");
+                ImGui::SliderFloat("Aberrazione RGB", &m_postProcess.chromaticAberration(), 0.0f, 0.015f, "%.4f");
+            }
+            ImGui::SliderFloat("Vignettatura Cosmica", &m_postProcess.vignetteIntensity(), 0.0f, 1.0f, "%.2f");
+
+            ImGui::Dummy(ImVec2(0.0f, 8.0f));
+            if (ImGui::Button("Torna al Gioco [P]", ImVec2(-1, 38)))
+            {
+                m_photoMode = false;
+            }
+        }
+        ImGui::End();
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // Barra della Vita Boss Overlord (Livello 3+):
+    // ------------------------------------------------------------------------
+    if (m_hermite.isBoss() && m_state == GameState::PLAYING)
+    {
+        float bossW = 460.0f;
+        float bossH = 46.0f;
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 18.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2(bossW, bossH));
+        ImGui::Begin("BossHpBar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        float hpFrac = static_cast<float>(m_hermite.bossHp()) / static_cast<float>(m_hermite.bossMaxHp());
+        char bossBuf[96];
+        snprintf(bossBuf, sizeof(bossBuf), "ALIEN SENTINEL OVERLORD: %d / %d HP", m_hermite.bossHp(), m_hermite.bossMaxHp());
+
+        float tw = ImGui::CalcTextSize(bossBuf).x;
+        ImGui::SetCursorPosX(std::max(0.0f, (bossW - tw) * 0.5f));
+        ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.35f, 1.0f), "%s", bossBuf);
+
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.95f, 0.20f, 0.20f, 1.0f));
+        ImGui::ProgressBar(hpFrac, ImVec2(bossW - 16, 16), "");
+        ImGui::PopStyleColor();
+        ImGui::End();
+    }
 
     // ------------------------------------------------------------------------
     // Logica di Auto-Compressione Non Invasiva dell'HUD:
@@ -476,6 +714,34 @@ void GameWorld::renderUI(float dt)
         ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.35f, 1.0f), "Drone Rosso: ATTIVO E PERICOLOSO");
     }
 
+    // Badge Indicatori Power-Up Attivi (v2):
+    if (m_player.isShieldActive())
+    {
+        ImGui::TextColored(ImVec4(0.2f, 0.85f, 1.0f, 1.0f), "[SCUDO DEFLETTORE: %.1fs]", m_player.shieldTimeRemaining());
+    }
+    if (m_player.isSpreadShotActive())
+    {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.15f, 1.0f), "[LASER TRIPLO: %.1fs]", m_player.spreadShotTimeRemaining());
+    }
+    if (m_player.isMagnetActive())
+    {
+        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.5f, 1.0f), "[CALAMITA MONETE: %.1fs]", m_player.magnetTimeRemaining());
+    }
+
+    // Indicatore Afterburner & Arsenale (v2):
+    ImGui::Text("Afterburner [Shift]:");
+    ImGui::SameLine();
+    ImGui::ProgressBar(m_player.boostPercent(), ImVec2(120, 14), m_player.isBoosting() ? "BOOST!" : "");
+
+    if (m_empCooldown <= 0.0f)
+    {
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.85f, 1.0f), "[BOMBA EMP PRONTA: Premi 'E' o Click Destro]");
+    }
+    else
+    {
+        ImGui::TextDisabled("Bomba EMP in ricarica: %.1fs", m_empCooldown);
+    }
+
     if (m_hudCompact)
     {
         // Vista Compatta: spunta rapida Wireframe e pulsante per riespandere i dettagli
@@ -490,6 +756,14 @@ void GameWorld::renderUI(float dt)
 
         ImGui::SliderFloat("Slow-Motion", &m_timeScale, 0.1f, 2.0f, "%.2fx");
         ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
+        ImGui::SameLine();
+        ImGui::Checkbox("Scanner Radar", &m_showRadar);
+        ImGui::Checkbox("Modalita' Sandbox", &m_sandboxMode);
+        ImGui::SameLine();
+        ImGui::Checkbox("Fari (L)", &m_player.headlightsRef());
+        if (ImGui::SmallButton("Personalizza Livrea...")) m_showCustomizer = !m_showCustomizer;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Photo Mode [P]")) m_photoMode = true;
     }
     else
     {
@@ -503,8 +777,43 @@ void GameWorld::renderUI(float dt)
 
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.6f, 1.0f), "Comandi di Gioco:");
-        ImGui::BulletText("Frecce Direzionali: Spostamento della navicella (con scia al plasma)");
-        ImGui::BulletText("Barra Spazio: Sparo Laser per frantumare asteroidi e indebolire il Drone Rosso");
+        ImGui::BulletText("WASD / Frecce: Movimento della navicella");
+        ImGui::BulletText("Spazio: Sparo Laser | Q: Missili Guidati | E: Bomba EMP | Shift: Afterburner");
+        ImGui::BulletText("L: Fari Volumetrici | P: Modalita' Foto Freeze Frame");
+
+        // Arsenale e Super-Armi (v2):
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "Arsenale Bellico & Super-Armi (v2):");
+        if (ImGui::Button(m_empCooldown <= 0.0f ? "Innesca Bomba EMP [E]" : "EMP in Ricarica..."))
+        {
+            if (m_empCooldown <= 0.0f) triggerEmpBomb();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Lancia Missili Homing [Q]"))
+        {
+            if (m_missiles.canFire())
+            {
+                glm::vec2 pDir = m_player.direction();
+                glm::vec2 pSide(-pDir.y, pDir.x);
+                m_missiles.fire(m_player.position() + pSide * 26.0f, pDir);
+                m_missiles.fire(m_player.position() - pSide * 26.0f, pDir);
+                m_missiles.resetCooldown(0.85f);
+                AudioEngine::instance().playLaser();
+            }
+        }
+        ImGui::Checkbox("Fari Proiettori Volumetrici (L)", &m_player.headlightsRef());
+        ImGui::SameLine();
+        ImGui::Checkbox("Boss Overlord (Hermite v2)", m_hermite.getBossModePtr());
+
+        if (ImGui::Button("Personalizza Livrea Navetta..."))
+        {
+            m_showCustomizer = !m_showCustomizer;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Modalita' Foto [P]"))
+        {
+            m_photoMode = true;
+        }
 
         // Slider interattivo per la velocità di navigazione:
         float pSpeed = m_player.speed();
@@ -528,6 +837,103 @@ void GameWorld::renderUI(float dt)
         ImGui::Checkbox("Mostra Traiettoria Hermite (Lissajous)", m_hermite.getShowOrbitPtr());
         ImGui::SameLine();
         ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
+
+        // Controlli Post-Processing (FBO & CRT):
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.9f, 1.0f), "Post-Processing (FBO & Effetti Visivi):");
+        ImGui::Checkbox("Filtro CRT Retro Arcade", &m_postProcess.crtEnabled());
+        if (m_postProcess.crtEnabled())
+        {
+            ImGui::SliderFloat("Scanlines", &m_postProcess.scanlineIntensity(), 0.0f, 1.0f, "%.2f");
+            ImGui::SliderFloat("Aberrazione RGB", &m_postProcess.chromaticAberration(), 0.0f, 0.012f, "%.4f");
+        }
+        ImGui::SliderFloat("Vignettatura Cosmica", &m_postProcess.vignetteIntensity(), 0.0f, 1.0f, "%.2f");
+        if (ImGui::SmallButton("Test Shockwave al Centro"))
+        {
+            m_postProcess.triggerShockwave(glm::vec2(m_screenWidth * 0.5f, m_screenHeight * 0.5f), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.06f, 0.75f);
+        }
+
+        // Controlli Gameplay Spaziale (v2):
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.7f, 1.0f), "Meccaniche Spaziali & Power-Up (v2):");
+        bool bhActive = m_blackHole.isActive();
+        if (ImGui::Checkbox("Attiva Buco Nero (Attrazione Gravitazionale)", &bhActive))
+        {
+            m_blackHole.setActive(bhActive);
+        }
+        ImGui::Text("Genera Power-Up al volo:");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Scudo"))
+        {
+            m_powerUps.spawn(m_player.position() + glm::vec2(60.0f, 0.0f), PowerUpType::SHIELD);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Laser Triplo"))
+        {
+            m_powerUps.spawn(m_player.position() + glm::vec2(60.0f, 0.0f), PowerUpType::SPREAD_SHOT);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Calamita"))
+        {
+            m_powerUps.spawn(m_player.position() + glm::vec2(60.0f, 0.0f), PowerUpType::MAGNET);
+        }
+
+        // Sottosistema Audio Procedurale Chiptune & Radar Scanner (v2):
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "Audio Procedurale & Radar Scanner (v2):");
+        bool soundMuted = AudioEngine::instance().isMuted();
+        if (ImGui::Checkbox("Muto Audio", &soundMuted))
+        {
+            AudioEngine::instance().setMuted(soundMuted);
+        }
+        ImGui::SameLine();
+        ImGui::SliderFloat("Volume SFX", &AudioEngine::instance().volumeRef(), 0.0f, 1.0f, "%.2f");
+
+        ImGui::Checkbox("Scanner Radar Olografico", &m_showRadar);
+        ImGui::SameLine();
+        ImGui::Checkbox("Modalita' Sandbox (Editor Live)", &m_sandboxMode);
+
+        if (m_sandboxMode)
+        {
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.7f, 1.0f), "[MODALITA' SANDBOX - EDITOR DI LIVELLO]");
+            const char* spawnTypes[] = { "Asteroide", "Moneta Cosmica", "Power-Up Scudo", "Power-Up Laser Triplo", "Power-Up Calamita", "Buco Nero" };
+            ImGui::Combo("Entita' da generare", &m_sandboxSpawnType, spawnTypes, IM_ARRAYSIZE(spawnTypes));
+            ImGui::TextDisabled("Fai click col mouse nell'area di gioco per generare l'oggetto!");
+
+            if (ImGui::SmallButton("Genera 5 Asteroidi"))
+            {
+                for (int i = 0; i < 5; ++i)
+                {
+                    float rx = 100.0f + static_cast<float>(rand() % (m_screenWidth - 200));
+                    float ry = 100.0f + static_cast<float>(rand() % (m_screenHeight - 200));
+                    m_asteroids.spawnOne(glm::vec2(rx, ry), 0.8f + static_cast<float>(rand() % 5) * 0.1f);
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Pulisci Asteroidi"))
+            {
+                m_asteroids.clear();
+            }
+
+            if (ImGui::SmallButton("Ricarica Scudo"))
+            {
+                m_player.activateShield(18.0f);
+                AudioEngine::instance().playPowerUp();
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Cannoni Tripli"))
+            {
+                m_player.activateSpreadShot(15.0f);
+                AudioEngine::instance().playPowerUp();
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Calamita (15s)"))
+            {
+                m_player.activateMagnet(15.0f);
+                AudioEngine::instance().playPowerUp();
+            }
+        }
 
         // Regolazione interattiva dell'effetto psichedelico dello sfondo
         ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
@@ -554,6 +960,32 @@ void GameWorld::renderUI(float dt)
         }
     }
     ImGui::End();
+
+    // ------------------------------------------------------------------------
+    // Cantiere Navale - Personalizzazione Livrea (v2)
+    // ------------------------------------------------------------------------
+    if (m_showCustomizer)
+    {
+        ImGui::SetNextWindowSize(ImVec2(340, 310), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Cantiere Navale - Personalizzazione Livrea (v2)", &m_showCustomizer))
+        {
+            ImGui::TextColored(ImVec4(0.3f, 0.95f, 1.0f, 1.0f), "PRESET CROMATICI RAPIDI:");
+            if (ImGui::Button("Cobalt (Default)")) m_player.applyPresetCobalt();
+            ImGui::SameLine();
+            if (ImGui::Button("Phoenix (Fuoco)")) m_player.applyPresetPhoenix();
+            if (ImGui::Button("Void (Spettrale)")) m_player.applyPresetVoid();
+            ImGui::SameLine();
+            if (ImGui::Button("Matrix (Cyber)")) m_player.applyPresetMatrix();
+
+            ImGui::Separator();
+            ImGui::Text("Colorazione Componenti RGB:");
+            ImGui::ColorEdit3("Fusoliera & Muso", &m_player.hullColorRef().x);
+            ImGui::ColorEdit3("Ali a Delta", &m_player.wingColorRef().x);
+            ImGui::ColorEdit3("Vetro Cabina", &m_player.cockpitColorRef().x);
+            ImGui::ColorEdit3("Fiamme Reattori", &m_player.thrusterColorRef().x);
+        }
+        ImGui::End();
+    }
 
     // ------------------------------------------------------------------------
     // Finestra Classifica Piloti (Leaderboard)
@@ -692,6 +1124,38 @@ void GameWorld::renderUI(float dt)
         }
         ImGui::End();
     }
+
+    // ------------------------------------------------------------------------
+    // Gestione click per spawn nella modalita' Sandbox / Editor (v2):
+    // ------------------------------------------------------------------------
+    if (m_sandboxMode && !io.WantCaptureMouse && ImGui::IsMouseClicked(0))
+    {
+        float wx = io.MousePos.x;
+        float wy = static_cast<float>(m_screenHeight) - io.MousePos.y;
+        if (wx >= 20.0f && wx <= static_cast<float>(m_screenWidth) - 20.0f &&
+            wy >= 20.0f && wy <= static_cast<float>(m_screenHeight) - 20.0f)
+        {
+            glm::vec2 spawnPos(wx, wy);
+            switch (m_sandboxSpawnType)
+            {
+                case 0: m_asteroids.spawnOne(spawnPos, 1.0f); break;
+                case 1: m_collectibles.spawnOne(spawnPos); break;
+                case 2: m_powerUps.spawn(spawnPos, PowerUpType::SHIELD); break;
+                case 3: m_powerUps.spawn(spawnPos, PowerUpType::SPREAD_SHOT); break;
+                case 4: m_powerUps.spawn(spawnPos, PowerUpType::MAGNET); break;
+                case 5: m_blackHole.setPosition(spawnPos); m_blackHole.setActive(true); break;
+            }
+            AudioEngine::instance().playPowerUp();
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Scanner Radar Olografico Tattico (v2):
+    // ------------------------------------------------------------------------
+    if (m_showRadar)
+    {
+        renderRadar(static_cast<float>(glfwGetTime()));
+    }
 }
 
 // ============================================================================
@@ -703,6 +1167,7 @@ void GameWorld::nextLevel()
     m_currentLevel++;
     m_state = GameState::PLAYING;
     m_lasers.clear();
+    m_missiles.clear();
     m_hazards.reset();
     m_hazards.setLevel(m_currentLevel);
     m_hermite.setLevel(m_currentLevel);
@@ -728,6 +1193,7 @@ void GameWorld::restartGame()
     m_currentLevel = 1;
     m_state = GameState::PLAYING;
     m_lasers.clear();
+    m_missiles.clear();
     m_particles.clear();
     m_hazards.reset();
     m_hazards.setLevel(m_currentLevel);
@@ -740,3 +1206,173 @@ void GameWorld::restartGame()
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 }
+
+// ============================================================================
+// Scanner Radar Olografico Tattico (v2)
+// Visualizzatore vettoriale ImGui in tempo reale di tutte le entita' spaziali
+// ============================================================================
+void GameWorld::renderRadar(float currentTime)
+{
+    ImGui::SetNextWindowSize(ImVec2(240, 305), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(static_cast<float>(m_screenWidth) - 260.0f, 20.0f), ImGuiCond_FirstUseEver);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
+    if (ImGui::Begin("Scanner Radar Olografico (v2)", &m_showRadar, flags))
+    {
+        ImVec2 canvas_sz(210.0f, 210.0f);
+        ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();
+        ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+        // Sfondo circolare del radar
+        ImVec2 center = ImVec2(canvas_p0.x + canvas_sz.x * 0.5f, canvas_p0.y + canvas_sz.y * 0.5f);
+        float radius = canvas_sz.x * 0.5f - 4.0f;
+
+        drawList->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(10, 15, 22, 240), 6.0f);
+        drawList->AddCircleFilled(center, radius, IM_COL32(6, 26, 16, 235), 48);
+        drawList->AddCircle(center, radius, IM_COL32(35, 180, 90, 220), 48, 2.0f);
+
+        // Cerchi concentrici di portata
+        drawList->AddCircle(center, radius * 0.33f, IM_COL32(35, 140, 75, 90), 32, 1.0f);
+        drawList->AddCircle(center, radius * 0.66f, IM_COL32(35, 140, 75, 110), 32, 1.0f);
+
+        // Reticolo a croce
+        drawList->AddLine(ImVec2(center.x - radius, center.y), ImVec2(center.x + radius, center.y), IM_COL32(35, 140, 75, 80), 1.0f);
+        drawList->AddLine(ImVec2(center.x, center.y - radius), ImVec2(center.x, center.y + radius), IM_COL32(35, 140, 75, 80), 1.0f);
+
+        // Raggio rotante dello sweep del radar
+        float sweepAngle = currentTime * 2.2f;
+        ImVec2 sweepEnd = ImVec2(center.x + std::cos(sweepAngle) * radius, center.y + std::sin(sweepAngle) * radius);
+        drawList->AddLine(center, sweepEnd, IM_COL32(90, 255, 140, 210), 1.8f);
+
+        // Funzione di mappatura da coordinate mondo [0, W] x [0, H] a coordinate radar ImGui
+        // Nel mondo Y=0 e' in basso, mentre nel canvas ImGui Y cresce verso il basso.
+        auto worldToRadar = [&](const glm::vec2& wPos) -> ImVec2
+        {
+            float nx = (wPos.x - m_screenWidth * 0.5f) / (m_screenWidth * 0.5f);
+            float ny = - (wPos.y - m_screenHeight * 0.5f) / (m_screenHeight * 0.5f);
+            return ImVec2(center.x + nx * (radius * 0.90f), center.y + ny * (radius * 0.90f));
+        };
+
+        // 1. Buco Nero (Viola scuro pulsante)
+        if (m_blackHole.isActive())
+        {
+            ImVec2 bhPos = worldToRadar(m_blackHole.position());
+            drawList->AddCircleFilled(bhPos, 5.0f, IM_COL32(180, 50, 255, 230), 16);
+            drawList->AddCircle(bhPos, 7.5f, IM_COL32(230, 120, 255, 180), 16, 1.0f);
+        }
+
+        // 2. Warp Gate (Verde smeraldo / Ciano splendente)
+        if (m_hermite.gatePosition().x > 0.0f)
+        {
+            ImVec2 gatePos = worldToRadar(m_hermite.gatePosition());
+            drawList->AddCircleFilled(gatePos, 4.5f, IM_COL32(0, 240, 180, 230), 16);
+            drawList->AddCircle(gatePos, 6.5f, IM_COL32(140, 255, 220, 200), 16, 1.2f);
+        }
+
+        // 3. Drone Sentinella Rosso (Rosso se pericoloso, Giallo-Verde se indebolito)
+        {
+            ImVec2 dronePos = worldToRadar(m_hermite.dronePosition());
+            ImU32 droneCol = m_hermite.isWeakened() ? IM_COL32(120, 255, 80, 255) : IM_COL32(255, 45, 45, 255);
+            drawList->AddCircleFilled(dronePos, 4.0f, droneCol, 14);
+            drawList->AddCircle(dronePos, 6.0f, IM_COL32(255, 255, 255, 160), 14, 1.0f);
+
+            // Blip micro-droni di scorta del Boss (v2):
+            if (m_hermite.isBoss())
+            {
+                for (int i = 0; i < 2; ++i)
+                {
+                    if (m_hermite.isEscortActive(i))
+                    {
+                        ImVec2 escBlip = worldToRadar(m_hermite.escortPos(i));
+                        drawList->AddCircleFilled(escBlip, 2.5f, IM_COL32(255, 120, 120, 230), 8);
+                    }
+                }
+            }
+        }
+
+        // 4. Asteroidi (Punti grigio chiaro o ciano per i cristallini)
+        for (const auto& ast : m_asteroids.asteroids())
+        {
+            if (ast.active)
+            {
+                ImVec2 aPos = worldToRadar(ast.pos);
+                ImU32 aCol = ast.isCrystal ? IM_COL32(100, 235, 255, 240) : IM_COL32(190, 195, 205, 210);
+                drawList->AddCircleFilled(aPos, ast.isCrystal ? 2.8f : 2.2f, aCol, 8);
+            }
+        }
+
+        // 5. Monete d'Oro Cosmiche (Punti dorati accesi)
+        for (const auto& coin : m_collectibles.coins())
+        {
+            if (!coin.collected)
+            {
+                ImVec2 cPos = worldToRadar(coin.currentPos);
+                drawList->AddCircleFilled(cPos, 2.8f, IM_COL32(255, 215, 30, 255), 10);
+            }
+        }
+
+        // 6. Power-Up (Punti azzurri / ciano con anello)
+        for (const auto& pu : m_powerUps.instances())
+        {
+            ImVec2 pPos = worldToRadar(pu.pos);
+            drawList->AddCircleFilled(pPos, 3.5f, IM_COL32(50, 220, 255, 255), 10);
+            drawList->AddCircle(pPos, 5.0f, IM_COL32(255, 255, 255, 200), 10, 1.0f);
+        }
+
+        // 7. Navicella del Giocatore (Triangolo verde brillante orientato o blip con scudo)
+        {
+            ImVec2 plPos = worldToRadar(m_player.position());
+            drawList->AddCircleFilled(plPos, 3.8f, IM_COL32(40, 255, 110, 255), 12);
+            if (m_player.isShieldActive())
+            {
+                drawList->AddCircle(plPos, 6.2f, IM_COL32(70, 200, 255, 255), 12, 1.5f);
+            }
+        }
+
+        // Riserva lo spazio per il canvas in ImGui
+        ImGui::Dummy(canvas_sz);
+
+        // Legenda compatta
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.4f, 1.0f), "[*] Tu");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "[*] Drone");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.1f, 1.0f), "[$] Oro");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.2f, 0.85f, 1.0f, 1.0f), "[+] Bonus");
+    }
+    ImGui::End();
+}
+
+// ============================================================================
+// Innesco Bomba ad Impulsi Elettromagnetici EMP (v2)
+// ============================================================================
+void GameWorld::triggerEmpBomb()
+{
+    m_empCooldown = m_maxEmpCooldown;
+
+    // 1. Onda d'urto FBO rifrattiva massiccia
+    m_postProcess.triggerShockwave(m_player.position(), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.085f, 0.95f);
+    triggerScreenShake(0.38f, 14.0f);
+
+    // 2. Impulso fisico circolare sugli asteroidi vicini (repulsione newtoniana inversa)
+    m_asteroids.applyImpulse(m_player.position(), 520.0f, 420.0f);
+
+    // 3. Stordisce il Drone Nemico se nel raggio d'azione
+    int empBonus = 0;
+    m_hermite.checkLaserHit(m_hermite.dronePosition(), 120.0f, m_particles, empBonus);
+    if (empBonus > 0) m_player.addScore(empBonus);
+
+    // 4. Annulla tutti i pericoli e raggi laser nemici attivi
+    m_hazards.reset();
+
+    // 5. Emette l'onda di archi al plasma azzurri
+    m_particles.emitEmpWave(m_player.position(), 340.0f, 54);
+
+    // 6. Effetto audio dedicato
+    AudioEngine::instance().playShieldDeflect();
+}
+

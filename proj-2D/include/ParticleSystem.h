@@ -63,6 +63,12 @@ public:
     // Emette la scia di plasma particellare dietro i post-bruciatori della navicella in spinta.
     void emitThrusterTrail(const glm::vec2& origin, const glm::vec2& shipDir, float intensity);
 
+    // Emette un anello di archi elettrici al plasma per la detonazione EMP (v2):
+    void emitEmpWave(const glm::vec2& origin, float radius = 280.0f, int count = 48);
+
+    // Emette scintille prismatiche azzurre/magenta per asteroidi cristallini e gemme (v2):
+    void emitCrystalSparkles(const glm::vec2& origin, int count = 24);
+
     // Cancella istantaneamente tutte le particelle attualmente attive.
     void clear() { m_particles.clear(); }
 
