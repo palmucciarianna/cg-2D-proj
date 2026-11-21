@@ -49,8 +49,48 @@ public:
     // Restituisce il volume di collisione circolare centrato sulla fusoliera (raggio 28px).
     CircleCollider getCollider() const;
 
-    // Infligge 1 punto danno scalando le vite e attivando il timer di invulnerabilità temporanea.
-    void takeDamage();
+    // Infligge 1 punto danno scalando le vite o assorbendolo tramite lo scudo energetico.
+    // Restituisce true se la navicella ha perso una vita, false se il colpo è stato deflesso dallo scudo.
+    bool takeDamage();
+
+    // Meccaniche Scudo Energetico Hex (v2):
+    void activateShield(float duration = 18.0f);
+    bool isShieldActive() const { return m_shieldActive; }
+    float shieldTimeRemaining() const { return m_shieldTimer; }
+
+    // Meccanica Laser Triplo / Spread Shot (v2):
+    void activateSpreadShot(float duration = 14.0f);
+    bool isSpreadShotActive() const { return m_spreadShotActive; }
+    float spreadShotTimeRemaining() const { return m_spreadShotTimer; }
+
+    // Meccanica Calamita Magnetica Monete (v2):
+    void activateMagnet(float duration = 16.0f);
+    bool isMagnetActive() const { return m_magnetActive; }
+    float magnetTimeRemaining() const { return m_magnetTimer; }
+
+    // Meccanica Fari Volumetrici / Illuminazione Dinamica 2D (v2):
+    void setHeadlights(bool active) { m_headlightsActive = active; }
+    bool headlightsActive() const { return m_headlightsActive; }
+    bool& headlightsRef() { return m_headlightsActive; }
+
+    // Meccanica Iper-Propulsione Afterburner (v2):
+    bool isBoosting() const { return m_isBoosting; }
+    float boostGauge() const { return m_boostGauge; }
+    float boostPercent() const { return m_boostGauge / m_maxBoost; }
+
+    // Personalizzazione Livrea Navicella (Starfighter Hull Customizer v2):
+    glm::vec4& hullColorRef() { return m_hullColor; }
+    glm::vec4& wingColorRef() { return m_wingColor; }
+    glm::vec4& cockpitColorRef() { return m_cockpitColor; }
+    glm::vec4& thrusterColorRef() { return m_thrusterColor; }
+
+    void applyPresetCobalt();
+    void applyPresetPhoenix();
+    void applyPresetVoid();
+    void applyPresetMatrix();
+
+    // Applicazione di forze cinematiche esterne (es. attrazione gravitazionale buco nero)
+    void addVelocity(const glm::vec2& impulse) { m_velocity += impulse; }
 
     // Restituisce true se la navicella ha ancora vite residue (> 0).
     bool isAlive() const { return m_lives > 0; }
@@ -134,4 +174,31 @@ private:
     Geometry m_flameHaloGeo;      // Alone esterno espanso della fiamma
     Geometry m_beaconGreenGeo;    // Luce di navigazione verde a dritta
     Geometry m_beaconRedGeo;      // Luce di navigazione rossa a sinistra
+
+    // Geometria e stati per le meccaniche speciali (v2):
+    Geometry m_shieldGeo;         // Barriera energetica esagonale deflettrice
+    bool m_shieldActive = false;  // Flag di scudo attivo
+    float m_shieldTimer = 0.0f;   // Durata residua dello scudo
+    float m_shieldHitAnim = 0.0f; // Animazione di impatto e deflessione su scudo
+
+    bool m_spreadShotActive = false; // Flag cannone laser triplo
+    float m_spreadShotTimer = 0.0f;  // Durata residua laser triplo
+
+    bool m_magnetActive = false;     // Flag calamita monete
+    float m_magnetTimer = 0.0f;      // Durata residua calamita monete
+
+    // Fari volumetrici conici (v2):
+    Geometry m_headlightGeo;
+    bool m_headlightsActive = true;
+
+    // Afterburner boost relativistico (v2):
+    bool m_isBoosting = false;
+    float m_boostGauge = 3.0f;
+    float m_maxBoost = 3.0f;
+
+    // Tinte personalizzabili della livrea (v2):
+    glm::vec4 m_hullColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec4 m_wingColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec4 m_cockpitColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    glm::vec4 m_thrusterColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 };

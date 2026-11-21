@@ -183,6 +183,40 @@ void Player::init()
         glm::vec4(0.8f, 0.1f, 0.1f, 0.2f));
     m_beaconRedGeo.setData(beaconRed.positions, beaconRed.colors, beaconRed.primitiveType);
     m_beaconRedGeo.upload();
+
+    // ------------------------------------------------------------------------
+    // 9. Creazione Barriera Energetica Esagonale (Hex Shield Bubble v2)
+    // ------------------------------------------------------------------------
+    MeshData shieldMesh = ShapeGenerator::createCircle(0.0f, 0.0f, 48.0f, 48.0f, 20,
+        glm::vec4(0.15f, 0.75f, 1.0f, 0.30f),
+        glm::vec4(0.40f, 0.95f, 1.0f, 0.85f));
+    m_shieldGeo.setData(shieldMesh.positions, shieldMesh.colors, shieldMesh.primitiveType);
+    m_shieldGeo.upload();
+
+    // ------------------------------------------------------------------------
+    // 10. Fari Conici Volumetrici Proiettati in Avanti (Headlights v2)
+    // ------------------------------------------------------------------------
+    std::vector<glm::vec3> hlPositions;
+    std::vector<glm::vec4> hlColors;
+
+    hlPositions.push_back(glm::vec3(0.0f, 24.0f, 0.0f));
+    hlColors.push_back(glm::vec4(0.95f, 0.98f, 1.0f, 0.38f)); // Apice conico
+
+    int hlSegments = 16;
+    float startAng = glm::radians(58.0f);
+    float endAng = glm::radians(122.0f);
+    float hlRadius = 420.0f;
+
+    for (int i = 0; i <= hlSegments; ++i)
+    {
+        float t = static_cast<float>(i) / static_cast<float>(hlSegments);
+        float a = startAng + t * (endAng - startAng);
+        hlPositions.push_back(glm::vec3(std::cos(a) * hlRadius, std::sin(a) * hlRadius, 0.0f));
+        hlColors.push_back(glm::vec4(0.20f, 0.55f, 1.0f, 0.0f));
+    }
+
+    m_headlightGeo.setData(hlPositions, hlColors, GL_TRIANGLE_FAN);
+    m_headlightGeo.upload();
 }
 
 // ============================================================================
@@ -200,6 +234,15 @@ void Player::reset(const glm::vec2& startPos)
     // IMPORTANTE: m_score NON viene azzerato, garantendo la cumulatività del punteggio
     // durante l'intera durata dell'applicazione fino alla chiusura della finestra.
     m_invulnerableTimer = 0.0f;
+
+    // Reset power-ups e scudo speciale (v2)
+    m_shieldActive = false;
+    m_shieldTimer = 0.0f;
+    m_shieldHitAnim = 0.0f;
+    m_spreadShotActive = false;
+    m_spreadShotTimer = 0.0f;
+    m_magnetActive = false;
+    m_magnetTimer = 0.0f;
 }
 
 // ============================================================================
@@ -211,6 +254,28 @@ void Player::update(float dt, GLFWwindow* window, int screenWidth, int screenHei
     if (m_fireCooldown > 0.0f) m_fireCooldown -= dt;
     if (m_invulnerableTimer > 0.0f) m_invulnerableTimer -= dt;
 
+    // Aggiornamento timer speciali (v2):
+    if (m_shieldTimer > 0.0f)
+    {
+        m_shieldTimer -= dt;
+        if (m_shieldTimer <= 0.0f) m_shieldActive = false;
+    }
+    if (m_shieldHitAnim > 0.0f)
+    {
+        m_shieldHitAnim -= dt * 3.5f;
+        if (m_shieldHitAnim < 0.0f) m_shieldHitAnim = 0.0f;
+    }
+    if (m_spreadShotTimer > 0.0f)
+    {
+        m_spreadShotTimer -= dt;
+        if (m_spreadShotTimer <= 0.0f) m_spreadShotActive = false;
+    }
+    if (m_magnetTimer > 0.0f)
+    {
+        m_magnetTimer -= dt;
+        if (m_magnetTimer <= 0.0f) m_magnetActive = false;
+    }
+
     // Rileva la pressione dei tasti direzionali: supporta sia WASD che le Frecce Direzionali.
     glm::vec2 inputDir(0.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)    inputDir.y += 1.0f;
@@ -219,24 +284,46 @@ void Player::update(float dt, GLFWwindow* window, int screenWidth, int screenHei
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) inputDir.x += 1.0f;
 
     bool isMoving = (glm::length(inputDir) > 0.01f);
+    bool shiftDown = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+
+    if (isMoving && shiftDown && m_boostGauge > 0.05f)
+    {
+        m_isBoosting = true;
+        m_boostGauge = std::max(0.0f, m_boostGauge - dt);
+    }
+    else
+    {
+        m_isBoosting = false;
+        m_boostGauge = std::min(m_maxBoost, m_boostGauge + dt * 0.85f);
+    }
+
+    float currentSpeed = m_isBoosting ? (m_speed * 1.95f) : m_speed;
+
     if (isMoving)
     {
         // Normalizza il vettore per evitare velocità diagonale maggiorata (sqrt(2) = 1.414).
         inputDir = glm::normalize(inputDir);
 
         // Integrazione numerica di Eulero: posizione = posizione + velocita * delta_t.
-        m_pos += inputDir * m_speed * dt;
+        m_pos += inputDir * currentSpeed * dt;
 
         // Calcola l'angolo di orientamento cartesiano in gradi: theta = atan2(dy, dx).
         m_angle = glm::degrees(std::atan2(inputDir.y, inputDir.x));
 
-        // Incrementa la spinta dei propulsori con rampa graduale fino a 1.0.
-        m_thrustIntensity = std::min(m_thrustIntensity + dt * 8.0f, 1.0f);
+        // Incrementa la spinta dei propulsori con rampa graduale fino a 1.0 (piu' rapida con boost).
+        m_thrustIntensity = std::min(m_thrustIntensity + dt * (m_isBoosting ? 14.0f : 8.0f), 1.0f);
     }
     else
     {
         // Dissolve gradualmente la spinta del motore all'arresto.
         m_thrustIntensity = std::max(m_thrustIntensity - dt * 5.0f, 0.0f);
+    }
+
+    // Integrazione dell'impulso di velocita' esterna (es. campo gravitazionale buco nero):
+    if (glm::length(m_velocity) > 0.001f)
+    {
+        m_pos += m_velocity * dt;
+        m_velocity *= std::max(0.0f, 1.0f - dt * 3.2f);
     }
 
     // Vincola la posizione all'interno dei confini visibili dello schermo (Clamping).
@@ -250,18 +337,15 @@ void Player::update(float dt, GLFWwindow* window, int screenWidth, int screenHei
 void Player::draw(const Shader& shader, float currentTime, const glm::mat4& projection)
 {
     // Feedback visivo di invulnerabilità: lampeggio stroboscopico con onda sinusoidale.
+    glm::vec4 invulnTint(1.0f);
     if (m_invulnerableTimer > 0.0f)
     {
         float blink = std::sin(currentTime * 28.0f);
         if (blink < 0.0f)
-            shader.setVec4("uColorTint", glm::vec4(1.0f, 0.35f, 0.35f, 0.85f));
-        else
-            shader.setVec4("uColorTint", glm::vec4(1.0f));
+            invulnTint = glm::vec4(1.0f, 0.35f, 0.35f, 0.85f);
     }
-    else
-    {
-        shader.setVec4("uColorTint", glm::vec4(1.0f));
-    }
+
+    shader.setVec4("uColorTint", invulnTint);
 
     // ------------------------------------------------------------------------
     // Matrice Radice della Navicella (Root Transformation)
@@ -273,16 +357,29 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     playerRoot = glm::rotate(playerRoot, glm::radians(m_angle - 90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
     // ------------------------------------------------------------------------
+    // 0. Fari Conici Volumetrici Proiettati in Avanti (Headlights v2)
+    // ------------------------------------------------------------------------
+    if (m_headlightsActive)
+    {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        shader.setMat4("model", playerRoot);
+        shader.setVec4("uColorTint", glm::vec4(1.0f, 1.0f, 1.0f, 0.85f));
+        m_headlightGeo.draw();
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    // ------------------------------------------------------------------------
     // 1. Ali a Freccia Gerarchiche (Simmetria tramite Scala Negativa)
     // ------------------------------------------------------------------------
+    shader.setVec4("uColorTint", invulnTint * m_wingColor);
+
     // Ala Destra:
     glm::mat4 wingRight = glm::translate(playerRoot, glm::vec3(18.0f, -6.0f, 0.0f));
     wingRight = glm::scale(wingRight, glm::vec3(26.0f, 32.0f, 1.0f));
     shader.setMat4("model", wingRight);
     m_wingsGeo.draw();
 
-    // Ala Sinistra: ottenuta specchiando la stessa geometria dell'ala destra lungo l'asse X locale
-    // tramite una matrice di riflessione con scala negativa: S(-26.0f, 32.0f, 1.0f).
+    // Ala Sinistra: specchiata con scala negativa su X:
     glm::mat4 wingLeft = glm::translate(playerRoot, glm::vec3(-18.0f, -6.0f, 0.0f));
     wingLeft = glm::scale(wingLeft, glm::vec3(-26.0f, 32.0f, 1.0f));
     shader.setMat4("model", wingLeft);
@@ -291,6 +388,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 2. Doppi Cannoni Laser sulle Punte Alari
     // ------------------------------------------------------------------------
+    shader.setVec4("uColorTint", invulnTint);
     glm::mat4 cannonRight = glm::translate(playerRoot, glm::vec3(31.0f, 4.0f, 0.0f));
     shader.setMat4("model", cannonRight);
     m_cannonsGeo.draw();
@@ -302,6 +400,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 3. Fusoliera Centrale Rastremata
     // ------------------------------------------------------------------------
+    shader.setVec4("uColorTint", invulnTint * m_hullColor);
     glm::mat4 fuseMat = glm::translate(playerRoot, glm::vec3(0.0f, -4.0f, 0.0f));
     shader.setMat4("model", fuseMat);
     m_fuselageGeo.draw();
@@ -317,6 +416,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 5. Cupolino Cabina & Texture Viso Pilota SOPRA la Cabina
     // ------------------------------------------------------------------------
+    shader.setVec4("uColorTint", invulnTint * m_cockpitColor);
     glm::mat4 canopyMat = glm::translate(playerRoot, glm::vec3(0.0f, 5.0f, 0.0f));
     shader.setMat4("model", canopyMat);
     m_canopyGeo.draw(); // Disegna prima la base della cabina in cristallo turchese
@@ -360,6 +460,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     }
 
     // Disegna il riflesso geometrico in vetro sul cupolino (sopra la foto).
+    shader.setVec4("uColorTint", invulnTint);
     shader.setMat4("model", canopyMat);
     m_canopyShineGeo.draw();
 
@@ -375,13 +476,17 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     m_thrusterNozzleGeo.draw();
 
     // ------------------------------------------------------------------------
-    // 7. Fiamme di Propulsione Animate (Doppio Post-Bruciatore)
+    // 7. Fiamme di Propulsione Animate (Doppio Post-Bruciatore / Afterburner v2)
     // ------------------------------------------------------------------------
     if (m_thrustIntensity > 0.02f)
     {
-        // Lunghezza pulsante modulata da funzione armonica sinusoidale ad alta frequenza (35 rad/s).
-        float flameLength = (24.0f + 14.0f * std::sin(currentTime * 35.0f)) * m_thrustIntensity;
-        float flameWidth  = 12.0f * m_thrustIntensity;
+        float boostMult = m_isBoosting ? 2.1f : 1.0f;
+        float flameFreq = m_isBoosting ? 50.0f : 35.0f;
+        float flameLength = (24.0f + 14.0f * std::sin(currentTime * flameFreq)) * m_thrustIntensity * boostMult;
+        float flameWidth  = (12.0f + (m_isBoosting ? 4.0f : 0.0f)) * m_thrustIntensity;
+
+        glm::vec4 thrusterTint = m_isBoosting ? glm::vec4(1.4f, 1.4f, 1.8f, 1.0f) * m_thrusterColor : m_thrusterColor;
+        shader.setVec4("uColorTint", thrusterTint);
 
         // Propulsore Destro:
         glm::mat4 flameRight = glm::translate(playerRoot, glm::vec3(10.0f, -32.0f, 0.0f));
@@ -421,6 +526,33 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
         m_beaconRedGeo.draw();
     }
 
+    // ------------------------------------------------------------------------
+    // 9. Scudo Deflettore Energetico (Hex Shield Bubble v2)
+    // ------------------------------------------------------------------------
+    if (m_shieldActive || m_shieldHitAnim > 0.01f)
+    {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+        float shieldPulse = 0.82f + 0.18f * std::sin(currentTime * 7.0f);
+        float shieldAlpha = m_shieldActive ? (0.42f * shieldPulse) : (m_shieldHitAnim * 0.85f);
+        glm::vec4 shieldColor = m_shieldActive
+            ? glm::vec4(0.2f, 0.8f, 1.0f, shieldAlpha)
+            : glm::vec4(1.0f, 0.35f, 0.85f, shieldAlpha);
+
+        shader.setVec4("uColorTint", shieldColor);
+        glm::mat4 shieldModel = glm::rotate(playerRoot, currentTime * 1.8f, glm::vec3(0, 0, 1));
+        shader.setMat4("model", shieldModel);
+        m_shieldGeo.draw();
+
+        // Anello interno rotante in direzione opposta
+        glm::mat4 innerShield = glm::rotate(playerRoot, -currentTime * 2.4f, glm::vec3(0, 0, 1));
+        innerShield = glm::scale(innerShield, glm::vec3(0.72f, 0.72f, 1.0f));
+        shader.setMat4("model", innerShield);
+        m_shieldGeo.draw();
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
     // Ripristina la tinta colore globale a bianco (1.0).
     shader.setVec4("uColorTint", glm::vec4(1.0f));
 }
@@ -437,14 +569,44 @@ CircleCollider Player::getCollider() const
 // ============================================================================
 // Applicazione Danni e Attivazione Invulnerabilità
 // ============================================================================
-void Player::takeDamage()
+bool Player::takeDamage()
 {
     // Subisce danno solo se la finestra di invulnerabilità post-impatto è esaurita.
     if (m_invulnerableTimer <= 0.0f)
     {
+        if (m_shieldActive)
+        {
+            // Lo scudo energetico hex deflette completamente l'impatto letale!
+            m_shieldActive = false;
+            m_shieldTimer = 0.0f;
+            m_shieldHitAnim = 1.0f;
+            m_invulnerableTimer = 0.75f;
+            return false; // Assorbito con successo, nessuna vita persa!
+        }
+
         m_lives--;
         m_invulnerableTimer = 1.6f; // 1.6 secondi di immunità temporanea
+        return true; // Danno effettivo allo scafo subito
     }
+    return false;
+}
+
+void Player::activateShield(float duration)
+{
+    m_shieldActive = true;
+    m_shieldTimer = duration;
+}
+
+void Player::activateSpreadShot(float duration)
+{
+    m_spreadShotActive = true;
+    m_spreadShotTimer = duration;
+}
+
+void Player::activateMagnet(float duration)
+{
+    m_magnetActive = true;
+    m_magnetTimer = duration;
 }
 
 // ============================================================================
@@ -458,4 +620,39 @@ bool Player::reloadFaceTexture(const std::string& path)
         return true;
     }
     return false;
+}
+
+// ============================================================================
+// Preset Cromatici Livrea (Starfighter Hull Customizer v2)
+// ============================================================================
+void Player::applyPresetCobalt()
+{
+    m_hullColor     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    m_wingColor     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    m_cockpitColor  = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    m_thrusterColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void Player::applyPresetPhoenix()
+{
+    m_hullColor     = glm::vec4(1.35f, 0.45f, 0.15f, 1.0f); // Fusoliera rosso fuoco
+    m_wingColor     = glm::vec4(1.25f, 0.85f, 0.18f, 1.0f); // Ali oro solare
+    m_cockpitColor  = glm::vec4(1.20f, 0.90f, 0.35f, 1.0f); // Vetro ambra
+    m_thrusterColor = glm::vec4(1.40f, 0.55f, 0.10f, 1.0f); // Fiamme solari
+}
+
+void Player::applyPresetVoid()
+{
+    m_hullColor     = glm::vec4(0.85f, 0.35f, 1.30f, 1.0f); // Fusoliera viola spettrale
+    m_wingColor     = glm::vec4(0.50f, 0.15f, 0.90f, 1.0f); // Ali ametista oscura
+    m_cockpitColor  = glm::vec4(1.00f, 0.40f, 0.90f, 1.0f); // Vetro magenta
+    m_thrusterColor = glm::vec4(0.90f, 0.20f, 1.25f, 1.0f); // Fiamme void al plasma
+}
+
+void Player::applyPresetMatrix()
+{
+    m_hullColor     = glm::vec4(0.25f, 1.25f, 0.45f, 1.0f); // Verde neon cyber
+    m_wingColor     = glm::vec4(0.12f, 0.80f, 0.30f, 1.0f); // Ali verde matrice
+    m_cockpitColor  = glm::vec4(0.40f, 1.30f, 0.60f, 1.0f); // Vetro smeraldo
+    m_thrusterColor = glm::vec4(0.30f, 1.40f, 0.50f, 1.0f); // Fiamme ioniche verdi
 }
