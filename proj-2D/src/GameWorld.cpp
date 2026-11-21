@@ -199,8 +199,8 @@ void GameWorld::update(float dt, GLFWwindow* window)
     }
     lastKeyL = currKeyL;
 
-    // In Modalita' Fotografica si sospende l'avanzamento fisico del mondo
-    if (m_photoMode)
+    // In Modalita' Fotografica o Pausa Impostazioni si sospende l'avanzamento fisico del mondo
+    if (m_photoMode || m_isPaused)
     {
         return;
     }
@@ -585,6 +585,15 @@ void GameWorld::renderUI(float dt)
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    // Funzione lambda per centrare orizzontalmente le scritte all'interno dei banner ImGui.
+    auto renderCenteredText = [](const char* text, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
+    {
+        float windowWidth = ImGui::GetWindowSize().x;
+        float textWidth = ImGui::CalcTextSize(text).x;
+        ImGui::SetCursorPosX(std::max(0.0f, (windowWidth - textWidth) * 0.5f));
+        ImGui::TextColored(color, "%s", text);
+    };
+
     // ------------------------------------------------------------------------
     // Studio Fotografico Spaziale (Photo Mode v2):
     // ------------------------------------------------------------------------
@@ -657,24 +666,66 @@ void GameWorld::renderUI(float dt)
     }
 
     // ------------------------------------------------------------------------
-    // Logica di Auto-Compressione Non Invasiva dell'HUD:
-    // All'avvio la finestra è completamente espansa per mostrare le istruzioni.
-    // Al primo click eseguito sull'area di gioco (ma NON sui widget ImGui come gli slider),
-    // la finestra si riduce automaticamente per liberare la visuale di gioco.
-    // Il controllo !io.WantCaptureMouse garantisce che l'interazione con l'HUD non chiuda la finestra!
+    // Rilevamento Interazione Mouse per Pausa Automatica e Ripresa Gioco (v2)
     // ------------------------------------------------------------------------
-    if (!m_hudCompact)
+    if (m_autoPauseOnSettings && m_state == GameState::PLAYING)
     {
-        bool clickedOnGameArea = !io.WantCaptureMouse && (io.MouseClicked[0] || io.MouseClicked[1]);
-        if (clickedOnGameArea)
+        // Se l'utente clicca su un qualsiasi elemento o finestra delle impostazioni ImGui, attiva la pausa:
+        if (!m_isPaused && io.WantCaptureMouse && (io.MouseClicked[0] || io.MouseClicked[1]))
         {
-            m_hudCompact = true;
+            m_isPaused = true;
+        }
+        // Se il gioco e' in pausa e l'utente clicca nell'area di gioco (spazio cosmico), riprendi la simulazione:
+        else if (m_isPaused && !io.WantCaptureMouse && (io.MouseClicked[0] || io.MouseClicked[1]))
+        {
+            m_isPaused = false;
         }
     }
 
-    // Finestra Principale HUD ("Mission Control")
+    // ------------------------------------------------------------------------
+    // Banner Grafico Pausa Gioco Attiva (Centrato in alto)
+    // ------------------------------------------------------------------------
+    if (m_isPaused && m_state == GameState::PLAYING)
+    {
+        float pBannerW = 540.0f;
+        float pBannerH = 68.0f;
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 68.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2(pBannerW, pBannerH));
+        ImGui::Begin("GamePausedBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::Dummy(ImVec2(0.0f, 2.0f));
+        ImGui::SetWindowFontScale(1.22f);
+        renderCenteredText("|| GIOCO IN PAUSA (REGOLAZIONE IMPOSTAZIONI)", ImVec4(1.0f, 0.85f, 0.2f, 1.0f));
+        ImGui::SetWindowFontScale(0.95f);
+        renderCenteredText("Clicca sullo sfondo cosmico o su 'Riprendi' per tornare alla navigazione!", ImVec4(0.85f, 1.0f, 0.9f, 1.0f));
+        ImGui::End();
+    }
+
+    // Finestra Principale HUD ("Mission Control & Impostazioni")
     ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Astro-Miner 2D - Mission Control", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(340, 240), ImVec2(480, 680));
+    ImGui::Begin("Astro-Miner 2D - Mission Control & Impostazioni", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    // Controlli Rapidi Pausa / Ripresa Gioco:
+    if (m_isPaused)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.70f, 0.28f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.85f, 0.35f, 1.0f));
+        if (ImGui::Button(" > RIPRENDI PARTITA (o clicca sullo schermo) ", ImVec2(-1, 32)))
+        {
+            m_isPaused = false;
+        }
+        ImGui::PopStyleColor(2);
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "[PAUSA ATTIVA: Simulazione fisica sospesa]");
+    }
+    else
+    {
+        if (ImGui::Button(" || METTI IN PAUSA ", ImVec2(-1, 24)))
+        {
+            m_isPaused = true;
+        }
+    }
+    ImGui::Checkbox("Pausa automatica cliccando sulle impostazioni", &m_autoPauseOnSettings);
+    ImGui::Separator();
 
     ImGui::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "LIVELLO ATTUALE: %d", m_currentLevel);
     ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "PUNTEGGIO TOTALE: %d", m_player.score());
@@ -693,7 +744,7 @@ void GameWorld::renderUI(float dt)
     ImGui::Separator();
     ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "MONETE: %d / %d", m_collectibles.collectedCoins(), m_collectibles.totalCoins());
     float coinProgress = static_cast<float>(m_collectibles.collectedCoins()) / static_cast<float>(m_collectibles.totalCoins());
-    ImGui::ProgressBar(coinProgress, ImVec2(m_hudCompact ? 160 : 240, m_hudCompact ? 16 : 22));
+    ImGui::ProgressBar(coinProgress, ImVec2(240, 20));
 
     if (!m_collectibles.allCollected())
     {
@@ -742,48 +793,99 @@ void GameWorld::renderUI(float dt)
         ImGui::TextDisabled("Bomba EMP in ricarica: %.1fs", m_empCooldown);
     }
 
-    if (m_hudCompact)
+    // ========================================================================
+    // SEZIONE 1: IMPOSTAZIONI NAVICELLA & VOLO (ORIGINALI)
+    // ========================================================================
+    if (ImGui::CollapsingHeader("Impostazioni Navicella & Volo", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        // Vista Compatta: spunta rapida Wireframe e pulsante per riespandere i dettagli
-        ImGui::Separator();
-        ImGui::Checkbox("Wireframe", &m_wireframe);
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Espandi Dettagli [+]"))
+        // Slider interattivo per la velocità di navigazione (Requisito didattico di laboratorio):
+        float pSpeed = m_player.speed();
+        if (ImGui::SliderFloat("Velocita' Navicella", &pSpeed, 120.0f, 850.0f, "%.0f px/s"))
         {
-            m_hudCompact = false;
+            m_player.setSpeed(pSpeed);
         }
-        ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("Scorciatoia: premi Shift + Su/Giu o +/- per regolare la velocita'");
 
-        ImGui::SliderFloat("Slow-Motion", &m_timeScale, 0.1f, 2.0f, "%.2fx");
-        ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
+        ImGui::Checkbox("Fari Proiettori Volumetrici (L)", &m_player.headlightsRef());
+
+        if (ImGui::Button("Personalizza Livrea Navetta..."))
+        {
+            m_showCustomizer = !m_showCustomizer;
+        }
         ImGui::SameLine();
-        ImGui::Checkbox("Scanner Radar", &m_showRadar);
-        ImGui::Checkbox("Modalita' Sandbox", &m_sandboxMode);
-        ImGui::SameLine();
-        ImGui::Checkbox("Fari (L)", &m_player.headlightsRef());
-        if (ImGui::SmallButton("Personalizza Livrea...")) m_showCustomizer = !m_showCustomizer;
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Photo Mode [P]")) m_photoMode = true;
+        if (ImGui::Button("Ricarica Texture Cabina"))
+        {
+            m_player.reloadFaceTexture("assets/textures/player_face.bmp") ||
+            m_player.reloadFaceTexture("assets/textures/player_face.png") ||
+            m_player.reloadFaceTexture("assets/textures/player_face.jpg");
+        }
+
+        if (ImGui::Button("Riavvia Partita"))
+        {
+            restartGame();
+        }
     }
-    else
+
+    // ========================================================================
+    // SEZIONE 2: GRAFICA, POST-PROCESSING & SHADERS (ORIGINALI + v2)
+    // ========================================================================
+    if (ImGui::CollapsingHeader("Grafica, Post-Processing & Shaders", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        // Vista Dettagliata: spiegazione regole, comandi e controlli avanzati
-        ImGui::Text("Asteroidi rimasti: %d", m_asteroids.activeCount());
+        // Spunta Wireframe (Requisito didattico di laboratorio):
+        ImGui::Checkbox("Modalita' Wireframe (Mesh reticolari)", &m_wireframe);
 
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.4f, 0.85f, 1.0f, 1.0f), "Regole di Gioco:");
-        ImGui::BulletText("Alien Drone (Rosso): Colpiscilo con il laser per INDEBOLIRLO e renderlo innocuo!");
-        ImGui::BulletText("Warp Gate (Portale): Raccogli 5 monete e volaci dentro per chiudere la partita!");
+        // Regolazione interattiva dell'effetto psichedelico dello sfondo:
+        ImGui::SliderFloat("Effetto Psichedelico Sfondo", &m_psychedelic, 0.0f, 1.0f, "%.2f");
 
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.6f, 1.0f), "Comandi di Gioco:");
-        ImGui::BulletText("WASD / Frecce: Movimento della navicella");
-        ImGui::BulletText("Spazio: Sparo Laser | Q: Missili Guidati | E: Bomba EMP | Shift: Afterburner");
-        ImGui::BulletText("L: Fari Volumetrici | P: Modalita' Foto Freeze Frame");
+        // Spunta traiettoria Lissajous del Drone:
+        ImGui::Checkbox("Mostra Traiettoria Hermite (Lissajous)", m_hermite.getShowOrbitPtr());
 
-        // Arsenale e Super-Armi (v2):
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "Arsenale Bellico & Super-Armi (v2):");
+        // Controlli Post-Processing FBO:
+        ImGui::Checkbox("Filtro CRT Retro-Arcade", &m_postProcess.crtEnabled());
+        if (m_postProcess.crtEnabled())
+        {
+            ImGui::SliderFloat("Scanlines", &m_postProcess.scanlineIntensity(), 0.0f, 1.0f, "%.2f");
+            ImGui::SliderFloat("Aberrazione RGB", &m_postProcess.chromaticAberration(), 0.0f, 0.012f, "%.4f");
+        }
+        ImGui::SliderFloat("Vignettatura Cosmica", &m_postProcess.vignetteIntensity(), 0.0f, 1.0f, "%.2f");
+
+        if (ImGui::SmallButton("Test Shockwave al Centro"))
+        {
+            m_postProcess.triggerShockwave(glm::vec2(m_screenWidth * 0.5f, m_screenHeight * 0.5f), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.06f, 0.75f);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Photo Mode Freeze-Frame [P]"))
+        {
+            m_photoMode = true;
+        }
+    }
+
+    // ========================================================================
+    // SEZIONE 3: AUDIO & SIMULAZIONE DIDATTICA (v2)
+    // ========================================================================
+    if (ImGui::CollapsingHeader("Audio & Simulazione Didattica (v2)", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        bool soundMuted = AudioEngine::instance().isMuted();
+        if (ImGui::Checkbox("Muto Audio", &soundMuted))
+        {
+            AudioEngine::instance().setMuted(soundMuted);
+        }
+        ImGui::SameLine();
+        ImGui::SliderFloat("Volume SFX", &AudioEngine::instance().volumeRef(), 0.0f, 1.0f, "%.2f");
+
+        ImGui::SliderFloat("Velocita' Simulazione (Slow-Mo)", &m_timeScale, 0.1f, 2.0f, "%.2fx");
+        if (ImGui::SmallButton("0.25x (Matrix)")) m_timeScale = 0.25f;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("1.0x (Normale)")) m_timeScale = 1.0f;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("2.0x (Rapido)")) m_timeScale = 2.0f;
+    }
+
+    // ========================================================================
+    // SEZIONE 4: SUPER-ARMI, MECCANICHE SPAZIALI & SANDBOX (v2)
+    // ========================================================================
+    if (ImGui::CollapsingHeader("Super-Armi, Meccaniche Spaziali & Sandbox (v2)", ImGuiTreeNodeFlags_DefaultOpen))
+    {
         if (ImGui::Button(m_empCooldown <= 0.0f ? "Innesca Bomba EMP [E]" : "EMP in Ricarica..."))
         {
             if (m_empCooldown <= 0.0f) triggerEmpBomb();
@@ -801,66 +903,15 @@ void GameWorld::renderUI(float dt)
                 AudioEngine::instance().playLaser();
             }
         }
-        ImGui::Checkbox("Fari Proiettori Volumetrici (L)", &m_player.headlightsRef());
-        ImGui::SameLine();
-        ImGui::Checkbox("Boss Overlord (Hermite v2)", m_hermite.getBossModePtr());
 
-        if (ImGui::Button("Personalizza Livrea Navetta..."))
-        {
-            m_showCustomizer = !m_showCustomizer;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Modalita' Foto [P]"))
-        {
-            m_photoMode = true;
-        }
-
-        // Slider interattivo per la velocità di navigazione:
-        float pSpeed = m_player.speed();
-        if (ImGui::SliderFloat("Velocita' Navicella", &pSpeed, 120.0f, 850.0f, "%.0f px/s"))
-        {
-            m_player.setSpeed(pSpeed);
-        }
-        ImGui::TextDisabled("Scorciatoia: premi Shift + Su/Giu o +/- per regolare la velocita'");
-
-        // Controlli Simulazione Didattica (v2):
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.3f, 0.95f, 1.0f, 1.0f), "Controlli Simulazione & Debug (v2):");
-        ImGui::SliderFloat("Velocita' Simulazione (Slow-Mo)", &m_timeScale, 0.1f, 2.0f, "%.2fx");
-        ImGui::SameLine();
-        if (ImGui::SmallButton("0.25x (Matrix)")) m_timeScale = 0.25f;
-        ImGui::SameLine();
-        if (ImGui::SmallButton("1.0x (Normale)")) m_timeScale = 1.0f;
-        ImGui::SameLine();
-        if (ImGui::SmallButton("2.0x (Rapido)")) m_timeScale = 2.0f;
-
-        ImGui::Checkbox("Mostra Traiettoria Hermite (Lissajous)", m_hermite.getShowOrbitPtr());
-        ImGui::SameLine();
-        ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
-
-        // Controlli Post-Processing (FBO & CRT):
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.9f, 1.0f), "Post-Processing (FBO & Effetti Visivi):");
-        ImGui::Checkbox("Filtro CRT Retro Arcade", &m_postProcess.crtEnabled());
-        if (m_postProcess.crtEnabled())
-        {
-            ImGui::SliderFloat("Scanlines", &m_postProcess.scanlineIntensity(), 0.0f, 1.0f, "%.2f");
-            ImGui::SliderFloat("Aberrazione RGB", &m_postProcess.chromaticAberration(), 0.0f, 0.012f, "%.4f");
-        }
-        ImGui::SliderFloat("Vignettatura Cosmica", &m_postProcess.vignetteIntensity(), 0.0f, 1.0f, "%.2f");
-        if (ImGui::SmallButton("Test Shockwave al Centro"))
-        {
-            m_postProcess.triggerShockwave(glm::vec2(m_screenWidth * 0.5f, m_screenHeight * 0.5f), static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 0.06f, 0.75f);
-        }
-
-        // Controlli Gameplay Spaziale (v2):
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.7f, 1.0f), "Meccaniche Spaziali & Power-Up (v2):");
         bool bhActive = m_blackHole.isActive();
         if (ImGui::Checkbox("Attiva Buco Nero (Attrazione Gravitazionale)", &bhActive))
         {
             m_blackHole.setActive(bhActive);
         }
+        ImGui::SameLine();
+        ImGui::Checkbox("Boss Overlord (Hermite v2)", m_hermite.getBossModePtr());
+
         ImGui::Text("Genera Power-Up al volo:");
         ImGui::SameLine();
         if (ImGui::SmallButton("Scudo"))
@@ -878,21 +929,11 @@ void GameWorld::renderUI(float dt)
             m_powerUps.spawn(m_player.position() + glm::vec2(60.0f, 0.0f), PowerUpType::MAGNET);
         }
 
-        // Sottosistema Audio Procedurale Chiptune & Radar Scanner (v2):
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "Audio Procedurale & Radar Scanner (v2):");
-        bool soundMuted = AudioEngine::instance().isMuted();
-        if (ImGui::Checkbox("Muto Audio", &soundMuted))
-        {
-            AudioEngine::instance().setMuted(soundMuted);
-        }
-        ImGui::SameLine();
-        ImGui::SliderFloat("Volume SFX", &AudioEngine::instance().volumeRef(), 0.0f, 1.0f, "%.2f");
-
         ImGui::Checkbox("Scanner Radar Olografico", &m_showRadar);
         ImGui::SameLine();
-        ImGui::Checkbox("Modalita' Sandbox (Editor Live)", &m_sandboxMode);
+        ImGui::Checkbox("Classifica Piloti", &m_showLeaderboard);
 
+        ImGui::Checkbox("Modalita' Sandbox (Editor Live)", &m_sandboxMode);
         if (m_sandboxMode)
         {
             ImGui::Separator();
@@ -934,31 +975,32 @@ void GameWorld::renderUI(float dt)
                 AudioEngine::instance().playPowerUp();
             }
         }
+    }
 
-        // Regolazione interattiva dell'effetto psichedelico dello sfondo
-        ImGui::SliderFloat("Effetto Psichedelico", &m_psychedelic, 0.0f, 1.0f, "%.2f");
+    // ========================================================================
+    // SEZIONE 5: REGOLE, COMANDI DI GIOCO & STATISTICHE (ORIGINALI)
+    // ========================================================================
+    if (ImGui::CollapsingHeader("Comandi di Gioco, Regole & Info"))
+    {
+        ImGui::Text("Asteroidi rimasti: %d", m_asteroids.activeCount());
         ImGui::Text("FPS: %.1f (dt: %.4f s)", io.Framerate, dt);
 
-        if (ImGui::Button("Riavvia Partita"))
-        {
-            restartGame();
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button("Ricarica Texture Cabina"))
-        {
-            m_player.reloadFaceTexture("assets/textures/player_face.bmp") ||
-            m_player.reloadFaceTexture("assets/textures/player_face.png") ||
-            m_player.reloadFaceTexture("assets/textures/player_face.jpg");
-        }
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 1.0f, 1.0f), "Regole di Gioco:");
+        ImGui::BulletText("Alien Drone (Rosso): Colpiscilo con il laser per INDEBOLIRLO e renderlo innocuo!");
+        ImGui::BulletText("Warp Gate (Portale): Raccogli 5 monete e volaci dentro per chiudere la partita!");
 
         ImGui::Separator();
-        ImGui::TextDisabled("(Fai click sullo schermo per iniziare e compattare la finestra)");
-        if (ImGui::SmallButton("Riduci Finestra [-]"))
-        {
-            m_hudCompact = true;
-        }
+        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.6f, 1.0f), "Comandi di Gioco:");
+        ImGui::BulletText("WASD / Frecce: Movimento navetta con scia al plasma");
+        ImGui::BulletText("Spazio: Sparo Laser minerario");
+        ImGui::BulletText("Q: Missili intelligenti homing a ricerca termica");
+        ImGui::BulletText("E / Click Destro: Bomba ad impulsi EMP");
+        ImGui::BulletText("Shift: Afterburner accelerazione warp");
+        ImGui::BulletText("L: Fari proiettori volumetrici conici");
+        ImGui::BulletText("P: Modalita' Foto Freeze-Frame studio");
     }
+
     ImGui::End();
 
     // ------------------------------------------------------------------------
@@ -1025,15 +1067,6 @@ void GameWorld::renderUI(float dt)
         }
         ImGui::End();
     }
-
-    // Funzione lambda per centrare orizzontalmente le scritte all'interno dei banner ImGui.
-    auto renderCenteredText = [](const char* text, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
-    {
-        float windowWidth = ImGui::GetWindowSize().x;
-        float textWidth = ImGui::CalcTextSize(text).x;
-        ImGui::SetCursorPosX(std::max(0.0f, (windowWidth - textWidth) * 0.5f));
-        ImGui::TextColored(color, "%s", text);
-    };
 
     // ------------------------------------------------------------------------
     // Banner di Allerta: Portale Attivo (Centrato in alto)

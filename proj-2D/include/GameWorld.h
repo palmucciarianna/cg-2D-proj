@@ -101,6 +101,12 @@ public:
     bool isPhotoMode() const { return m_photoMode; }
     void setPhotoMode(bool p) { m_photoMode = p; }
 
+    // Controllo Pausa di Gioco e Impostazioni (v2):
+    bool isPaused() const { return m_isPaused; }
+    void setPaused(bool p) { m_isPaused = p; }
+    bool autoPauseOnSettings() const { return m_autoPauseOnSettings; }
+    void setAutoPauseOnSettings(bool ap) { m_autoPauseOnSettings = ap; }
+
 
 private:
     int m_screenWidth;  // Larghezza logica della finestra in pixel (1280)
@@ -150,6 +156,10 @@ private:
     float m_photoZoom = 1.0f;
     glm::vec2 m_photoPan{ 0.0f, 0.0f };
     bool m_showCustomizer = false;
+
+    // Controllo Pausa e Impostazioni (v2):
+    bool m_isPaused = false;            // Flag di simulazione in pausa
+    bool m_autoPauseOnSettings = true;  // Se true, cliccare o interagire con l'HUD delle impostazioni mette in pausa automatica
 
     std::vector<LeaderboardEntry> m_leaderboard; // Classifica piloti
     bool m_showLeaderboard = false;              // Finestra classifica aperta/chiusa

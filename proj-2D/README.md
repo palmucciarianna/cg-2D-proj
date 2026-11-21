@@ -26,7 +26,9 @@ Il progetto implementa un sistema di **particelle fisiche** (esplosione delle ro
 | **P** | **Modalità Foto (v2)**: congela il gioco in pausa cinematografica e apre lo studio con zoom, pan e filtri |
 | **Shift + Freccia Su** oppure **`+`** / **`]`** | Incrementa la velocità di crociera della navicella |
 | **Shift + Freccia Giù** oppure **`-`** / **`[`** | Diminuisce la velocità di crociera della navicella |
-| **Mouse (Interfaccia ImGui)** | Spunta Wireframe, regolazione Slider **Slow-Motion** (0.1x..2.0x), **Cantiere Navale (Customizer Livrea)**, **Scanner Radar**, **Modalità Sandbox**, reset partita, monitoraggio FPS e vite |
+| **Mouse (Interfaccia ImGui)** | Regolazione Slider **Velocità Navicella**, Spunta Wireframe, Slider **Slow-Motion** (0.1x..2.0x), **Cantiere Navale (Customizer Livrea)**, **Scanner Radar**, **Modalità Sandbox**, ricarica texture cabina, reset partita, monitoraggio FPS e vite |
+| **Click su Impostazioni HUD** | **Pausa Automatica (v2)**: cliccando sulle impostazioni la simulazione entra in pausa per consentire la regolazione dei parametri senza pericoli |
+| **Click sullo Spazio / Spazio** | **Ripresa Partita**: riprende istantaneamente la navigazione dalla pausa |
 | **ESC** | Chiusura applicazione |
 
 ---
@@ -213,6 +215,9 @@ Sul branch `v2` sono state introdotte evoluzioni grafiche, fisiche, audio e di g
 
 21. **Modalità Fotografica (Photo Mode Freeze-Frame, Tasto `P`)**:
     * Pausa cinematografica che congela la simulazione, nasconde l'HUD e attiva lo studio virtuale con controlli di zoom ottico ($0.4\times..3.5\times$), traslazione libera (pan) della camera e regolazione fine dei filtri ottici.
+
+22. **Pausa Automatica e Pannello Impostazioni Integrato (v2)**:
+    * Cliccando sul pannello Mission Control o su qualsiasi widget/finestra di configurazione (Cantiere Navale, Radar, Sandbox), il gioco entra istantaneamente in pausa con banner informativo a centro schermo. Questo permette di regolare la velocità della navicella, testare i filtri CRT o personalizzare la livrea in totale sicurezza senza rischiare impatti con asteroidi o droni. Cliccando nuovamente sullo spazio cosmico o sul pulsante verde *Riprendi*, la partita prosegue all'istante.
 
 ---
 
