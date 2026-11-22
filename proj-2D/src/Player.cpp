@@ -1,12 +1,17 @@
 // ============================================================================
-// File: src/Player.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione dettagliata della navicella mineraria Player.
-//              Mostra la modellazione gerarchica tramite matrici di trasformazione,
-//              il mapping di texture sulla cabina, l'integrazione del moto Euleriano,
-//              la riflessione speculare delle ali via S(-1, 1, 1), l'animazione
-//              reattiva delle fiamme e il controllo simultaneo WASD / Frecce direzionali.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Player.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Realizza la navicella composta a 11 nodi gerarchici guidata dal pilota (Requisito 3.1).
+//    - Integra la cinematica fisica Euleriana continua (accelerazione, trascinamento inerziale).
+//    - Gestisce la texture 2D della foto del pilota con ritaglio ellittico.
+// 2. A CHI È COLLEGATO:
+//    - Coordinato da GameWorld; riceve input continui da GLFW (frecce/WASD).
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Gerarchia matriciale M_world = M_player * (T_loc * R_loc * S_loc) (Domanda 6).
+//    - Riflessione speculare alare con scala negativa S(-1, 1, 1) (Domanda 6).
+//    - Integrazione Euleriana: v(t+dt) = v(t) + a*dt; p(t+dt) = p(t) + v(t)*dt (Requisito 6).
+//    - Fiamme propulsore reattive alla velocita' e texture mapping UV cabina (Domande 14, 20).
 // ============================================================================
 
 #include "Player.h"

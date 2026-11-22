@@ -1,12 +1,16 @@
 // ============================================================================
-// File: src/HermiteObject.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore degli oggetti basati su curve di Hermite.
-//              - Alien Sentinel Drone: segue una traiettoria a forma di 8 (curva di Lissajous),
-//                modula la scala Y dell'occhio per l'ammiccamento (blink) quando sorvolato dal player.
-//              - Cosmic Warp Gate: portale a vortice rotante bifase (dormiente/attivo),
-//                costruito da anello cavo Hermite e disco di interpolazione ciano.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: HermiteObject.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Realizza l'Alien Sentinel Drone e il portale monumentale Cosmic Warp Gate (Requisito 3.2).
+//    - Guida il drone lungo un'orbita a 8 di Lissajous ed esegue l'ammiccamento (eye-blink).
+//    - Gestisce la rotazione a doppio anello e l'attivazione del Warp Gate per l'HURRÀ.
+// 2. A CHI È COLLEGATO:
+//    - Carica mesh da PlayerShapeLoader (alien_drone.obj, warp_gate.obj); gestito da GameWorld.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Spline di Hermite C^1: C(t) = h00*P0 + h01*P1 + h10*D0 + h11*D1 (Domanda 12).
+//    - Traiettoria a 8 di Lissajous: x = x0 + A*cos(phi), y = y0 + B*sin(2*phi) (Domanda 11).
+//    - Animazione ammiccamento occhio: scala Y modulata da campana sinusoidale (Requisito 6).
 // ============================================================================
 
 #include "HermiteObject.h"

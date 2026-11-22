@@ -1,13 +1,32 @@
 // ============================================================================
-// File: include/ParticleSystem.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Sistema di simulazione particellare basato su cinematica fisica.
-//              Genera e gestisce effetti visivi dinamici:
-//              1. Frantumazione in mille pezzi degli asteroidi colpiti dal laser
-//              2. Scintille dorate alla raccolta delle monete
-//              3. Celebrazione pirotecnica e coriandoli "HURRÀ!" per il completamento livello
-//              4. Bagliori energetici di risonanza della reliquia cosmica
+// GUIDA RAPIDA PER L'ORALE - CLASSE: ParticleSystem (Simulatore Particellare)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Simula la fisica e il rendering di centinaia di particelle dinamiche (Requisiti 6, 7).
+//    - Produce feedback visivi immediati ed spettacolari:
+//      * Polverizzazione di 32 frammenti rocciosi alla distruzione di un asteroide;
+//      * Scintille dorate alla raccolta di ogni moneta;
+//      * Esplosione trionfale di coriandoli colorati nello stato LEVEL_CLEARED_HURRA;
+//      * Scia di fumo del reattore della navicella.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (chiamata in init(), update(dt), draw(shader)).
+//    - Invocata da: GameWorld, AsteroidManager, CollectibleManager, LaserManager per emettere particelle.
+//    - Utilizza: Geometry per il quad/punto particellare e Shader basic con abilitazione del Blending.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Integrazione Fisica Euleriana con Smorzamento Viscoso (Requisito 6 & Domande 4, 16):
+//      * v(t + dt) = v(t) * (1 - gamma * dt)  (attrito viscoso spaziale);
+//      * p(t + dt) = p(t) + v(t) * dt;
+//      * theta(t + dt) = theta(t) + omega * dt.
+//    - Dissolvenza Lineare dell'Alpha & Restringimento Geometrico (Domanda 20):
+//      Fattore di vita: ratio = life / maxLife;
+//      alpha(t) = color.a * ratio;  size(t) = base_size * ratio.
+//    - Equazione di Alpha Blending (Domanda 20):
+//      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) fonde i colori:
+//      C_out = alpha_s * C_s + (1 - alpha_s) * C_d, eliminando l'effetto "quadrato" nero dei detriti.
+//    - Allocazione Dinamica & Compattazione Vettori:
+//      Le particelle morte (life <= 0) vengono eliminate con l'idioma remove_if (Erase-Remove).
 // ============================================================================
 
 #pragma once

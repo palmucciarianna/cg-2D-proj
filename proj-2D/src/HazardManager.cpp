@@ -1,12 +1,13 @@
 // ============================================================================
-// File: src/HazardManager.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore delle minacce ambientali.
-//              - Spawn casuale ogni 3.2 - 5.7 secondi
-//              - Fase di telegrafia con lampeggio visivo sinusoidale ad alta frequenza (30 rad/s)
-//              - Lancio balistico ad altissima velocità (880 px/s)
-//              - Scia particellare dinamica durante il volo e cancellazione off-screen
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: HazardManager.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Genera pericoli perimetrali supersonici (missili plasma a 880 px/s) con preavviso visivo.
+// 2. A CHI È COLLEGATO:
+//    - Coordinato da GameWorld; testa collisioni contro il Player e genera detriti con ParticleSystem.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Lampeggio stroboscopico con funzione seno: alpha = 0.5 + 0.5*sin(omega * t) (Domanda 20).
+//    - Collisione cerchio vs AABB tramite punto clamped su box rettangolare (Domanda 5).
 // ============================================================================
 
 #include "HazardManager.h"

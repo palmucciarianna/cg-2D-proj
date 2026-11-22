@@ -1,11 +1,15 @@
 // ============================================================================
-// File: src/AsteroidManager.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore degli asteroidi a geometria condivisa.
-//              Dimostra l'efficienza della pipeline OpenGL:
-//              1 sola allocazione VBO/VAO per N oggetti distinti nello spazio,
-//              differenziati a runtime tramite la Model Matrix Uniform.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: AsteroidManager.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Genera e anima la cintura di asteroidi rotanti (Requisito 4).
+//    - Implementa la tecnica del Buffer Sharing: 1 solo VBO/VAO per tutti gli asteroidi.
+// 2. A CHI È COLLEGATO:
+//    - Coordinato da GameWorld; interagisce con LaserManager e ParticleSystem.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Buffer Sharing su VRAM con GL_STATIC_DRAW (Domanda 17).
+//    - Invio uniforme Model Matrix CPU -> GPU: M_i = T * R * S per ogni istanza (Domande 6, 18).
+//    - Distribuzione in coordinate polari: x = cx + r*cos(theta), y = cy + r*sin(theta) (Domanda 5).
 // ============================================================================
 
 #include "AsteroidManager.h"

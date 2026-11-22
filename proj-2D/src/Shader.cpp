@@ -1,10 +1,15 @@
 // ============================================================================
-// File: src/Shader.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione della classe Shader.
-//              Incapsula le chiamate OpenGL glGetUniformLocation e glUniform*
-//              garantendo la corretta associazione dei parametri shader da C++.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Shader.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Wrapper RAII per lo Shader Program OpenGL (gestisce program ID, use(), destroy()).
+//    - Fornisce i metodi helper per il passaggio di variabili Uniform (matrici, vettori, scalari).
+// 2. A CHI È COLLEGATO:
+//    - Utilizza ShaderMaker per compilazione e linking; invocato da GameWorld e renderers.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Passaggio Uniform CPU -> GPU: glUniformMatrix4fv, glUniform4fv, glUniform1f (Domanda 18).
+//    - Matrici in formato column-major (glm::value_ptr) compatibile con GLSL (Domande 6, 18).
+//    - Deallocazione RAII tramite glDeleteProgram (Domanda 16).
 // ============================================================================
 
 #include "Shader.h"

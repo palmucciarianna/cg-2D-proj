@@ -1,10 +1,14 @@
 // ============================================================================
-// File: src/ShaderMaker.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del caricatore e compilatore di shader GLSL.
-//              Include il controllo degli errori di compilazione (glGetShaderiv)
-//              e degli errori di linking del programma eseguibile (glGetProgramiv).
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ShaderMaker.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Legge da disco, compila e linka i file sorgente GLSL (Vertex e Fragment Shader).
+//    - Verifica e stampa log di errore di compilazione (glGetShaderInfoLog) e linking (glGetProgramInfoLog).
+// 2. A CHI È COLLEGATO:
+//    - Chiamato da Shader::load; riceve i percorsi dei file .vert e .frag.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Compilazione a runtime sul driver della GPU: glCreateShader, glShaderSource, glCompileShader.
+//    - Assemblaggio del Programma Shader e verifica stato (GL_COMPILE_STATUS, GL_LINK_STATUS) (Domande 3, 18).
 // ============================================================================
 
 #include <glad/glad.h>

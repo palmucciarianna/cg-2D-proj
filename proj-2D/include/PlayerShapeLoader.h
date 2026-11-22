@@ -1,11 +1,26 @@
 // ============================================================================
-// File: include/PlayerShapeLoader.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Parser e caricatore procedurale di file Wavefront OBJ e tavolozze colore MTL.
-//              Decodifica geometrie poligonali, estrae coordinate dei vertici,
-//              associa colori flat RGB di vertice da file MTL (senza modelli di illuminazione)
-//              e triangola poligoni arbitrari.
+// GUIDA RAPIDA PER L'ORALE - MODULO: PlayerShapeLoader (Parser Wavefront OBJ/MTL)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - È il parser che carica da disco i modelli poligonali in formato Wavefront .obj e le palette .mtl.
+//    - Decodifica i token testuali:
+//      * 'v x y z': estrae le posizioni cartesiane dei vertici;
+//      * 'f v1 v2 v3 ... vn': triangola le facce poligonali con un ventaglio di triangoli (Triangle Fan);
+//      * 'mtllib' e 'usemtl': collega i materiali del file .mtl;
+//      * 'Kd r g b' e 'd alpha': estrae il colore diffuso e lo assegna direttamente come Vertex Color.
+//    - Riempie la struttura MeshData pronta per il caricamento su VRAM tramite Geometry::upload().
+//
+// 2. A CHI È COLLEGATO:
+//    - Invocato da: HermiteManager (per caricare 'alien_drone.obj' e 'warp_gate.obj') e Player.
+//    - Produce: istanze della struttura MeshData.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Triangolazione di Poligoni Arbitrari (Domande 2, 14):
+//      OpenGL Core Profile accetta solo triangoli (GL_TRIANGLES). Per una faccia a N vertici:
+//      (v0, v1, v2, ..., vn-1), il loader genera (N - 2) triangoli: (v0, v1, v2), (v0, v2, v3), ..., (v0, vn-2, vn-1).
+//    - Flat Shading per Vertice (Domande 3, 7, 20):
+//      Il parametro Kd del file MTL viene convertito direttamente in colore associato a ogni vertice (vec4 aColor).
+//      Non essendoci luci 3D complesse (Phong/Blinn-Phong), il rendering è estremamente rapido.
 // ============================================================================
 
 #pragma once

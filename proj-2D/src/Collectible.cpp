@@ -1,11 +1,15 @@
 // ============================================================================
-// File: src/Collectible.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore delle monete d'oro collezionabili.
-//              Mostra la tecnica di rotazione pseudo-3D tramite proiezione ortogonale:
-//              variando il fattore di scala orizzontale come S_x = cos(omega * t),
-//              il cerchio 2D appare all'occhio come una moneta 3D che ruota su se stessa.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Collectible.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Genera e anima le 5 monete d'oro collezionabili (Requisito 7.2).
+//    - Implementa la rotazione pseudo-3D e l'oscillazione armonica (Requisito 6).
+// 2. A CHI È COLLEGATO:
+//    - Coordinato da GameWorld; attiva l'apertura del Warp Gate al raggiungimento di 5 monete.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Rotazione Pseudo-3D via scala modulata da coseno: s_x(t) = |cos(omega * t)| (Domanda 6, 9).
+//    - Levitazione sinusoidale verticale: y(t) = y_base + A * sin(nu * t + phi) (Requisito 6).
+//    - Buffer Sharing su singolo VAO per tutte le 5 monete (Domanda 17).
 // ============================================================================
 
 #include "Collectible.h"

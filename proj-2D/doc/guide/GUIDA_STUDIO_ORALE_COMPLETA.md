@@ -1,7 +1,7 @@
 # GUIDA DEFINITIVA ALLO STUDIO ORALE: ASTRO-MINER 2D
 ## Manuale Completo di Preparazione all'Esame di Computer Graphics
 **Candidata:** Arianna Palmucci  
-**Docente:** Prof.ssa Serena Morigi – Università di Bologna  
+**Docente:** Prof.ssa Damiana Lazzaro – Università di Bologna  
 **Corso:** Computer Graphics (A.A. 2025/2026 – Parziale I)  
 **Progetto:** *Astro-Miner 2D: Cosmic Coin Rush* (OpenGL 3.3 Core Profile, C++17)
 
@@ -21,7 +21,7 @@
 # 1. LA STRATEGIA PER UN ESAME DA 30 E LODE
 
 ### Come affrontare il colloquio con la professoressa
-La professoressa Serena Morigi valuta due cose fondamentali:
+La professoressa Damiana Lazzaro valuta due cose fondamentali:
 1. **Padronanza assoluta dei concetti teorici e geometrici:** non devi dare definizioni "vaghe" o "a senso", ma usare il vocabolario formale della grafica (spazio affine, coordinate omogenee, prodotto scalare come proiezioni, basi di Hermite $C^1$, interpolazione baricentrica, pipeline programmabile).
 2. **Capacità di collegare ogni riga di codice alla teoria:** quando la docente ti chiede *"Dove hai usato le coordinate omogenee?"* oppure *"Come hai gestito la rasterizzazione?"*, non limitarti a dire "nel vertex shader", ma spiega:
    > *"Nel vertex shader `basic.vert` moltiplico il vettore posizione esteso a coordinate omogenee con $w=1.0$ per la matrice `model` e poi per la matrice `projection` ortografica `glm::ortho`. La GPU effettua il clipping nello spazio canonico $[-1, 1]^3$, esegue la divisione prospettica normalizzando le coordinate in NDC, e poi la fase a funzione fissa di Viewport Mapping converte le coordinate NDC nei pixel della finestra 1280x720."*

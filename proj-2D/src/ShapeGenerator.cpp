@@ -1,15 +1,15 @@
 // ============================================================================
-// File: src/ShapeGenerator.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del generatore procedurale delle forme geometriche 2D.
-//              Include le formule matematiche per:
-//              - Primitiva Triangolo, Rettangolo, Trapezio e Rombo
-//              - Moneta circolare e Disco parametrico (Triangle Fan)
-//              - Curva Polare della Farfalla (Fay): r = exp(cos t) - 2*cos(4t) + sin(t/12)^5
-//              - Curva Cardioide del Cuore: x = 16*sin(t)^3, y = 13*cos(t)-5*cos(2t)-2*cos(3t)-cos(4t)
-//              - Curva della Luna crescente: x = 3*sin(t), y = 0.5*cos(2t) - cos(t)
-//              - Frattale Chaos Game di Sierpinski con Mersenne Twister (std::mt19937)
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ShapeGenerator.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Factory matematica per la creazione di mesh poligonali e curve parametriche su CPU.
+//    - Genera cerchi, monete, rettangoli, triangoli, stelle e forme complesse (farfalla, cuore, Sierpinski).
+// 2. A CHI È COLLEGATO:
+//    - Fornisce strutture MeshData a Player, AsteroidManager, CollectibleManager, HermiteManager.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Coordinate Polari per cerchi e dischi: x = cx + r*cos(theta), y = cy + r*sin(theta) (Domanda 2, 13).
+//    - Triangolazione a ventaglio (GL_TRIANGLE_FAN) e a coppie di triangoli (GL_TRIANGLES) (Domanda 14).
+//    - Assegnazione dei colori di vertice per l'interpolazione baricentrica di Gouraud (Domanda 7).
 // ============================================================================
 
 #include "ShapeGenerator.h"

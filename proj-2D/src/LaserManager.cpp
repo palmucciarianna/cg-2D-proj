@@ -1,12 +1,14 @@
 // ============================================================================
-// File: src/LaserManager.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore dei colpi laser.
-//              - Integrazione balistica uniforme: pos = pos + dir * v * dt
-//              - Calcolo dinamico dell'orientamento con arcotangente (atan2)
-//              - Intersezione con volumi di collisione degli asteroidi
-//              - Innesco frantumazione e assegnazione punteggio di gioco
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: LaserManager.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce la traiettoria balistica dei raggi plasma, la collisione con gli asteroidi e il drone.
+// 2. A CHI È COLLEGATO:
+//    - Invocato da GameWorld quando il Player spara (barra spaziatrice); interagisce con AsteroidManager.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Cinematica: p(t+dt) = p(t) + d * v_laser * dt (Domanda 4).
+//    - Orientamento con arcotangente: theta = atan2(dir.y, dir.x) per allineare la Model Matrix (Domanda 6).
+//    - Clipping software rispetto alla finestra [0, 1280] x [0, 720] (Domanda 10).
 // ============================================================================
 
 #include "LaserManager.h"

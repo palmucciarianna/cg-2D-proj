@@ -1,9 +1,23 @@
 // ============================================================================
-// File: include/MeshData.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Struttura dati CPU leggera (POD-like) per il trasferimento e l'assemblaggio
-//              di vertici, attributi di colore RGBA e tipo di primitiva di rendering OpenGL.
+// GUIDA RAPIDA PER L'ORALE - STRUTTURA: MeshData (Container Dati Geometrici CPU)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - È il contenitore intermedio in RAM (CPU) che accumula posizioni, colori e tipo primitiva
+//      prima che i dati vengano inviati alla VRAM della GPU tramite glBufferData.
+//    - Separa la fase di generazione matematica della mesh dalla gestione dei buffer hardware OpenGL.
+//
+// 2. A CHI È COLLEGATA:
+//    - Riempita da: ShapeGenerator (forme procedurali) e PlayerShapeLoader (file OBJ/MTL).
+//    - Consumata da: Geometry::setData() e inviata alla GPU con Geometry::upload().
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Separazione Memoria CPU vs VRAM GPU (Domande 1, 4, 17):
+//      La CPU prepara i vettori 'positions' (glm::vec3) e 'colors' (glm::vec4).
+//      La GPU non può leggere direttamente std::vector della CPU: il metodo upload()
+//      esegue glBufferData trasferendo i dati nel bus PCIe verso la memoria VRAM.
+//    - Primitive Assembly (Domanda 4):
+//      Il campo 'primitiveType' (GL_TRIANGLES, GL_TRIANGLE_FAN) istruisce la GPU su come
+//      connettere la sequenza di vertici in triangoli durante la fase di rasterizzazione.
 // ============================================================================
 
 #pragma once

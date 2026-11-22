@@ -1,13 +1,17 @@
 // ============================================================================
-// File: src/GameWorld.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del GameWorld.
-//              - Orchestrazione del game loop (aggiornamento fisico e rendering)
-//              - Costruzione della matrice di proiezione ortografica glm::ortho
-//              - Risoluzione geometrica di tutte le collisioni tra entità
-//              - Interfaccia grafica ImGui con auto-compressione non invasiva
-//              - Gestione transizioni di stato (PLAYING, LEVEL_CLEARED_HURRA, GAME_OVER)
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: GameWorld.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Coordinatore centrale del motore di gioco (orchestra init, update, render e HUD).
+//    - Macchina a stati FSM (PLAYING, LEVEL_CLEARED_HURRA, GAME_OVER).
+//    - Risolve le collisioni (Player vs Asteroidi, Player vs Monete, Laser vs Asteroidi/Drone).
+//    - Costruisce la proiezione ortografica e controlla l'interfaccia non invasiva ImGui.
+// 2. A CHI È COLLEGATO:
+//    - Invocato dal loop principale in main.cpp; coordina tutti i manager e renderers.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - P = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f, -1.0f, 1.0f) (Domanda 9).
+//    - Disegno Back-to-Front con Alpha Blending (Domanda 20).
+//    - Delta-Time Clamping a 0.05s per stabilita' fisica (Requisito 6).
 // ============================================================================
 
 #include "GameWorld.h"

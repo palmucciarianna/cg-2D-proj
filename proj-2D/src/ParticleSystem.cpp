@@ -1,12 +1,15 @@
 // ============================================================================
-// File: src/ParticleSystem.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del motore fisico particellare.
-//              - Integrazione cinematica di Eulero semi-implicito
-//              - Smorzamento per attrito fluido (viscous drag): v' = v * (1 - gamma * dt)
-//              - Decadimento lineare della vita residua (life) con dissolvenza alfa (fade-out)
-//              - Restringimento proporzionale del raggio durante l'invecchiamento
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ParticleSystem.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Simula la cinematica e il rendering di centinaia di particelle per effetti visivi reattivi.
+//    - Esplosione asteroidi (32 detriti rocciosi), scintille dorate, coriandoli HURRÀ e scia fumo.
+// 2. A CHI È COLLEGATO:
+//    - Invocato da GameWorld, AsteroidManager, CollectibleManager e LaserManager.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Smorzamento per attrito viscoso: v(t+dt) = v(t) * (1 - gamma * dt) (Domanda 4).
+//    - Dissolvenza lineare dell'alpha: a(t) = a0 * (life / maxLife) (Domanda 20).
+//    - Composizione in Alpha Blending: Cout = as*Cs + (1-as)*Cd (Domanda 20).
 // ============================================================================
 
 #include "ParticleSystem.h"

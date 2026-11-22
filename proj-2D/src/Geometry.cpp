@@ -1,11 +1,15 @@
 // ============================================================================
-// File: src/Geometry.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione dettagliata dei metodi della classe Geometry.
-//              Gestisce la creazione dei VAO, il binding dei VBO, la configurazione
-//              dei puntatori agli attributi dei vertici (location 0 e 1) e
-//              l'esecuzione delle draw call per OpenGL 3.3 Core Profile.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Geometry.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Incapsula e gestisce le risorse OpenGL su VRAM: VAO, VBO posizioni, VBO colori.
+//    - Trasferisce i dati da CPU a GPU con upload() ed emette il disegno con draw().
+// 2. A CHI È COLLEGATO:
+//    - Riceve i vertici da MeshData; utilizzata da tutte le entità per il rendering.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - VAO registra lo stato degli attributi (glVertexAttribPointer) (Domanda 17).
+//    - VBO memorizza fisicamente i dati in memoria VRAM (glBufferData) (Domande 1, 17).
+//    - Gestione RAII con glDeleteVertexArrays e glDeleteBuffers nel distruttore (Domanda 16).
 // ============================================================================
 
 #include "Geometry.h"

@@ -1,11 +1,39 @@
 // ============================================================================
-// File: include/Player.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Definizione della classe Player (Starfighter minerario avanzato).
-//              Implementa la modellazione gerarchica di un oggetto composto
-//              multilivello (Requisito 3.1): fusoliera, ali speculari, cannoni,
-//              cabina con texture personalizzata del pilota, post-bruciatori e luci stroboscopiche.
+// GUIDA RAPIDA PER L'ORALE - CLASSE: Player
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Rappresenta la navicella mineraria Starfighter guidata dal giocatore (Requisito 3.1).
+//    - Implementa la modellazione gerarchica complessa: assembla 11 componenti distinti
+//      (fusoliera, muso, cabina UV, ali simmetriche, cannoni plasma, doppi reattori,
+//      fiamme reattive all'accelerazione e luci LED stroboscopiche di navigazione).
+//    - Integra la cinematica fisica del moto Euleriano continuo (spinta, inerzia, attrito spaziale).
+//    - Gestisce la texture 2D della foto del pilota mappata sulla cabina con ritaglio ellittico.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (chiamata in init(), update(dt, window), draw(shader)).
+//    - Collabora con:
+//      * Input / GLFW: legge i comandi di guida continua (Frecce direzionali / WASD).
+//      * ShapeGenerator: crea le mesh procedurali dei componenti (trapezi, triangoli, cerchi).
+//      * Texture: carica da file e invia alla GPU la foto del pilota (player_face.bmp).
+//      * Geometry: incapsula i buffer VBO/VAO dei singoli componenti della navicella.
+//      * Collider2D: fornisce il CircleCollider per i test di impatto contro asteroidi e drone.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Modellazione Gerarchica & Ordine Matrici (Requisito 3.1 & Domanda 6):
+//      * Radice globale: M_player = T(pos) * R(theta) * S(scale).
+//      * Componenti figli: M_finale = M_player * (T_loc * R_loc * S_loc).
+//      * L'ordine con vettori colonna applica prima scala locale, poi rotazione, poi traslazione.
+//    - Riflessione Speculare via Algebra Lineare (Domanda 6):
+//      L'ala sinistra non duplica i vertici della destra: è specchiata applicando una matrice
+//      di scala con coordinata orizzontale negativa: S(-1, 1, 1).
+//    - Integrazione Euleriana del Moto (Requisito 6 & Domanda 16):
+//      v(t + dt) = v(t) + a * dt;  p(t + dt) = p(t) + v(t) * dt;  v = v * (1 - drag * dt).
+//    - Texture Mapping & Ritaglio Ellittico (Domande 14, 18):
+//      Coordinate UV su quad [0, 1]^2; il fragment shader calcola dist = dot(uvNorm, uvNorm)
+//      ed esegue 'discard' se dist > 1.0, ritagliando analiticamente il cupolino.
+//    - Fiamme e Trasparenza Reattiva (Requisito 6 & Domanda 20):
+//      La scala della fiamma varia esponenzialmente con la velocità: s_fiamma = f(v/v_max);
+//      i LED alari modulano l'alpha con una sinusoide temporale tramite glBlendFunc.
 // ============================================================================
 
 #pragma once

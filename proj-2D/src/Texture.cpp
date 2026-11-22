@@ -1,10 +1,15 @@
 // ============================================================================
-// File: src/Texture.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del caricamento texture tramite libreria stb_image.
-//              Configura texture wrapping (CLAMP_TO_EDGE), filtri min/mag (GL_LINEAR)
-//              e trasferisce la matrice di pixel in formato RGBA 32-bit su VRAM.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Texture.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Carica file immagine (PNG/JPG/BMP) tramite stb_image.h e crea l'oggetto texture OpenGL 2D.
+//    - Imposta i filtri di campionamento bilineare e il wrapping CLAMP_TO_EDGE.
+// 2. A CHI È COLLEGATO:
+//    - Utilizzato da Player per il rendering della foto del pilota sul cupolino della cabina.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Flip verticale: stbi_set_flip_vertically_on_load(true) adatta l'origine immagine a OpenGL (Domanda 2).
+//    - Filtro bilineare GL_LINEAR: interpolazione pesata tra i 4 texel più vicini (Domanda 2, 15).
+//    - Trasferimento pixel CPU -> GPU con glTexImage2D e rilascio RAM con stbi_image_free.
 // ============================================================================
 
 #include "Texture.h"
