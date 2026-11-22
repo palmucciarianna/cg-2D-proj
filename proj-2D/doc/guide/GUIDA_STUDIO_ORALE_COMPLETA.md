@@ -94,6 +94,37 @@ Il motore grafico di *Astro-Miner 2D* è strutturato secondo il principio di **S
 
 # 3. ANATOMIA DEL CODICE: FILE PER FILE E FUNZIONE PER FUNZIONE
 
+### Mappa dei File Aggiornati con i Link Diretti e le Schede per l'Orale:
+Tutti i file del progetto contengono in cima al codice la **Guida Rapida per l'Orale** con lo schema: *1. A cosa serve*, *2. A chi è collegata*, *3. Formule e principi CG utilizzati*.
+
+* **Entry point e Coordinamento:**
+  - [`main.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/main.cpp) (Inizializzazione, GLFW, GLAD, V-Sync, Render Loop con Delta-Time Clamping)
+  - [`GameWorld.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/GameWorld.h) e [`GameWorld.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/GameWorld.cpp) (FSM, `glm::ortho`, coordinamento collisioni, HUD Dear ImGui)
+* **Entità di Gioco e Modellazione:**
+  - [`Player.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Player.h) e [`Player.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Player.cpp) (Albero gerarchico a 11 nodi, $S(-1,1,1)$, texture cabina, fiamme)
+  - [`AsteroidManager.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/AsteroidManager.h) e [`AsteroidManager.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/AsteroidManager.cpp) (Buffer Sharing con 1 solo VAO statico su VRAM per $N$ istanze)
+  - [`Collectible.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Collectible.h) e [`Collectible.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Collectible.cpp) (5 monete d'oro, rotazione pseudo-3D ortogonale $s_x(t) = |\cos(\omega t)|$)
+  - [`HermiteObject.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/HermiteObject.h) e [`HermiteObject.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/HermiteObject.cpp) (Spline cubiche di Hermite $C^1$, traiettoria a 8 di Lissajous, ammiccamento eye-blink, Warp Gate)
+* **Balistica, Pericoli e Simulazione Fisica:**
+  - [`LaserManager.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/LaserManager.h) e [`LaserManager.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/LaserManager.cpp) (Proiettili plasma a 950 px/s, clipping finestra)
+  - [`HazardManager.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/HazardManager.h) e [`HazardManager.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/HazardManager.cpp) (Pericoli supersonici 880 px/s con lampeggio stroboscopico di allerta)
+  - [`ParticleSystem.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/ParticleSystem.h) e [`ParticleSystem.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/ParticleSystem.cpp) (Attrito viscoso $v(t+\Delta t) = v(t)(1-\gamma\Delta t)$, decadimento alpha e rimpicciolimento)
+* **Pipeline Grafica, Shader e Geometria:**
+  - [`BackgroundRenderer.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/BackgroundRenderer.h) e [`BackgroundRenderer.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/BackgroundRenderer.cpp) (Fullscreen quad in NDC $[-1,1]$, RAII e Rule of Five)
+  - [`Geometry.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Geometry.h) e [`Geometry.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Geometry.cpp) (Incapsulamento hardware VAO/VBO, upload e draw call)
+  - [`ShapeGenerator.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/ShapeGenerator.h) e [`ShapeGenerator.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/ShapeGenerator.cpp) (Coordinate polari, triangolazioni e vertex color)
+  - [`Shader.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Shader.h) e [`Shader.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Shader.cpp) (Program ID, setter uniform `glUniform*`)
+  - [`ShaderMaker.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/ShaderMaker.h) e [`ShaderMaker.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/ShaderMaker.cpp) (Compilazione GLSL a runtime e controllo log di errore)
+  - [`Texture.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Texture.h) e [`Texture.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Texture.cpp) (`stb_image.h`, flip verticale per coordinate UV di OpenGL, filtri bilineari)
+* **Matematica, Input e Tipi di Base:**
+  - [`Collider2D.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Collider2D.h) (Cerchio-Cerchio con distanza al quadrato senza radice quadrata, AABB SAT)
+  - [`Transform.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Transform.h) (Composizione $M = T \cdot R \cdot S$ e grafi di scena gerarchici)
+  - [`MeshData.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/MeshData.h) (Contenitore CPU per vertici e colori)
+  - [`Input.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Input.h) e [`Input.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Input.cpp) (Callback GLFW vs Polling continuo)
+  - [`PlayerShapeLoader.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/PlayerShapeLoader.h) (Parser per file `.obj` e `.mtl` con triangolazione a ventaglio)
+
+---
+
 ## 3.1 `src/main.cpp` – Il Punto di Ingresso e il Ciclo di Rendering
 * **A cosa serve:** Inizializza le librerie grafiche, istanzia il gioco, esegue il game-loop a tempo reale e dealloca tutto all'uscita.
 * **Funzioni e chiamate chiave riga per riga:**
