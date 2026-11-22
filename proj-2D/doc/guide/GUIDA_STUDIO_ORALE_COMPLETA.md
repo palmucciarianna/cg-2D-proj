@@ -2,7 +2,7 @@
 ## Manuale Completo di Preparazione all'Esame di Computer Graphics
 **Candidata:** Arianna Palmucci  
 **Docente:** Prof.ssa Damiana Lazzaro – Università di Bologna  
-**Corso:** Computer Graphics (A.A. 2025/2026 – Parziale I)  
+**Corso:** Computer Graphics (A.A. 2026/2027 – Parziale I)  
 **Progetto:** *Astro-Miner 2D: Cosmic Coin Rush* (OpenGL 3.3 Core Profile, C++17)
 
 ---
@@ -598,36 +598,51 @@ Ecco come collegare direttamente il tuo progetto a ciascuna delle 20 domande d'e
 
 ---
 
-# 7. COME POTENZIARE LA PRESENTAZIONE CANVA E LA DEMO LIVE
+# 7. GUIDA STRATEGICA ALL'ESPOSIZIONE DELLE 10 SLIDE E ALLA DEMO LIVE
 
-### Perché la presentazione attuale è considerata "breve" e come migliorarla
-Una presentazione breve non è un difetto se è densa di contenuti. Tuttavia, per dare l'impressione di una sicurezza totale e da 30 e Lode, le tue slide devono mostrare immediatamente alla docente che **dietro ogni elemento visivo c'è una scelta matematica e architetturale precisa**.
+Per il testo completo parola per parola da pronunciare durante il colloquio e per le risposte alle domande a trabocchetto su ogni singola slide, consulta il documento complementare:
+👉 [`guida_presentazione_canva.md`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/doc/guide/guida_presentazione_canva.md)
 
-### Le 5 Modifiche Chiave da fare subito su Canva:
-1. **Aggiungi lo Screenshot con HUD e Boss Bar:** Inserisci lo screenshot del gameplay reale (quello con l'Alien Sentinel Overlord, il radar olografico e le particelle cosmiche). Mostra che il gioco è completo, rifinito e giocabile.
-2. **Inserisci il Grafo ad Albero delle Trasformazioni (Slide 3):** Disegna un piccolo diagramma ad albero per la navicella:
-   $$\text{Player Root } (M = T \cdot R \cdot S) \longrightarrow \{\text{Fusoliera, Muso, Cabina, Ala DX, Ala SX } [S(-1,1,1)], \text{Fiamme, Luci}\}$$
-   La professoressa adora vedere che comprendi la propagazione matriciale nei grafi di scena!
-3. **Metti in evidenza l'equazione di Hermite e il raccordo $C^1$ (Slide 4):**
-   Scrivi chiaramente la formula vettoriale:
-   $$C(t) = h_{00}(t)P_0 + h_{01}(t)P_1 + h_{10}(t)D_0 + h_{11}(t)D_1$$
-   e specifica: *Continuità $C^1$: $C_{i-1}(t_i) = C_i(t_i)$ e $C'_{i-1}(t_i) = C'_i(t_i)$*.
-4. **Evidenzia il diagramma di Buffer Sharing (Slide 5):**
-   Un piccolo box con scritto: `VRAM: 1 solo VBO/VAO` $\longrightarrow$ `CPU Loop: 9 x glUniformMatrix4fv(model)`. Spiega che azzera i trasferimenti RAM $\to$ VRAM.
-5. **Cita il Delta-Time Clamping (Slide 7):**
-   Spiega che $\Delta t = \min(\Delta t, 0.05\text{s})$ previene il passaggio attraverso i muri e garantisce stabilità numerica.
+### 7.1 Mappa Sinottica delle 10 Slide Definitive (5-7 Minuti Totali)
 
-### Scaletta Perfetta per l'Orale (5-7 Minuti):
-* **Minuto 0:00 - 0:45 (Apertura e Architettura):**
-  Saluta, presenta il titolo *Astro-Miner 2D: Cosmic Coin Rush*, spiega che è sviluppato in C++17 e OpenGL 3.3 Core Profile, con pattern RAII, zero variabili globali e architettura disaccoppiata (SoC).
-* **Minuto 0:45 - 2:00 (Modellazione Geometrica e Hermite):**
-  Mostra la navicella (11 componenti gerarchici, matrice di riflessione alare $S(-1,1,1)$ e texture UV cabina) e le spline di Hermite $C^1$ (Alien Drone su traiettoria a 8 di Lissajous con animazione interattiva di ammiccamento occhio e Warp Gate).
-* **Minuto 2:00 - 3:15 (Efficienza della Pipeline e Shaders):**
-  Spiega il Buffer Sharing (1 solo VAO statico per tutti gli asteroidi e monete, variazione tramite Model Matrix Uniform) e i due programmi shader distinti (sfondo procedurale in NDC puro con parallasse a 3 strati e shader universale con proiezione ortografica `glm::ortho`).
-* **Minuto 3:15 - 4:15 (Fisica, Collisioni e Particelle):**
-  Racconta la rotazione pseudo-3D delle monete ($s_x = |\cos(\omega t)|$), le collisioni con distanza al quadrato per evitare la radice quadrata e il sistema particellare con attrito viscoso e alpha blending.
-* **Minuto 4:15 - Fine (Live Demo e Domande):**
-  Avvia il gioco con `./bin/Interactive2DWorld`, raccogli le monete, spara agli asteroidi con il laser, fai vedere l'ammiccamento del drone passandoci sopra, e completa il livello saltando nel Warp Gate!
+| Slide | Titolo & Contenuto Chiave | Concetto CG & Formula da Citare | Focus da Enfatizzare |
+| :--- | :--- | :--- | :--- |
+| **1** | **Copertina & Titolo** (*Astro-Miner 2D*) | OpenGL 3.3 Core Profile, pipeline programmabile | Zero pipeline fissa, portabilità nativa macOS/Win |
+| **2** | **Obiettivi Didattici & Specifiche** | Modellazione gerarchica, Hermite $C^1$, VRAM static | Conformità 100% ai requisiti d'esame |
+| **3** | **Architettura Software & Game Loop** | Separation of Concerns (SoC), delta time clamping $\Delta t$ | Zero variabili globali, RAII, disaccoppiamento |
+| **4** | **Oggetto Composto (Requisito 3.1)** | $M_{\text{comp}} = M_{\text{player}} \cdot T \cdot R \cdot S$, specularità $S(-1,1,1)$ | 8 componenti logici (11 nodi), nessun vertice duplicato |
+| **5** | **Curve di Hermite (Requisito 3.2)** | $p(t) = \sum h_{ij}(t) P_j$, raccordo $C^1$ ($C = C, C' = C'$) | Alien Drone (113 vtx) su Lissajous e Warp Gate (144 vtx) |
+| **6** | **Buffer Statici & Istanziazione (Req. 4)** | `GL_STATIC_DRAW`, $v_{\text{clip}} = P \cdot M \cdot v_{\text{loc}}$ | 1 solo VAO statico per 9 asteroidi: zero bus transfer |
+| **7** | **Shader Sfondo vs Shader Oggetti (Req. 5)** | Starfield $h(p) = \text{fract}(\sin(p \cdot K) \cdot 43758.54)$, $P_{\text{ortho}}$ | Sfondo procedurale matematico in NDC puro $[-1,1]$ |
+| **8** | **Gameplay, Fisica & Collisioni** | $\|c_1 - c_2\|^2 \le (r_1+r_2)^2$, attrito $v(t+\Delta t) = v(1-\gamma\Delta t)$ | Nessuna radice quadrata, 28 schegge particellari |
+| **9** | **Portabilità Totale & HUD ImGui** | GLFW/GLAD/GLM bundled, `!io.WantCaptureMouse` | Compilazione out-of-the-box, slider velocità nave |
+| **10** | **Chiusura & Avvio Demo Live** | Integrazione completa rendering + fisica + input | Transizione fluida e sicura alla prova al computer |
+
+---
+
+### 7.2 Scaletta Temporale per l'Esposizione Orale
+
+* **Minuti 0:00 – 1:00 (Slide 1–3) — Inquadramento e Architettura:**
+  Saluta con sicurezza, dichiara le tecnologie utilizzate (C++17, OpenGL 3.3 Core Profile) ed esponi la struttura ad alto livello del motore grafico: pattern RAII, disaccoppiamento dei layer (Core, Graphics, Scene, FSM) e delta-time clamping ($\Delta t \le 0.05\text{s}$) per evitare tunneling e jittering.
+* **Minuti 1:00 – 2:30 (Slide 4–5) — Geometria, Grafo Gerarchico e Hermite:**
+  Spiega l'albero matriciale della navicella sottolineando l'eleganza della specchiatura alare sinistra tramite $S(-1, 1, 1)$, che dimezza i vertici memorizzati. Passa subito alla formulazione analitica delle spline cubiche di Hermite, scrivendo o indicando le 4 funzioni base $h_{00}, h_{01}, h_{10}, h_{11}$ e spiegando come la continuità parametrica $C^1$ garantisca la perfetta tangenza sia nelle corna dell'Alien Drone che nella corona del Warp Gate.
+* **Minuti 2:30 – 3:45 (Slide 6–7) — Ottimizzazione della Pipeline e Shader GLSL:**
+  Illustra il principio cardine del Requisito 4: buffer sharing estremo, con un singolo VAO caricato in VRAM all'avvio e riutilizzato per disegnare tutti gli asteroidi e le monete semplicemente aggiornando la matrice uniforme `model` via `glUniformMatrix4fv`. Descrivi la differenza concettuale tra lo shader universale degli oggetti (proiezione ortografica `glm::ortho`) e lo shader dello sfondo procedurale (operante in NDC $[-1,1]$ puro con parallasse a 3 livelli e funzioni hash pseudo-casuali senza alcuna texture).
+* **Minuti 3:45 – 4:45 (Slide 8–9) — Dinamica, Collisioni, HUD e Portabilità:**
+  Mostra l'ottimizzazione del calcolo delle collisioni con la distanza euclidea al quadrato, la dinamica particellare con decadimento viscoso e alpha blending, l'HUD in Dear ImGui protetto da `io.WantCaptureMouse` e la portabilità garantita dalle librerie ausiliarie incluse come sorgenti.
+* **Minuti 4:45 – Fine (Slide 10 & Demo Live):**
+  Chiudi ringraziando per l'attenzione e avvia la demo interattiva per mostrare visivamente quanto esposto.
+
+---
+
+### 7.3 I 6 Passi Obbligatori della Demo Live
+
+1. **Avvio:** Lancia `./bin/Interactive2DWorld` da terminale (o da Visual Studio).
+2. **Guida & Manovra:** Usa le frecce per muovere la nave: fai notare l'inerzia dolce e l'allungamento progressivo delle fiamme arancioni degli scarichi.
+3. **Monete:** Raccogli una moneta d'oro: evidenzia l'oscillazione pseudo-3D ortogonale ($s_x = \|\cos(\omega t)\|$) e il burst di scintille particellari dorate.
+4. **Laser & Asteroidi:** Premi `Spazio` per sparare: distruggi un asteroide e mostra la frantumazione in 28 schegge con attrito viscoso e dissolvenza alpha.
+5. **Alien Drone & Eye-Blink:** Mostra l'Alien Drone rosso che pattuglia la mappa sulla traiettoria a 8 di Lissajous; volaci sopra e fai notare chiaramente che **l'occhio dorato si chiude e ammicca (eye-blink)** ad ogni contatto!
+6. **Vittoria:** Raccogli le 5 monete, vola dentro il Warp Gate luminoso e mostra la schermata centrata di **"HURRÀ!"** con la fontana di coriandoli festosi!
 
 ---
 *Documento redatto per la preparazione dell'Esame di Computer Graphics – UniBo.*
