@@ -327,6 +327,7 @@ Tutti i file del progetto contengono in cima al codice la **Guida Rapida per l'O
      - `glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)`: previene artefatti di ripetizione sui bordi.
   4. `glTexImage2D(...)`: trasferisce i byte dell'immagine nella memoria VRAM della GPU.
   5. `stbi_image_free(data)`: libera immediatamente la RAM di sistema (CPU).
+  6. **Pulsante *"Ricarica Texture Cabina"* (Hot-Reload a runtime):** In `GameWorld.cpp` il pulsante ImGui invoca `m_player.reloadFaceTexture(...)` cercando in ordine `player_face.bmp`, `.png` o `.jpg` in `assets/textures/`. Se una texture era già presente, `Texture::load()` invoca prima `glDeleteTextures(1, &m_textureID)` per evitare memory leak in VRAM e poi ricarica da disco i nuovi pixel senza riavviare l'applicazione. Se il file su disco non è cambiato, l'immagine a schermo rimane visivamente identica.
 
 ---
 

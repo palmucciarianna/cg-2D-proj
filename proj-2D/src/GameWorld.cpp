@@ -442,6 +442,8 @@ void GameWorld::renderUI(float dt)
         }
 
         ImGui::SameLine();
+        // Hot-reload a caldo: dealloca la texture precedente (glDeleteTextures) e ricarica
+        // da disco player_face.bmp/.png/.jpg senza riavviare l'applicazione.
         if (ImGui::Button("Ricarica Texture Cabina"))
         {
             m_player.reloadFaceTexture("assets/textures/player_face.bmp") ||

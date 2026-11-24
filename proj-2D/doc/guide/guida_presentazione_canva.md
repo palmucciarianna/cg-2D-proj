@@ -179,7 +179,11 @@ Per ogni slide trovi:
 
 ### 🎙️ Cosa dire a voce (35 secondi):
 > *"Il progetto è stato progettato con un'attenzione particolare all'ingegneria del software e alla portabilità: tutte le librerie ausiliarie (GLFW, GLAD, GLM, ImGui, stb_image) sono incluse come codice sorgente statico all'interno del repository, consentendo la compilazione immediata 'out-of-the-box' su macOS, Linux e Windows senza installare pacchetti di sistema.  
-> L'interfaccia utente in Dear ImGui è protetta dal controllo `!io.WantCaptureMouse`, permettendo di regolare la velocità della nave o monitorare le prestazioni a 60/120 FPS senza che i click del mouse interferiscano con i controlli di guida."*
+> L'interfaccia utente in Dear ImGui è protetta dal controllo `!io.WantCaptureMouse`, permettendo di regolare la velocità della nave, ricaricare a caldo la texture della cabina o monitorare le prestazioni a 60/120 FPS senza che i click del mouse interferiscano con i controlli di guida."*
+
+### ❓ Possibile domanda a trabocchetto:
+* **Professoressa:** *"A cosa serve il pulsante 'Ricarica Texture Cabina' nell'HUD e come evita sprechi di memoria?"*
+* **Risposta vincente:** *"Implementa l'hot-reload a runtime della foto del pilota (`assets/textures/player_face.bmp/.png/.jpg`) senza riavviare l'app: prima di caricare il nuovo file con `stbi_load` e `glTexImage2D`, `Texture::load()` dealloca l'handle precedente con `glDeleteTextures`, garantendo l'assenza di memory leak in VRAM."*
 
 ---
 
