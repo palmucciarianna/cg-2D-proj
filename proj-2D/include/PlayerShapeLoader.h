@@ -109,55 +109,55 @@ namespace PlayerShapeLoader
             return false;
         }
 
-        std::vector<glm::vec3> vertices;
-        std::unordered_map<std::string, glm::vec4> materials;
+        std::vector<glm::vec3> vertices;                    // Lista temporanea dei vertici 'v' letti dal file
+        std::unordered_map<std::string, glm::vec4> materials; // Mappa nome materiale -> colore RGBA
         // Colore di fallback azzurro chiaro se nessun materiale è associato.
         glm::vec4 currentColor(0.3f, 0.7f, 0.95f, 1.0f);
 
-        MeshData result;
-        result.primitiveType = GL_TRIANGLES;
+        MeshData result;                     // Struttura CPU di destinazione
+        result.primitiveType = GL_TRIANGLES; // Tutti i poligoni vengono triangolati
 
-        std::string line;
+        std::string line;                    // Buffer stringa per la lettura riga per riga
 
         // 2. Parsing riga per riga del file OBJ.
         while (std::getline(file, line))
         {
-            std::istringstream in(line);
-            std::string tag;
-            in >> tag;
+            std::istringstream in(line); // Stream di parsing sulla riga corrente
+            std::string tag;             // Primo token della riga ('v', 'f', 'mtllib', 'usemtl')
+            in >> tag;                   // Estrae il prefisso identificativo
 
             // Token 'v': vertice geometrico nello spazio locale (x, y, z).
             if (tag == "v")
             {
-                glm::vec3 v(0.0f);
-                if (in >> v.x >> v.y)
+                glm::vec3 v(0.0f); // Inizializza il vertice a (0,0,0)
+                if (in >> v.x >> v.y) // Legge almeno le coordinate X e Y
                 {
                     in >> v.z; // Se z non è presente nello stream, rimane 0.0f
-                    vertices.push_back(v);
+                    vertices.push_back(v); // Salva il vertice nella tabella indicizzata
                 }
             }
             // Token 'mtllib': riferimento a un file di materiali esterno (.mtl).
             else if (tag == "mtllib")
             {
-                std::string name;
-                while (in >> name)
+                std::string name; // Nome del file .mtl
+                while (in >> name) // Carica ciascuna libreria materiali referenziata
                 {
-                    readMTL(directoryOf(filename) + name, materials);
+                    readMTL(directoryOf(filename) + name, materials); // Parsing colori dal file .mtl
                 }
             }
             // Token 'usemtl': seleziona il materiale attivo per le facce successive.
             else if (tag == "usemtl")
             {
-                std::string name;
-                in >> name;
-                auto it = materials.find(name);
-                currentColor = (it != materials.end()) ? it->second : glm::vec4(0.3f, 0.7f, 0.95f, 1.0f);
+                std::string name; // Nome del materiale da attivare
+                in >> name;       // Legge il nome dallo stream
+                auto it = materials.find(name); // Cerca il materiale nella tabella caricata
+                currentColor = (it != materials.end()) ? it->second : glm::vec4(0.3f, 0.7f, 0.95f, 1.0f); // Applica o usa fallback
             }
             // Token 'f': definizione di una faccia poligonale (es. f v1/vt1/vn1 v2/vt2/vn2 ...).
             else if (tag == "f")
             {
-                std::vector<int> face;
-                std::string token;
+                std::vector<int> face; // Indici dei vertici appartenenti al poligono corrente
+                std::string token;     // Singolo token indice (es. "12/3/1")
 
                 // Estrae gli indici dei vertici della faccia.
                 while (in >> token)
@@ -166,7 +166,7 @@ namespace PlayerShapeLoader
                     {
                         // Estrae solo la prima cifra prima del carattere '/'.
                         int index = std::stoi(token.substr(0, token.find('/')));
-                        if (index == 0) { face.clear(); break; }
+                        if (index == 0) { face.clear(); break; } // Indice 0 non valido nello standard OBJ
 
                         // L'OBJ usa indici a base 1 (positivi) o relativi (negativi):
                         // Convertiamo all'indice base 0 del vettore C++.
@@ -175,15 +175,15 @@ namespace PlayerShapeLoader
                         // Verifica dei limiti di sicurezza del vettore.
                         if (index < 0 || index >= static_cast<int>(vertices.size()))
                         {
-                            face.clear();
-                            break;
+                            face.clear(); // Scarta la faccia se fuori intervallo
+                            break;        // Interrompe la lettura della faccia
                         }
-                        face.push_back(index);
+                        face.push_back(index); // Aggiunge l'indice validato
                     }
-                    catch (...)
+                    catch (...) // Cattura errori di conversione numerica (std::stoi)
                     {
-                        face.clear();
-                        break;
+                        face.clear(); // Scarta faccia malformata
+                        break;        // Esce dal ciclo token
                     }
                 }
 
@@ -192,19 +192,19 @@ namespace PlayerShapeLoader
                 // (v0, v1, v2), (v0, v2, v3), ..., (v0, v_{k}, v_{k+1})
                 for (std::size_t k = 1; k + 1 < face.size(); ++k)
                 {
-                    const glm::vec3 a = vertices[face[0]];
-                    const glm::vec3 b = vertices[face[k]];
-                    const glm::vec3 c = vertices[face[k + 1]];
+                    const glm::vec3 a = vertices[face[0]];     // Primo vertice ancora (v0)
+                    const glm::vec3 b = vertices[face[k]];     // Secondo vertice corrente (vk)
+                    const glm::vec3 c = vertices[face[k + 1]]; // Terzo vertice successivo (vk+1)
 
                     // Calcolo del prodotto vettoriale 2D (area con segno):
                     // Se l'area è infinitesima, scarta il triangolo degenere per evitare artefatti di rasterizzazione.
                     const float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-                    if (std::abs(cross) < 1e-10f) continue;
+                    if (std::abs(cross) < 1e-10f) continue; // Salta triangoli con area nulla
 
                     // Inserisce i tre vertici del triangolo nel buffer delle posizioni.
-                    result.positions.push_back(a);
-                    result.positions.push_back(b);
-                    result.positions.push_back(c);
+                    result.positions.push_back(a); // Vertice A
+                    result.positions.push_back(b); // Vertice B
+                    result.positions.push_back(c); // Vertice C
 
                     // Associa il colore del materiale attivo a tutti e tre i vertici del triangolo.
                     result.colors.insert(result.colors.end(), 3, currentColor);
@@ -215,13 +215,13 @@ namespace PlayerShapeLoader
         // Verifica che il modello contenga almeno un triangolo valido.
         if (result.positions.empty())
         {
-            error = "Il file OBJ non contiene facce poligonali o triangoli validi: " + filename;
-            return false;
+            error = "Il file OBJ non contiene facce poligonali o triangoli validi: " + filename; // Messaggio diagnostico
+            return false; // Fallimento caricamento
         }
 
         // Trasferisce i risultati nella mesh di output tramite move semantics.
-        mesh = std::move(result);
-        error.clear();
-        return true;
+        mesh = std::move(result); // Evita copie pesanti dei std::vector
+        error.clear();            // Nessun errore
+        return true;              // Caricamento completato con successo
     }
 }

@@ -72,33 +72,33 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
 
     // Sopracciglio triangolare inclinato aggressivo.
     MeshData browData = ShapeGenerator::createTriangle(
-        glm::vec4(0.1f, 0.05f, 0.05f, 1.0f),
-        glm::vec4(0.6f, 0.05f, 0.05f, 1.0f),
-        glm::vec4(0.05f, 0.02f, 0.02f, 1.0f)
+        glm::vec4(0.1f, 0.05f, 0.05f, 1.0f),   // Vertice base scuro
+        glm::vec4(0.6f, 0.05f, 0.05f, 1.0f),   // Vertice rosso intenso
+        glm::vec4(0.05f, 0.02f, 0.02f, 1.0f)   // Vertice ombra esterna
     );
-    m_eyebrowsGeo.setData(browData.positions, browData.colors, browData.primitiveType);
-    m_eyebrowsGeo.upload();
+    m_eyebrowsGeo.setData(browData.positions, browData.colors, browData.primitiveType); // Copia dati CPU
+    m_eyebrowsGeo.upload(); // Carica VAO/VBO sopracciglia in VRAM
 
     // Bocca a ghigno malefico con zanna aguzza.
     MeshData mouthData = ShapeGenerator::createTriangle(
-        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),
-        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),
-        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f)
+        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),  // Angolo sinistro scuro
+        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),  // Angolo destro scuro
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f)   // Punta zanna bianca
     );
-    m_evilMouthGeo.setData(mouthData.positions, mouthData.colors, mouthData.primitiveType);
-    m_evilMouthGeo.upload();
+    m_evilMouthGeo.setData(mouthData.positions, mouthData.colors, mouthData.primitiveType); // Copia dati CPU
+    m_evilMouthGeo.upload(); // Carica VAO/VBO bocca in VRAM
 
     // ------------------------------------------------------------------------
     // 3. Caricamento del Warp Gate (Portale Monumentale Hermite)
     // ------------------------------------------------------------------------
-    MeshData gateData;
-    if (PlayerShapeLoader::load(warpGateObjPath, gateData, err))
+    MeshData gateData; // Struttura CPU per l'anello del Warp Gate
+    if (PlayerShapeLoader::load(warpGateObjPath, gateData, err)) // Parsing del file OBJ/MTL a spline Hermite
     {
-        m_gateGeo.setData(gateData.positions, gateData.colors, gateData.primitiveType);
-        m_gateGeo.upload();
-        m_hasGate = true;
+        m_gateGeo.setData(gateData.positions, gateData.colors, gateData.primitiveType); // Popola la geometria
+        m_gateGeo.upload(); // Trasferisce i 144 vertici in VRAM
+        m_hasGate = true;   // Segnala caricamento riuscito
     }
-    else
+    else // Gestione errore se il file OBJ manca
     {
         std::cerr << "[ERRORE] Caricamento modello Hermite Gate (" << warpGateObjPath << "): " << err << "\n";
     }
@@ -106,11 +106,11 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     // Vortice di energia interno (cerchio ciano a sfumatura radiale).
     MeshData vortexData = ShapeGenerator::createCircle(
         0.0f, 0.0f, 30.0f, 30.0f, 32,
-        glm::vec4(0.8f, 0.95f, 1.0f, 0.90f),
-        glm::vec4(0.1f, 0.45f, 0.85f, 0.30f)
+        glm::vec4(0.8f, 0.95f, 1.0f, 0.90f), // Nucleo centrale luminoso
+        glm::vec4(0.1f, 0.45f, 0.85f, 0.30f) // Alone esterno sfumato
     );
-    m_vortexGeo.setData(vortexData.positions, vortexData.colors, vortexData.primitiveType);
-    m_vortexGeo.upload();
+    m_vortexGeo.setData(vortexData.positions, vortexData.colors, vortexData.primitiveType); // Copia dati CPU
+    m_vortexGeo.upload(); // Carica VAO/VBO del vortice in VRAM
 }
 
 // ============================================================================
@@ -309,29 +309,29 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         m_evilEyeGeo.draw();
 
         // D) Pupilla verticale all'interno dell'occhio.
-        glm::mat4 pupilMat = glm::scale(eyeMat, glm::vec3(1.0f, 0.9f, 1.0f));
-        shader.setMat4("model", pupilMat);
-        m_pupilGeo.draw();
+        glm::mat4 pupilMat = glm::scale(eyeMat, glm::vec3(1.0f, 0.9f, 1.0f)); // Scala leggermente sull'asse Y
+        shader.setMat4("model", pupilMat); // Invia matrice pupilla
+        m_pupilGeo.draw();                 // Disegna pupilla nera
 
         // E) Sopracciglio Destro inclinato di +28 gradi.
-        glm::mat4 browRight = glm::translate(headRoot, glm::vec3(10.0f, 15.0f, 0.0f));
-        browRight = glm::rotate(browRight, glm::radians(28.0f), glm::vec3(0, 0, 1));
-        browRight = glm::scale(browRight, glm::vec3(18.0f, 5.0f, 1.0f));
-        shader.setMat4("model", browRight);
-        m_eyebrowsGeo.draw();
+        glm::mat4 browRight = glm::translate(headRoot, glm::vec3(10.0f, 15.0f, 0.0f)); // Posizione sopra l'occhio DX
+        browRight = glm::rotate(browRight, glm::radians(28.0f), glm::vec3(0, 0, 1));   // Inclinazione aggressiva +28°
+        browRight = glm::scale(browRight, glm::vec3(18.0f, 5.0f, 1.0f));               // Dimensionamento rettangolare
+        shader.setMat4("model", browRight); // Invia matrice sopracciglio DX
+        m_eyebrowsGeo.draw();               // Disegna sopracciglio DX
 
         // F) Sopracciglio Sinistro inclinato di -28 gradi.
-        glm::mat4 browLeft = glm::translate(headRoot, glm::vec3(-10.0f, 15.0f, 0.0f));
-        browLeft = glm::rotate(browLeft, glm::radians(-28.0f), glm::vec3(0, 0, 1));
-        browLeft = glm::scale(browLeft, glm::vec3(-18.0f, 5.0f, 1.0f));
-        shader.setMat4("model", browLeft);
-        m_eyebrowsGeo.draw();
+        glm::mat4 browLeft = glm::translate(headRoot, glm::vec3(-10.0f, 15.0f, 0.0f)); // Posizione sopra l'occhio SX
+        browLeft = glm::rotate(browLeft, glm::radians(-28.0f), glm::vec3(0, 0, 1));   // Inclinazione simmetrica -28°
+        browLeft = glm::scale(browLeft, glm::vec3(-18.0f, 5.0f, 1.0f));               // Riflessione speculare X=-18
+        shader.setMat4("model", browLeft); // Invia matrice sopracciglio SX
+        m_eyebrowsGeo.draw();              // Riusa la mesh del sopracciglio
 
         // G) Bocca a ghigno malefico posizionata nella parte inferiore del volto.
-        glm::mat4 mouthMat = glm::translate(headRoot, glm::vec3(0.0f, -18.0f, 0.0f));
-        mouthMat = glm::scale(mouthMat, glm::vec3(22.0f, 8.0f, 1.0f));
-        shader.setMat4("model", mouthMat);
-        m_evilMouthGeo.draw();
+        glm::mat4 mouthMat = glm::translate(headRoot, glm::vec3(0.0f, -18.0f, 0.0f)); // Offset inferiore bocca
+        mouthMat = glm::scale(mouthMat, glm::vec3(22.0f, 8.0f, 1.0f));                // Larghezza 22px, altezza 8px
+        shader.setMat4("model", mouthMat); // Invia matrice bocca
+        m_evilMouthGeo.draw();             // Disegna bocca con zanna
 
         // Ripristina uColorTint predefinito (1.0f) per le geometrie successive:
         shader.setVec4("uColorTint", glm::vec4(1.0f));
@@ -342,43 +342,43 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
     // ------------------------------------------------------------------------
     if (m_hasGate)
     {
-        glm::mat4 gateRoot = glm::mat4(1.0f);
-        gateRoot = glm::translate(gateRoot, glm::vec3(m_gatePos, 0.0f));
+        glm::mat4 gateRoot = glm::mat4(1.0f);                           // Matrice identità base portale
+        gateRoot = glm::translate(gateRoot, glm::vec3(m_gatePos, 0.0f)); // Trasla alla posizione fluttuante
 
-        bool activeVisual = (gateActive || m_relicPulseTimer > 0.0f);
+        bool activeVisual = (gateActive || m_relicPulseTimer > 0.0f); // Attivo visivamente se tutte le monete raccolte o toccato
         if (activeVisual)
         {
             // Portale Attivo: pulsazione luminosa radiale ad alta frequenza (10 rad/s).
             float pulse = 1.0f + 0.18f * std::sin(currentTime * 10.0f);
 
             // Vortice attivo a rotazione accelerata.
-            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 1.5f), glm::vec3(0, 0, 1));
-            vortexMat = glm::scale(vortexMat, glm::vec3(1.4f * pulse, 1.4f * pulse, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.3f, 1.0f, 0.95f, 1.0f));
-            shader.setMat4("model", vortexMat);
-            m_vortexGeo.draw();
+            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 1.5f), glm::vec3(0, 0, 1)); // Rotazione veloce
+            vortexMat = glm::scale(vortexMat, glm::vec3(1.4f * pulse, 1.4f * pulse, 1.0f)); // Scala pulsante
+            shader.setVec4("uColorTint", glm::vec4(0.3f, 1.0f, 0.95f, 1.0f)); // Tinta ciano brillante
+            shader.setMat4("model", vortexMat); // Invia matrice vortice
+            m_vortexGeo.draw();                 // Disegna vortice interno
 
             // Anello monumentale Hermite.
-            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 1.5f), glm::vec3(0, 0, 1));
-            ringMat = glm::scale(ringMat, glm::vec3(1.35f * pulse, 1.35f * pulse, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.4f, 0.85f, 1.0f, 1.0f));
-            shader.setMat4("model", ringMat);
-            m_gateGeo.draw();
+            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 1.5f), glm::vec3(0, 0, 1)); // Rotazione anello
+            ringMat = glm::scale(ringMat, glm::vec3(1.35f * pulse, 1.35f * pulse, 1.0f)); // Scala pulsante
+            shader.setVec4("uColorTint", glm::vec4(0.4f, 0.85f, 1.0f, 1.0f)); // Tinta azzurro elettrico
+            shader.setMat4("model", ringMat); // Invia matrice anello Hermite
+            m_gateGeo.draw();                 // Disegna i 144 vertici Hermite
         }
         else
         {
             // Portale Dormiente (in attesa che il giocatore raccolga le 5 monete).
-            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 0.4f), glm::vec3(0, 0, 1));
-            vortexMat = glm::scale(vortexMat, glm::vec3(1.15f, 1.15f, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.2f, 0.4f, 0.8f, 0.75f));
-            shader.setMat4("model", vortexMat);
-            m_vortexGeo.draw();
+            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 0.4f), glm::vec3(0, 0, 1)); // Rotazione lenta
+            vortexMat = glm::scale(vortexMat, glm::vec3(1.15f, 1.15f, 1.0f)); // Scala moderata
+            shader.setVec4("uColorTint", glm::vec4(0.2f, 0.4f, 0.8f, 0.75f)); // Tinta blu tenue semitrasparente
+            shader.setMat4("model", vortexMat); // Invia matrice vortice dormiente
+            m_vortexGeo.draw();                 // Disegna vortice
 
-            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 0.5f), glm::vec3(0, 0, 1));
-            ringMat = glm::scale(ringMat, glm::vec3(1.15f, 1.15f, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.35f, 0.6f, 0.95f, 0.9f));
-            shader.setMat4("model", ringMat);
-            m_gateGeo.draw();
+            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 0.5f), glm::vec3(0, 0, 1)); // Rotazione lenta anello
+            ringMat = glm::scale(ringMat, glm::vec3(1.15f, 1.15f, 1.0f)); // Scala fissa 1.15
+            shader.setVec4("uColorTint", glm::vec4(0.35f, 0.6f, 0.95f, 0.9f)); // Tinta blu sobria
+            shader.setMat4("model", ringMat); // Invia matrice anello dormiente
+            m_gateGeo.draw();                 // Disegna anello Hermite
         }
 
         // Ripristina la tinta colore globale.

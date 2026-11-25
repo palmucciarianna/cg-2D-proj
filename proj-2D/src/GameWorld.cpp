@@ -86,25 +86,33 @@ void GameWorld::init(const std::string& assetDir)
     // ------------------------------------------------------------------------
     // 2. Inizializzazione dei Singoli Sottosistemi
     // ------------------------------------------------------------------------
+    // Inizializza la geometria condivisa del sistema particellare (scintille, detriti, coriandoli).
     m_particles.init();
+    // Inizializza il gestore dei pericoli perimetrali supersonici.
     m_hazards.init();
+    // Alloca le 11 componenti gerarchiche e la texture della navicella del giocatore.
     m_player.init();
     // Colloca la navicella esattamente al centro dello schermo (640, 360).
     m_player.reset(glm::vec2(m_screenWidth * 0.5f, m_screenHeight * 0.5f));
 
+    // Prepara il VAO statico condiviso per le 5 monete d'oro collezionabili.
     m_collectibles.init();
+    // Prepara il VAO statico condiviso (Buffer Sharing) per tutti gli asteroidi.
     m_asteroids.init();
+    // Prepara la geometria condivisa per i proiettili laser al plasma.
     m_lasers.init();
 
     // Carica i modelli poligonali delle spline di Hermite (Drone Nemico e Portale Warp Gate).
-    std::string alienObj = resolveAsset(assetDir, "models/alien_drone.obj");
-    std::string warpObj  = resolveAsset(assetDir, "models/warp_gate.obj");
-    m_hermite.init(alienObj, warpObj);
+    std::string alienObj = resolveAsset(assetDir, "models/alien_drone.obj"); // Risolve il percorso della mesh del Drone
+    std::string warpObj  = resolveAsset(assetDir, "models/warp_gate.obj");   // Risolve il percorso della mesh del Warp Gate
+    m_hermite.init(alienObj, warpObj); // Carica e invia in VRAM i due modelli spline di Hermite
 
     // ------------------------------------------------------------------------
     // 3. Generazione Procedurale delle Entità per il Livello 1
     // ------------------------------------------------------------------------
+    // Posiziona le 5 monete d'oro evitando sovrapposizioni con lo spawn centrale.
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+    // Genera il campo iniziale di asteroidi con orbite e velocità casuali.
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 }
 
@@ -176,23 +184,23 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // Aggiorna le entità del mondo.
-        m_asteroids.update(dt);
-        m_collectibles.update(dt, currentTime);
-        m_hermite.update(dt, currentTime, m_player.position());
-        m_particles.update(dt);
+        m_asteroids.update(dt);                                      // Integra posizione e rotazione di ogni asteroide
+        m_collectibles.update(dt, currentTime);                      // Aggiorna oscillazione verticale e spin pseudo-3D delle monete
+        m_hermite.update(dt, currentTime, m_player.position());      // Muove il Drone su Lissajous e aggiorna timer eye-blink/portale
+        m_particles.update(dt);                                      // Integra cinematica particelle con attrito viscoso e decadimento alpha
 
         // Raccolta delle Monete d'Oro (+100 punti per ciascuna moneta):
-        int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles);
-        if (collectedNow > 0)
+        int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles); // Verifica impatto cerchio-cerchio
+        if (collectedNow > 0) // Se almeno una moneta è stata raccolta in questo frame
         {
-            m_player.addScore(collectedNow * 100);
+            m_player.addScore(collectedNow * 100); // Incrementa il punteggio cumulativo di +100 per moneta
         }
 
         // Interazione facoltativa di prossimità con la reliquia monumentale (+50 punti bonus):
-        int relicScore = 0;
+        int relicScore = 0; // Accumulatore per il bonus di prossimità
         if (!m_collectibles.allCollected() && m_hermite.checkRelicInteraction(m_player.getCollider(), m_particles, relicScore))
         {
-            m_player.addScore(relicScore);
+            m_player.addScore(relicScore); // Assegna il bonus al giocatore
         }
 
         // --------------------------------------------------------------------
@@ -202,32 +210,32 @@ void GameWorld::update(float dt, GLFWwindow* window)
         // Se invece il Drone è stato INDEBOLITO dai colpi laser, diventa innocuo:
         // non toglie vita e produce solo scintille di impatto ionico!
         // --------------------------------------------------------------------
-        if (m_hermite.checkDroneCollision(m_player.getCollider()))
+        if (m_hermite.checkDroneCollision(m_player.getCollider())) // Test distanza al quadrato tra navicella e Drone
         {
-            if (m_hermite.isWeakened())
+            if (m_hermite.isWeakened()) // Caso 1: il Drone è stato temporaneamente disattivato dal laser
             {
                 // Drone indebolito: innocuo! Scintille di rimbalzo senza perdita di vite
                 m_particles.emitDroneHitSparks(m_hermite.dronePosition(), 12);
             }
-            else if (!m_player.isInvulnerable())
+            else if (!m_player.isInvulnerable()) // Caso 2: Drone attivo e giocatore non invulnerabile
             {
-                m_player.takeDamage();
-                m_hermite.triggerEyeBlink();
-                m_particles.emitAsteroidExplosion(m_player.position(), 24);
+                m_player.takeDamage();                                   // Decrementa 1 vita e attiva invulnerabilità temporanea
+                m_hermite.triggerEyeBlink();                             // Fa ammiccare l'occhio dorato del Drone
+                m_particles.emitAsteroidExplosion(m_player.position(), 24); // Genera burst di 24 particelle di impatto
             }
         }
 
         // Collisione con gli asteroidi rocciosi in transito:
-        if (m_asteroids.checkPlayerCollision(m_player.getCollider()))
+        if (m_asteroids.checkPlayerCollision(m_player.getCollider())) // Test cerchio-cerchio con tutti gli asteroidi attivi
         {
-            m_player.takeDamage();
-            m_particles.emitAsteroidExplosion(m_player.position(), 16);
+            m_player.takeDamage();                                   // Infligge 1 danno alla navicella
+            m_particles.emitAsteroidExplosion(m_player.position(), 16); // Genera 16 frammenti particellari d'urto
         }
 
         // Se le vite sono terminate, scatta il Game Over:
-        if (!m_player.isAlive())
+        if (!m_player.isAlive()) // Controlla se m_lives <= 0
         {
-            m_state = GameState::GAME_OVER;
+            m_state = GameState::GAME_OVER; // Transizione della FSM allo stato finale di sconfitta
         }
 
         // --------------------------------------------------------------------
@@ -250,14 +258,14 @@ void GameWorld::update(float dt, GLFWwindow* window)
     // ------------------------------------------------------------------------
     else if (m_state == GameState::LEVEL_CLEARED_HURRA)
     {
-        m_hurraTimer -= dt;
-        m_particles.update(dt);
-        m_hermite.update(dt, currentTime, m_player.position());
+        m_hurraTimer -= dt;                                      // Scala il conto alla rovescia della celebrazione
+        m_particles.update(dt);                                  // Continua a simulare la caduta dei coriandoli
+        m_hermite.update(dt, currentTime, m_player.position());  // Mantiene attiva la rotazione del Warp Gate
 
         // Al termine del timer di celebrazione, avanza automaticamente al livello successivo.
         if (m_hurraTimer <= 0.0f)
         {
-            nextLevel();
+            nextLevel(); // Genera il livello m_currentLevel + 1
         }
     }
     // ------------------------------------------------------------------------
@@ -265,7 +273,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
     // ------------------------------------------------------------------------
     else if (m_state == GameState::GAME_OVER)
     {
-        m_particles.update(dt);
+        m_particles.update(dt); // Lascia esaurire le ultime particelle d'esplosione a schermo
     }
 }
 
@@ -472,19 +480,20 @@ void GameWorld::renderUI(float dt)
     // ------------------------------------------------------------------------
     // Banner di Allerta: Portale Attivo (Centrato in alto)
     // ------------------------------------------------------------------------
-    if (m_state == GameState::PLAYING && m_collectibles.allCollected())
+    if (m_state == GameState::PLAYING && m_collectibles.allCollected()) // Mostra il banner quando tutte le 5 monete sono state raccolte
     {
-        float bannerWidth = 560.0f;
-        float bannerHeight = 68.0f;
+        float bannerWidth = 560.0f;  // Larghezza fissa del banner in pixel
+        float bannerHeight = 68.0f;  // Altezza fissa del banner in pixel
+        // Posiziona il banner centrato orizzontalmente (pivot X=0.5) a 32px dal bordo superiore.
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 32.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("GateActivePrompt", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        ImGui::Dummy(ImVec2(0.0f, 2.0f));
-        ImGui::SetWindowFontScale(1.25f);
-        renderCenteredText(">> PORTALE ATTIVO! ENTRA NEL WARP GATE! <<", ImVec4(0.2f, 1.0f, 0.45f, 1.0f));
-        ImGui::SetWindowFontScale(0.95f);
-        renderCenteredText("Vola dentro il Warp Gate a destra per chiudere la partita con l'HURRA'!", ImVec4(0.85f, 0.95f, 1.0f, 1.0f));
-        ImGui::End();
+        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight)); // Applica le dimensioni fisse alla finestra
+        ImGui::Begin("GateActivePrompt", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove); // Finestra senza barra titolo né trascinamento
+        ImGui::Dummy(ImVec2(0.0f, 2.0f)); // Piccola spaziatura verticale superiore
+        ImGui::SetWindowFontScale(1.25f); // Ingrandisce il font per il titolo del prompt
+        renderCenteredText(">> PORTALE ATTIVO! ENTRA NEL WARP GATE! <<", ImVec4(0.2f, 1.0f, 0.45f, 1.0f)); // Testo verde brillante
+        ImGui::SetWindowFontScale(0.95f); // Ripristina la scala del font per il sottotitolo
+        renderCenteredText("Vola dentro il Warp Gate a destra per chiudere la partita con l'HURRA'!", ImVec4(0.85f, 0.95f, 1.0f, 1.0f)); // Istruzione per il giocatore
+        ImGui::End(); // Chiude il contesto della finestra ImGui
     }
 
     // ------------------------------------------------------------------------
@@ -492,71 +501,73 @@ void GameWorld::renderUI(float dt)
     // ------------------------------------------------------------------------
     if (m_state == GameState::LEVEL_CLEARED_HURRA)
     {
-        float bannerWidth = 500.0f;
-        float bannerHeight = 240.0f;
+        float bannerWidth = 500.0f;  // Larghezza del pannello di vittoria
+        float bannerHeight = 240.0f; // Altezza del pannello di vittoria
+        // Centra esattamente sullo schermo usando il pivot centrale (0.5, 0.5).
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("CelebrationBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight)); // Fissa le dimensioni del banner
+        ImGui::Begin("CelebrationBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove); // Pannello modale fisso
 
-        ImGui::Dummy(ImVec2(0.0f, 14.0f));
-        ImGui::SetWindowFontScale(1.75f);
+        ImGui::Dummy(ImVec2(0.0f, 14.0f)); // Margine interno superiore
+        ImGui::SetWindowFontScale(1.75f);  // Font grande dorato per il titolo "HURRA'!"
         renderCenteredText("HURRA'! SEI ENTRATO NEL WARP GATE!", ImVec4(1.0f, 0.90f, 0.10f, 1.0f));
-        ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetWindowFontScale(1.0f);   // Ripristina scala font standard
 
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
-        ImGui::Separator();
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));  // Spaziatura prima della linea divisoria
+        ImGui::Separator();                // Linea orizzontale separatrice
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));  // Spaziatura dopo la linea divisoria
 
-        renderCenteredText("Salto dimensionale completato con successo!", ImVec4(0.3f, 1.0f, 0.4f, 1.0f));
-        renderCenteredText("Bonus Livello: +500 Punti!", ImVec4(0.2f, 0.9f, 1.0f, 1.0f));
+        renderCenteredText("Salto dimensionale completato con successo!", ImVec4(0.3f, 1.0f, 0.4f, 1.0f)); // Messaggio di conferma
+        renderCenteredText("Bonus Livello: +500 Punti!", ImVec4(0.2f, 0.9f, 1.0f, 1.0f)); // Indica il bonus assegnato
 
-        char nextLvlBuf[128];
-        snprintf(nextLvlBuf, sizeof(nextLvlBuf), "Generazione del Livello %d in corso (%.1f s)...", m_currentLevel + 1, m_hurraTimer);
-        renderCenteredText(nextLvlBuf, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+        char nextLvlBuf[128]; // Buffer stringa per il conto alla rovescia
+        snprintf(nextLvlBuf, sizeof(nextLvlBuf), "Generazione del Livello %d in corso (%.1f s)...", m_currentLevel + 1, m_hurraTimer); // Formatta livello e timer
+        renderCenteredText(nextLvlBuf, ImVec4(0.9f, 0.9f, 0.9f, 1.0f)); // Mostra il countdown centrato
 
-        ImGui::Dummy(ImVec2(0.0f, 10.0f));
-        float btnWidth = 380.0f;
-        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f);
-        if (ImGui::Button("Passa Subito al Prossimo Livello >>", ImVec2(btnWidth, 38)))
+        ImGui::Dummy(ImVec2(0.0f, 10.0f)); // Spaziatura prima del pulsante
+        float btnWidth = 380.0f;           // Larghezza del pulsante d'azione
+        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f); // Centra orizzontalmente il pulsante
+        if (ImGui::Button("Passa Subito al Prossimo Livello >>", ImVec2(btnWidth, 38))) // Se cliccato salta l'attesa
         {
-            nextLevel();
+            nextLevel(); // Avanza immediatamente al livello successivo
         }
-        ImGui::End();
+        ImGui::End(); // Chiude la finestra ImGui di vittoria
     }
     // ------------------------------------------------------------------------
     // Banner Game Over: (Perfettamente centrato sullo schermo)
     // ------------------------------------------------------------------------
     else if (m_state == GameState::GAME_OVER)
     {
-        float bannerWidth = 420.0f;
-        float bannerHeight = 210.0f;
+        float bannerWidth = 420.0f;  // Larghezza del pannello di Game Over
+        float bannerHeight = 210.0f; // Altezza del pannello di Game Over
+        // Centra il banner rispetto alla finestra di gioco con pivot (0.5, 0.5).
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("GameOverBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight)); // Applica le dimensioni del pannello
+        ImGui::Begin("GameOverBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove); // Pannello fisso
 
-        ImGui::Dummy(ImVec2(0.0f, 14.0f));
-        ImGui::SetWindowFontScale(1.8f);
-        renderCenteredText("GAME OVER!", ImVec4(1.0f, 0.25f, 0.25f, 1.0f));
-        ImGui::SetWindowFontScale(1.0f);
+        ImGui::Dummy(ImVec2(0.0f, 14.0f)); // Margine superiore
+        ImGui::SetWindowFontScale(1.8f);   // Scala testo grande per "GAME OVER!"
+        renderCenteredText("GAME OVER!", ImVec4(1.0f, 0.25f, 0.25f, 1.0f)); // Titolo rosso
+        ImGui::SetWindowFontScale(1.0f);   // Ripristina scala font standard
 
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
-        ImGui::Separator();
-        ImGui::Dummy(ImVec2(0.0f, 6.0f));
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));  // Spaziatura
+        ImGui::Separator();                // Linea orizzontale
+        ImGui::Dummy(ImVec2(0.0f, 6.0f));  // Spaziatura
 
-        renderCenteredText("La navicella e' andata distrutta!", ImVec4(0.95f, 0.95f, 0.95f, 1.0f));
+        renderCenteredText("La navicella e' andata distrutta!", ImVec4(0.95f, 0.95f, 0.95f, 1.0f)); // Messaggio di sconfitta
 
-        char scoreBuf[64];
-        snprintf(scoreBuf, sizeof(scoreBuf), "Punteggio finale: %d", m_player.score());
-        renderCenteredText(scoreBuf, ImVec4(1.0f, 0.85f, 0.2f, 1.0f));
+        char scoreBuf[64]; // Buffer per il punteggio finale
+        snprintf(scoreBuf, sizeof(scoreBuf), "Punteggio finale: %d", m_player.score()); // Formatta lo score accumulato
+        renderCenteredText(scoreBuf, ImVec4(1.0f, 0.85f, 0.2f, 1.0f)); // Stampa lo score in giallo oro
 
-        ImGui::Dummy(ImVec2(0.0f, 10.0f));
-        float btnWidth = 280.0f;
-        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f);
-        if (ImGui::Button("Riprova Partita", ImVec2(btnWidth, 38)))
+        ImGui::Dummy(ImVec2(0.0f, 10.0f)); // Spaziatura sopra il bottone
+        float btnWidth = 280.0f;           // Larghezza bottone Riprova
+        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f); // Centra il bottone
+        if (ImGui::Button("Riprova Partita", ImVec2(btnWidth, 38))) // Bottone di riavvio rapido
         {
-            restartGame();
+            restartGame(); // Resetta lo stato di gioco dal livello 1
         }
-        ImGui::End();
+        ImGui::End(); // Chiude il banner Game Over
     }
 }
 
@@ -565,14 +576,13 @@ void GameWorld::renderUI(float dt)
 // ============================================================================
 void GameWorld::nextLevel()
 {
-    // Incrementa il livello.
-    m_currentLevel++;
-    m_state = GameState::PLAYING;
-    m_lasers.clear();
-    m_hazards.reset();
-    m_hazards.setLevel(m_currentLevel);
-    m_hermite.setLevel(m_currentLevel);
-    m_hermite.resetWeakness();
+    m_currentLevel++;                         // Incrementa il numero del livello corrente
+    m_state = GameState::PLAYING;             // Riporta la FSM in stato di gioco attivo
+    m_lasers.clear();                         // Rimuove tutti i proiettili laser residui
+    m_hazards.reset();                        // Azzera i pericoli laterali attivi
+    m_hazards.setLevel(m_currentLevel);       // Scala la difficoltà dei pericoli al nuovo livello
+    m_hermite.setLevel(m_currentLevel);       // Aggiorna la velocità del Drone al nuovo livello
+    m_hermite.resetWeakness();                // Ripristina lo stato attivo del Drone Rosso
 
     // Riposiziona il giocatore al centro dello schermo (punteggio mantenuto cumulativo).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
@@ -589,18 +599,19 @@ void GameWorld::nextLevel()
 // ============================================================================
 void GameWorld::restartGame()
 {
-    // Resetta il contatore del livello al primo.
-    m_currentLevel = 1;
-    m_state = GameState::PLAYING;
-    m_lasers.clear();
-    m_particles.clear();
-    m_hazards.reset();
-    m_hazards.setLevel(m_currentLevel);
-    m_hermite.setLevel(m_currentLevel);
-    m_hermite.resetWeakness();
+    m_currentLevel = 1;                       // Resetta il contatore del livello al primo
+    m_state = GameState::PLAYING;             // Riporta la FSM allo stato PLAYING
+    m_lasers.clear();                         // Elimina eventuali raggi laser in volo
+    m_particles.clear();                      // Svuota il pool delle particelle residue
+    m_hazards.reset();                        // Azzera i pericoli perimetrali attivi
+    m_hazards.setLevel(m_currentLevel);       // Reimposta la difficoltà al livello 1
+    m_hermite.setLevel(m_currentLevel);       // Reimposta la velocità del Drone al livello 1
+    m_hermite.resetWeakness();                // Riattiva la pericolosità del Drone Rosso
 
-    // Ripristina la navicella (il punteggio cumulativo di sessione non si azzera).
+    // Ripristina la navicella al centro (il punteggio cumulativo di sessione non si azzera).
     m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
+    // Rigenera le 5 monete d'oro per il livello 1.
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+    // Rigenera il campo iniziale di asteroidi per il livello 1.
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 }
