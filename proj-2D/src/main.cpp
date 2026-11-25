@@ -1,3 +1,6 @@
+// ORIGINE: Scheletro standard di avvio/chiusura GLFW + GLAD + ImGui dai laboratori della prof 
+// (glfwInit, contesto 3.3 Core Profile, gladLoadGLLoader, ImGui_Impl*, swap/terminate), 
+// esteso con GameWorld, Input, V-Sync, Alpha Blending e Delta-Time Clamping.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - ENTRY-POINT: main.cpp (Architettura & Render Loop)
 // ----------------------------------------------------------------------------

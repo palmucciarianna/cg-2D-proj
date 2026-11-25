@@ -43,11 +43,11 @@ Texture::~Texture()
 // ============================================================================
 // Costruttore per Movimento
 // ============================================================================
-Texture::Texture(Texture&& other) noexcept
-    : m_textureID(other.m_textureID)
-    , m_width(other.m_width)
-    , m_height(other.m_height)
-    , m_channels(other.m_channels)
+Texture::Texture(Texture&& other) noexcept:
+    m_textureID(other.m_textureID),
+    m_width(other.m_width),
+    m_height(other.m_height),
+    m_channels(other.m_channels)
 {
     // Invalida l'oggetto sorgente per evitare la distruzione accidentale dell'handle GPU.
     other.m_textureID = 0;
