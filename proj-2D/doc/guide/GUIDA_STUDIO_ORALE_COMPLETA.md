@@ -117,11 +117,14 @@ Tutti i file del progetto contengono in cima al codice la **Guida Rapida per l'O
   - [`ShaderMaker.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/ShaderMaker.h) e [`ShaderMaker.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/ShaderMaker.cpp) (Compilazione GLSL a runtime e controllo log di errore)
   - [`Texture.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Texture.h) e [`Texture.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Texture.cpp) (`stb_image.h`, flip verticale per coordinate UV di OpenGL, filtri bilineari)
 * **Matematica, Input e Tipi di Base:**
-  - [`Collider2D.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Collider2D.h) (Cerchio-Cerchio con distanza al quadrato senza radice quadrata, AABB SAT)
+  - [`Collider2D.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Collider2D.h) (Cerchio-Cerchio con distanza al quadrato senza radice quadrata, AABB SAT, Cerchio-AABB con clamping)
+  - [`MathConstants.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/MathConstants.h) (Costante `PI` condivisa)
   - [`Transform.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Transform.h) (Composizione $M = T \cdot R \cdot S$ e grafi di scena gerarchici)
   - [`MeshData.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/MeshData.h) (Contenitore CPU per vertici e colori)
-  - [`Input.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Input.h) e [`Input.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Input.cpp) (Callback GLFW vs Polling continuo)
+  - [`Input.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Input.h) e [`Input.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Input.cpp) (Callback GLFW vs Polling continuo, inversione asse Y)
   - [`PlayerShapeLoader.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/PlayerShapeLoader.h) (Parser per file `.obj` e `.mtl` con triangolazione a ventaglio)
+
+> **Nota sull'origine dei file (commenti `// ORIGINE:`):** `ShaderMaker` e `ShapeGenerator` riprendono direttamente la base dei laboratori del corso (con estensioni del gioco); `Geometry`, `Shader`, `Texture`, `MeshData`, `Transform`, `Input`, `HermiteObject` e lo scheletro GLFW/GLAD/ImGui di `main.cpp` seguono il pattern dei laboratori ma sono stati incapsulati/estesi in C++ moderno con RAII, Rule of Five e logica specifica di gioco.
 
 ---
 

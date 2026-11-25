@@ -7,9 +7,9 @@
 
 ---
 
-# STRUTTURA DEL DISCORSO ORALE (10 SLIDE – 5/7 MINUTI)
+# STRUTTURA DEL DISCORSO ORALE (10 SLIDE – 7/10 MINUTI)
 
-Questa guida è allineata **pagina per pagina** con la tua presentazione Canva definitiva.  
+Questa guida è allineata **pagina per pagina** con la tua presentazione Canva definitiva (senza demo giocata dal vivo durante le slide).  
 Per ogni slide trovi:
 1. **Contenuto della Slide** (i punti chiave a schermo).
 2. **Cosa dire a voce (Script parlato)**: formulato in tono professionale, chiaro, accademico e sicuro.
@@ -70,8 +70,8 @@ Per ogni slide trovi:
 
 ## SLIDE 4: Assemblaggio dell'Oggetto Composto (Requisito 3.1)
 * **Punti a schermo:**
-  * **Scomposizione in Primitive:** Muso a freccia, fusoliera trapezoidale, ali a delta, doppi cannoni, ugelli di scarico, fiamme reattive e LED stroboscopici.
-  * **Simmetria Speculare:** L'ala sinistra riutilizza la mesh dell'ala destra invertendo l'asse X locale tramite $S(-1, 1, 1)$, con scala $x = -1$ (nessun vertice duplicato).
+  * **Scomposizione in Primitive:** Fusoliera trapezoidale, muso a freccia, cabina con ritratto UV ellittico (`texture.frag` con `discard` + `smoothstep`), ali a delta, doppi cannoni, ugelli di scarico, fiamme reattive e LED stroboscopici.
+  * **Simmetria Speculare:** L'ala sinistra (e il cannone sinistro) riutilizza la mesh destra invertendo l'asse X locale tramite $S(-1, 1, 1)$, con scala $x = -1$ (nessun vertice duplicato).
   * **Formula:** $\mathbf{M}_{\text{componente}} = \mathbf{M}_{\text{player}} \cdot \mathbf{T}(t_{\text{rel}}) \cdot \mathbf{R}(\theta_{\text{rel}}) \cdot \mathbf{S}(s_{\text{rel}})$
   * **Albero di Trasformazione:** $\text{Player Root } (\mathbf{M} = \mathbf{T}\mathbf{R}\mathbf{S}) \to \text{Fusoliera, Cabina UV, Ala DX, Ala SX } [\mathbf{S}(-1,1,1)], \text{Fiamme, Luci}$.
 
@@ -135,8 +135,8 @@ Per ogni slide trovi:
 * **Punti a schermo:**
   * 🌌 **Shader Sfondo Procedurale (`background.frag`) – Senza Texture:**
     * Fullscreen quad renderizzato direttamente in coordinate normalizzate NDC $[-1, 1]$.
-    * Starfield a 3 livelli di parallasse: sintesi frattale pseudo-casuale con funzione hash $h(p) = \text{fract}(\sin(p \cdot K) \cdot 43758.54)$ e scintillio temporale con $\sin(uTime)$.
-    * Nebulosa fluida armonica con domain warping trigonometrico in toni ciano e magenta.
+    * Starfield a 3 livelli di parallasse: griglia UV (`floor`/`fract`), funzione `hash` deterministica (`fract(p * vec2(123.34, 456.21))` + `dot`), anti-aliasing con `smoothstep` e scintillio temporale con $\sin(uTime)$.
+    * Nebulosa fluida armonica con coordinate polari, domain warping trigonometrico, alternanza palette per livello (`uLevel`) e vignettatura radiale.
   * 🎨 **Shader Oggetti (`basic.frag` / `basic.vert`):**
     * Riceve coordinate e attributi colore interpolati per vertice (Gouraud).
     * Supporta la variabile `uniform vec4 uColorTint` per gestire feedback visivi di danno, flash da laser e invulnerabilità.
