@@ -13,14 +13,11 @@
 // ============================================================================
 
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <random>
 #include <cmath>
 
-namespace
-{
-    // Costante matematica Pi-Greco a 32 bit di precisione.
-    constexpr float PI = 3.14159265358979323846f;
-}
+using MathConstants::PI;
 
 // ============================================================================
 // Costruzione Triangolo di Base (GL_TRIANGLES)

@@ -14,6 +14,7 @@
 
 #include "Collectible.h"
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <cstdlib>
@@ -61,7 +62,7 @@ void CollectibleManager::spawnLevel(int levelCount, float screenWidth, float scr
         CosmicCoin c;
 
         // Distribuzione polare distanziata dal centro per favorire l'esplorazione della mappa.
-        float angle = (i * 6.28318f) / count + (rand() % 80) * 0.01f;
+        float angle = (i * MathConstants::TWO_PI) / count + (rand() % 80) * 0.01f;
         float dist = 180.0f + (rand() % 240);
 
         c.basePos.x = screenWidth * 0.5f + std::cos(angle) * dist;

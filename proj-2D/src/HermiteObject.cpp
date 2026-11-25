@@ -16,6 +16,7 @@
 #include "HermiteObject.h"
 #include "PlayerShapeLoader.h"
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <iostream>
@@ -177,15 +178,15 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
         float progress = 1.0f - (m_dashTimer / 0.75f); // 0.0 all'inizio, 1.0 alla fine
 
         // Profilo a campana sinusoidale (starts at 0, peaks at 1, returns to 0):
-        float bell = std::sin(progress * 3.14159f);
+        float bell = std::sin(progress * MathConstants::PI);
 
         // Giro strano: slancio direzionale combinato con un loop a vortice ad alta frequenza
         float loopRadius = 60.0f * bell;
-        float loopAngle = progress * 6.28318f * 2.5f; // 2.5 rotazioni complete durante lo scatto
+        float loopAngle = progress * MathConstants::TWO_PI * 2.5f; // 2.5 rotazioni complete durante lo scatto
         m_dashOffset = m_dashDirection * (bell * 110.0f) + glm::vec2(std::cos(loopAngle) * loopRadius, std::sin(loopAngle) * loopRadius);
 
         // Rollio della testa del drone durante la manovra
-        m_droneAngle = std::sin(progress * 6.28318f * 2.0f) * 45.0f;
+        m_droneAngle = std::sin(progress * MathConstants::TWO_PI * 2.0f) * 45.0f;
     }
     else
     {
@@ -293,7 +294,7 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         if (m_eyeBlinkTimer > 0.0f)
         {
             float progress = m_eyeBlinkTimer / 0.38f;
-            eyeScaleY = std::abs(std::sin(progress * 3.14159f));
+            eyeScaleY = std::abs(std::sin(progress * MathConstants::PI));
             eyeScaleY = std::max(eyeScaleY, 0.08f); // Clamping per mantenere la fessura visibile
         }
         else if (weakened)

@@ -13,6 +13,7 @@
 // ============================================================================
 
 #include "ParticleSystem.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstdlib>
 #include <cmath>
@@ -134,7 +135,7 @@ void ParticleSystem::emitAsteroidExplosion(const glm::vec2& origin, int count)
     for (int i = 0; i < count; ++i)
     {
         // Direzione angolare casuale a 360 gradi [0, 2*PI].
-        float angle = randRange(0.0f, 6.28318f);
+        float angle = randRange(0.0f, MathConstants::TWO_PI);
         // Velocità esplosiva di proiezione [80, 320] px/s.
         float speed = randRange(80.0f, 320.0f);
 
@@ -168,7 +169,7 @@ void ParticleSystem::emitCoinSparkles(const glm::vec2& origin, int count)
 {
     for (int i = 0; i < count; ++i)
     {
-        float angle = randRange(0.0f, 6.28318f); // Direzione radiale casuale [0, 2*PI]
+        float angle = randRange(0.0f, MathConstants::TWO_PI); // Direzione radiale casuale [0, 2*PI]
         float speed = randRange(60.0f, 200.0f);  // Velocità iniziale [60, 200] px/s
 
         Particle p;                              // Nuova particella scintilla
@@ -200,7 +201,7 @@ void ParticleSystem::emitHurraCelebration(float screenWidth, float screenHeight,
             randRange(screenHeight * 0.3f, screenHeight * 0.7f)
         );
 
-        float angle = randRange(0.0f, 6.28318f); // Angolo casuale a 360 gradi
+        float angle = randRange(0.0f, MathConstants::TWO_PI); // Angolo casuale a 360 gradi
         float speed = randRange(120.0f, 380.0f); // Velocità di espansione esplosiva
         p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed; // Vettore velocità
 
@@ -230,7 +231,7 @@ void ParticleSystem::emitRelicEnergy(const glm::vec2& origin, int count)
 {
     for (int i = 0; i < count; ++i)
     {
-        float angle = randRange(0.0f, 6.28318f); // Direzione radiale casuale
+        float angle = randRange(0.0f, MathConstants::TWO_PI); // Direzione radiale casuale
         float speed = randRange(90.0f, 260.0f);  // Velocità delle onde di energia
 
         Particle p; // Particella energetica della reliquia
@@ -262,7 +263,7 @@ void ParticleSystem::emitDroneHitSparks(const glm::vec2& origin, int count)
 {
     for (int i = 0; i < count; ++i)
     {
-        float angle = randRange(0.0f, 6.28318f); // Angolo casuale a 360 gradi
+        float angle = randRange(0.0f, MathConstants::TWO_PI); // Angolo casuale a 360 gradi
         float speed = randRange(70.0f, 260.0f);  // Velocità di dispersione scintille
 
         Particle p; // Particella scintilla elettrica

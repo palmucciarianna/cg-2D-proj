@@ -14,6 +14,7 @@
 
 #include "AsteroidManager.h"
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <cstdlib>
@@ -52,9 +53,9 @@ void AsteroidManager::spawnLevel(int levelCount, float screenWidth, float screen
     m_asteroids.clear();
 
     // Calcola il numero di asteroidi da generare in base alla difficoltà:
-    // Livello 1: 4 asteroidi; cresce di 2 a livello fino a un tetto massimo di 9.
+    // Livello 1: 4 asteroidi; cresce di 2 a livello fino a un tetto massimo di 10.
     int count = 4 + (levelCount - 1) * 2;
-    if (count > 9) count = 9;
+    if (count > 10) count = 10;
 
     for (int i = 0; i < count; ++i)
     {
@@ -62,7 +63,7 @@ void AsteroidManager::spawnLevel(int levelCount, float screenWidth, float screen
 
         // Distribuzione polare attorno al centro dello schermo:
         // Evita che gli asteroidi compaiano direttamente sopra la navicella del giocatore.
-        float angle = (i * 6.28318f) / count + (rand() % 100) * 0.005f;
+        float angle = (i * MathConstants::TWO_PI) / count + (rand() % 100) * 0.005f;
         float dist = 220.0f + (rand() % 260);
 
         // Calcola le coordinate cartesiane (x, y) a partire da raggio e angolo polare.
