@@ -1,3 +1,4 @@
+// ORIGINE: Caricamento texture con stb_image e filtri OpenGL dai laboratori della prof, incapsulato in classe C++ RAII con Rule of Five.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Texture.cpp
 // ----------------------------------------------------------------------------

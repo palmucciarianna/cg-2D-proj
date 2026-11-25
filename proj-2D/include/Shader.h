@@ -1,3 +1,4 @@
+// ORIGINE: Gestione Shader Program e Uniform dai laboratori della prof, incapsulata in classe C++ RAII.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - CLASSE: Shader (Gestione Shader Program GLSL)
 // ----------------------------------------------------------------------------

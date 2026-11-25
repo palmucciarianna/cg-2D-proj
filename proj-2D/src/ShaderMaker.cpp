@@ -1,3 +1,4 @@
+// ORIGINE: Base diretta dai laboratori della prof (compilazione e linking GLSL), adattata in C++.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ShaderMaker.cpp
 // ----------------------------------------------------------------------------

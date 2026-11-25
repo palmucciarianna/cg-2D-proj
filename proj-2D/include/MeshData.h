@@ -1,3 +1,4 @@
+// ORIGINE: Struttura dati CPU (posizioni, colori, primitiva) basata sul modello dei laboratori della prof.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - STRUTTURA: MeshData (Container Dati Geometrici CPU)
 // ----------------------------------------------------------------------------
@@ -29,16 +30,18 @@
 // Struttura che incapsula la geometria generata lato CPU prima del trasferimento sui buffer GPU (VBO).
 struct MeshData
 {
-    // Vettore dinamico delle coordinate spaziali 3D dei vertici (X, Y, Z).
-    // Nel nostro mondo 2D, Z è tipicamente 0.0f (o usato per ordinamento in profondità).
+    // Vettore dinamico delle coordinate (locali) spaziali 3D dei vertici (X, Y, Z).
+    // Nel mondo 2D, Z è tipicamente 0.0f (o usato per ordinamento in profondità).
     std::vector<glm::vec3> positions;
 
     // Vettore dinamico dei canali di colore per ogni vertice in formato RGBA (Red, Green, Blue, Alpha) in [0.0, 1.0].
     // Ogni vertice in positions deve avere un colore corrispondente in colors (mapping 1:1 per attributi interleaved/separati).
+    // la GPU interpreta il gradiente via coordinate baricentriche durante la rasterizzazione dei triangoli.
     std::vector<glm::vec4> colors;
 
     // Tipo di primitiva geometrica OpenGL utilizzato nella rasterizzazione:
     // Può assumere valori come GL_TRIANGLES, GL_TRIANGLE_FAN, GL_LINE_STRIP, GL_LINES, ecc.
     // Il valore predefinito è GL_TRIANGLES.
+    // dice a glDrawArrays come collegare i vertici in triangoli o linee durante il rendering.
     GLenum primitiveType = GL_TRIANGLES;
 };

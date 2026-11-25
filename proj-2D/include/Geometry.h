@@ -1,3 +1,4 @@
+// ORIGINE: Pattern VAO/VBO e attributi OpenGL dai laboratori della prof, incapsulato in classe C++ RAII con Rule of Five.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - CLASSE: Geometry (Incapsulamento Risorse GPU)
 // ----------------------------------------------------------------------------

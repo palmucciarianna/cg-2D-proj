@@ -129,7 +129,7 @@ void ParticleSystem::draw(const Shader& shader)
     // Se non ci sono particelle attive, esce subito.
     if (m_particles.empty()) return;
 
-    for (const auto& p : m_particles)
+    for (const auto& p : m_particles) // scorre tutte le particelle attive
     {
         // Calcola la percentuale di vita rimanente in [0.0, 1.0]:
         // progress = 1.0 alla nascita, progress = 0.0 alla morte.
@@ -145,10 +145,13 @@ void ParticleSystem::draw(const Shader& shader)
         m = glm::scale(m, glm::vec3(currentScale, currentScale, 1.0f));
 
         // Applica la dissolvenza alfa: il canale di trasparenza sfuma a zero verso fine vita.
+        // in pratica riduce gradualmente la trasparenza
+        // progress = 1.0 -> alpha = 1.0, progress = 0.0 -> alpha = 0.0
         glm::vec4 c = p.color;
         c.a *= progress;
 
         // Imposta le uniform del colore e della matrice di modellazione.
+        // invio delle uniform al shader -> GPU
         shader.setVec4("uColorTint", c);
         shader.setMat4("model", m);
 
@@ -157,6 +160,7 @@ void ParticleSystem::draw(const Shader& shader)
     }
 
     // Ripristina la tinta uniforme a bianco opaco (1.0).
+    // rimette a bianco opaco (1,1,1,1)
     shader.setVec4("uColorTint", glm::vec4(1.0f));
 }
 

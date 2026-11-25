@@ -1,3 +1,4 @@
+// ORIGINE: Base dai laboratori della prof (cerchio, farfalla di Fay, cuore, luna, Sierpinski, primitive base) + estensioni per il gioco (moneta, trapezio, diamante) adattate a MeshData.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - CLASSE: ShapeGenerator (Factory Mesh Procedurali)
 // ----------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+// ORIGINE: Trasformazioni affini 2D (T * R * S) e gerarchia dai laboratori della prof, incapsulate in classe C++.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - CLASSE: Transform (Algebra delle Trasformazioni Affini)
 // ----------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+// ORIGINE: Gestione input e callback GLFW basata sul pattern dei laboratori della prof, incapsulata in classe.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Input.cpp
 // ----------------------------------------------------------------------------

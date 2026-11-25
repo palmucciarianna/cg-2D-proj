@@ -1,3 +1,4 @@
+// ORIGINE: In parte basato sul modulo Hermite dei laboratori della prof (spline cubiche), esteso con logica di gioco Alien Sentinel Drone e Warp Gate.
 // ============================================================================
 // GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: HermiteObject.cpp
 // ----------------------------------------------------------------------------
