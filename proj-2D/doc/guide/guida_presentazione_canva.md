@@ -26,6 +26,11 @@ Per ogni slide trovi:
 > *"Buongiorno professoressa. Oggi presento Astro-Miner 2D: Cosmic Coin Rush, un mondo interattivo bidimensionale sviluppato interamente in C++17 nativo e OpenGL 3.3 Core Profile.  
 > L'obiettivo del progetto è stato realizzare un motore grafico didatticamente rigoroso, fondato sulla moderna pipeline programmabile a shader, che implementa modellazione gerarchica complessa, curve spline cubiche di Hermite a continuità $C^1$, texture mapping UV, shader procedurali avanzati, fisica particellare e un'interfaccia utente reattiva basata su Dear ImGui."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~35 sec):
+> *"Buongiorno professoressa. Oggi presento **Astro-Miner 2D: Cosmic Coin Rush**, un mondo 2D interattivo sviluppato in **C++17** e **OpenGL 3.3 Core Profile**.*  
+> *È un arcade spaziale in cui la navicella deve raccogliere 5 monete cosmiche evitando asteroidi, raggi di plasma e un drone nemico, fino ad aprire e attraversare il Warp Gate finale.*  
+> *Dal punto di vista grafico, il progetto implementa la pipeline programmabile GLSL, modellazione gerarchica, curve di Hermite, buffer sharing e uno shader procedurale per lo sfondo."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Perché ha scelto il Core Profile 3.3 e non la pipeline tradizionale o una versione più recente?"*
 * **Risposta vincente:** *"Ho scelto il Core Profile 3.3 perché esclude completamente tutte le funzioni a pipeline fissa ormai deprecate dal 2008 (come `glBegin`, `glEnd`, `glMatrixMode`), costringendo a gestire esplicitamente la memoria VRAM tramite VBO e VAO e il calcolo geometrico tramite shader GLSL personalizzati. Inoltre garantisce la massima portabilità multipiattaforma nativa, in particolare su macOS dove OpenGL è fermo al profilo 4.1."*
@@ -47,6 +52,13 @@ Per ogni slide trovi:
 > Il sottosistema di shading impiega due programmi GLSL distinti: uno per gli oggetti della scena e uno interamente matematico e procedurale per lo spazio cosmico.  
 > Infine, tutte le dinamiche fisiche sono parametrizzate sul Delta Time, garantendo un framerate indipendente dalla frequenza di refresh del monitor."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~45 sec):
+> *"In questa slide riassumo come il progetto soddisfa tutti i requisiti dell'elaborato:*  
+> *Sul piano **geometrico**, ho modellato una navicella composita ad albero gerarchico e due entità basate su curve spline cubiche di Hermite.*  
+> *Sul piano delle **prestazioni**, ho applicato il Buffer Sharing su buffer statici in VRAM (`GL_STATIC_DRAW`) per non ricaricare i vertici a ogni frame.*  
+> *Sul piano dello **shading**, uso shader GLSL distinti: uno per gli oggetti 2D, uno per la texture ellittica della cabina e uno interamente procedurale per lo sfondo.*  
+> *Infine, tutta la simulazione è legata al **Delta Time**, così fisica e velocità restano identiche su qualsiasi monitor."*
+
 ---
 
 ## SLIDE 3: Architettura Software e Game Loop
@@ -61,6 +73,11 @@ Per ogni slide trovi:
 > *"L'architettura del software segue il principio della Separation of Concerns (SoC) ed è priva di qualsiasi variabile globale esposta, applicando il paradigma RAII per la gestione del ciclo di vita delle risorse hardware.  
 > Come illustra il diagramma di flusso del Render Loop: a ogni frame la CPU acquisisce gli input e misura il delta time. `GameWorld` aggiorna la cinematica e risolve le collisioni geometriche.  
 > Successivamente la GPU riceve i comandi di rendering secondo un ordine rigoroso Back-to-Front: prima il passaggio dello sfondo procedurale, poi il passaggio degli oggetti solidi del mondo e infine il disegno in Alpha Blending dell'interfaccia utente Dear ImGui."*
+
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~55 sec):
+> *"L'architettura segue la **Separation of Concerns**, senza variabili globali esposte e con gestione **RAII** delle risorse GPU (`Geometry`, `Shader`, `Texture` rilasciano i buffer nei distruttori).*  
+> *`main.cpp` inizializza GLFW, GLAD, l'alpha blending e Dear ImGui, poi esegue il game loop parlando solo con **`GameWorld`**, che fa da **Facade** e gestisce una **FSM** a 3 stati: `PLAYING`, `LEVEL_CLEARED_HURRA` e `GAME_OVER`.*  
+> *Ogni frame segue 4 fasi: calcolo del `deltaTime` con **clamping a 0.05 s** (per evitare glitch o attraversamento degli ostacoli in caso di lag), aggiornamento della fisica e delle collisioni, rendering **Back-to-Front** (sfondo -> oggetti solidi -> navicella -> particelle trasparenti) e infine disegno dell'HUD Dear ImGui prima dello `glfwSwapBuffers`."*
 
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Cosa succede se il gioco subisce un lag improvviso o la finestra viene messa in pausa?"*
@@ -80,6 +97,12 @@ Per ogni slide trovi:
 > La radice dell'albero rappresenta la posizione e l'orientamento globale del pilota nel mondo: $M_{\text{player}} = T \cdot R \cdot S$.  
 > Ciascun componente figlio possiede una trasformazione locale che viene moltiplicata a destra per quella del genitore: $M_{\text{comp}} = M_{\text{player}} \cdot T_{\text{rel}} \cdot R_{\text{rel}} \cdot S_{\text{rel}}$.  
 > Un'ottimizzazione algebrica importante riguarda le ali: per disegnare l'ala sinistra non ho duplicato i dati dei vertici su VRAM, ma ho riutilizzato la mesh dell'ala destra anteponendo una matrice di riflessione speculare con fattore di scala orizzontale negativo $S(-1, 1, 1)$."*
+
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~55 sec):
+> *"La navicella è un albero di trasformazione gerarchica. La radice è il `Player`, la cui matrice globale nel mondo è $M_{\text{player}} = T \cdot R \cdot S$ (con ordine prima scala, poi rotazione attorno al centro locale, poi traslazione).*  
+> *Tutti i componenti figli — fusoliera, muso, cabina con texture ellittica del pilota, ali, cannoni, scarichi, fiamme animate e LED — calcolano la propria matrice come $M_{\text{figlio}} = M_{\text{player}} \cdot M_{\text{locale}}$.*  
+> *Un'ottimizzazione importante è la **simmetria speculare**: per l'ala sinistra e il cannone sinistro non ho duplicato i vertici in memoria, ma ho riutilizzato la mesh destra applicando una scala orizzontale negativa $S(-1, 1, 1)$.*  
+> *Inoltre, la foto del pilota nel cockpit usa `texture.frag`, che applica una maschera ellittica con `discard` fuori dal cerchio UV unitario e un bordo morbido anti-aliased tramite `smoothstep`."*
 
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Perché l'ordine delle moltiplicazioni matriciali è $T \cdot R \cdot S$ e non $S \cdot R \cdot T$?"*
@@ -106,6 +129,11 @@ Per ogni slide trovi:
 > La prima entità è l'Alien Sentinel Drone, un ostacolo dinamico la cui testa cornuta è modellata a curve Hermite; esso pattuglia lo spazio seguendo una curva armonica chiusa di Lissajous a rapporto di frequenze 1:2 ed è dotato di un'interazione visiva: quando la navicella lo sorvola, contrae l'occhio in un ammiccamento (eye-blink).  
 > La seconda entità è il Cosmic Warp Gate, un anello monumentale a curve Hermite con vortice interno rotante, che si attiva al completamento della raccolta monete."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~60 sec):
+> *"Per le forme curvilinee organiche sono state modellate due entità tramite **spline cubiche di Hermite** a tratti, che interpolano punti di controllo $P_0, P_1$ e tangenti $D_0, D_1$ tramite le quattro funzioni base cubiche $h_{00}, h_{01}, h_{10}, h_{11}$ su $[0, 1]$, garantendo continuità $C^1$ nei punti di raccordo (stessa posizione e stesso vettore derivata).*  
+> *La prima entità è l'**Alien Sentinel Drone**, un ostacolo dinamico che pattuglia lo spazio lungo una curva chiusa a 8 di **Lissajous** (rapporto frequenze 1:2): reagisce sia al sorvolo del giocatore — chiudendo l'occhio in un ammiccamento — sia ai colpi laser, che lo indeboliscono temporaneamente.*  
+> *La seconda è il **Cosmic Warp Gate**, un portale ad anello cavo con vortice interno rotante che resta dormiente finché non si raccolgono tutte e 5 le monete."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Qual è la differenza fondamentale tra continuità geometrica $G^1$ e continuità parametrica $C^1$?"*
 * **Risposta vincente:** *"La continuità $G^1$ richiede soltanto che nei punti di giunzione i vettori tangenti abbiano la stessa direzione e verso concordi, ovvero $C'_{i}(t) = \lambda C'_{i-1}(t)$ con $\lambda > 0$. La continuità parametrica $C^1$ è una condizione più stringente: impone che anche la norma del vettore derivata sia identica ($\lambda = 1$), garantendo non solo l'assenza di spigoli visivi, ma anche una velocità di percorrenza continua senza accelerazioni istantanee infinite."*
@@ -124,6 +152,11 @@ Per ogni slide trovi:
 > Per ottimizzare le prestazioni, ho implementato il Buffer Sharing: all'avvio viene allocato in VRAM un unico blocco di memoria per l'asteroide e uno per la moneta tramite `glBufferData` in modalità `GL_STATIC_DRAW`.  
 > Nel game loop la CPU non invia alcuna coordinata di vertice: scorre le istanze attive, calcola la matrice Model individuale $M_i = T_i \cdot R_i \cdot S_i$, la trasferisce alla GPU tramite `glUniformMatrix4fv` ed emette la draw call `glDrawArrays`.  
 > Sulle monete d'oro ho inoltre applicato una simulazione di rotazione pseudo-3D: variando la sola scala orizzontale come $s_x(t) = s_{\text{base}} \cdot |\cos(\omega t)|$, la moneta bidimensionale proiettata ortogonalmente simula all'occhio umano una rotazione solida nello spazio tridimensionale."*
+
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~50 sec):
+> *"Per soddisfare il requisito di efficienza, `ShapeGenerator` prepara i dati in CPU dentro `MeshData` (`positions`, `colors`, `primitiveType`) e `Geometry` li carica una sola volta in VRAM tramite `glGenVertexArrays`, `glGenBuffers` e `glBufferData(..., GL_STATIC_DRAW)`.*  
+> *Per gli asteroidi e le monete ho applicato il **Buffer Sharing**: c'è un solo VAO/VBO condiviso per l'asteroide tipo e uno per la moneta. Nel loop di rendering la CPU non ri-trasferisce vertici sul bus PCIe, ma aggiorna solo la `uniform mat4 model` tramite `glUniformMatrix4fv` e chiama `glDrawArrays` per ogni istanza attiva.*  
+> *Sulle monete ho anche simulato una rotazione **pseudo-3D** in proiezione ortografica modulando la scala orizzontale con $|\cos(\omega t)|$."*
 
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Cosa memorizza esattamente un VAO rispetto a un VBO?"*
@@ -146,6 +179,12 @@ Per ogni slide trovi:
 > Lo shader dello sfondo non fa uso di alcuna immagine pre-renderizzata: è generato matematicamente nel fragment shader sfruttando l'architettura massivamente parallela SIMD della scheda video per calcolare in tempo reale per tutti i 921.600 pixel funzioni di hash pseudo-casuale, onde polari e gradienti di nebulosa con domain warping. I vertici del quad di sfondo sono passati direttamente in coordinate normalizzate NDC $[-1, 1]$, azzerando i calcoli di matrici.  
 > Lo shader degli oggetti `basic` gestisce invece la proiezione ortografica $glm::ortho$, l'interpolazione del colore di vertice tramite coordinate baricentriche e la modulazione dinamica della tinta tramite la variabile uniform `uColorTint`."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~60 sec):
+> *"L'applicazione usa shader program separati, compilati e linkati a runtime da `ShaderMaker`.*  
+> *Il più particolare è lo shader dello sfondo (`BackgroundRenderer` + `background.vert/.frag`): disegna un **fullscreen quad** i cui vertici sono già in coordinate normalizzate **NDC $[-1, 1]$**, quindi `background.vert` non moltiplica per `projection * model`.*  
+> *Nel fragment shader tutto è generato **matematicamente senza texture**: calcolo coordinate polari e una spirale rotante con **domain warping** trigonometrico per la nebulosa (la cui palette cambia tra livelli pari e dispari tramite `uLevel`), una vignettatura radiale ai bordi e **3 layer di stelle in parallasse** basati su una griglia UV, una funzione `hash` pseudo-casuale deterministica, `smoothstep` per l'anti-aliasing e `sin(uTime)` per lo scintillio.*  
+> *Al contrario, `basic.vert` e `texture.vert` usano la proiezione ortografica `glm::ortho(0, 1280, 0, 720, -1, 1)` e supportano `uColorTint` per flash di danno, invulnerabilità e dissolvenze senza toccare i VBO."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Come funziona il passaggio di attributi dal vertex shader al fragment shader?"*
 * **Risposta vincente:** *"Nel vertex shader dichiariamo la variabile di uscita `out vec4 vColor`. Lo stadio di rasterizzazione a funzione fissa calcola le coordinate baricentriche $(\alpha, \beta, \gamma)$ all'interno di ogni triangolo e interpola linearmente il valore del colore per ciascun frammento generato, consegnandolo al fragment shader come `in vec4 vColor` prima della scrittura nel framebuffer."*
@@ -164,6 +203,11 @@ Per ogni slide trovi:
 > Alla distruzione di un asteroide o alla raccolta di una moneta, il `ParticleSystem` genera decine di particelle animate da cinematica fisica con attrito viscoso spaziale e decadimento lineare dell'opacità, disegnate con blending trasparente.  
 > Il flusso di gioco richiede di raccogliere tutte le 5 monete per energizzare il Warp Gate: attraversandolo, il sistema attiva lo stato trionfale di vittoria HURRÀ con una fontana di coriandoli celebrativi."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~50 sec):
+> *"Tutte le collisioni sono centralizzate in `Collider2D.h`: uso test **Cerchio–Cerchio** confrontando le distanze al quadrato ($\|c_1 - c_2\|^2 \le (r_1 + r_2)^2$, evitando `sqrt`) e test **Cerchio–AABB** tramite clamping per i raggi di plasma perimetrali di `HazardManager`.*  
+> *Quando un asteroide esplode o si raccoglie una moneta, `ParticleSystem` genera particelle dinamiche (`GL_DYNAMIC_DRAW` / `updatePositions`) con integrazione di Eulero, attrito viscoso $v \leftarrow v(1 - \gamma\Delta t)$ e **alpha fade** lineare su `uColorTint`, disegnate dopo gli oggetti opaci con `GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA`.*  
+> *Raccolte le 5 monete, il Warp Gate si attiva e attraversarlo porta allo stato `LEVEL_CLEARED_HURRA` con coriandoli particellari prima del livello successivo."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Come ha configurato il blending per le particelle trasparenti?"*
 * **Risposta vincente:** *"Ho abilitato il blending con `glEnable(GL_BLEND)` e configurato i fattori sorgente e destinazione con `glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)`, che implementa l'equazione $C_{\text{out}} = \alpha_s C_s + (1 - \alpha_s) C_d$. Inoltre, per garantire la correttezza visiva, disegno le particelle semitrasparenti rigorosamente dopo tutti gli oggetti opaci della scena."*
@@ -181,6 +225,11 @@ Per ogni slide trovi:
 > *"Il progetto è stato progettato con un'attenzione particolare all'ingegneria del software e alla portabilità: tutte le librerie ausiliarie (GLFW, GLAD, GLM, ImGui, stb_image) sono incluse come codice sorgente statico all'interno del repository, consentendo la compilazione immediata 'out-of-the-box' su macOS, Linux e Windows senza installare pacchetti di sistema.  
 > L'interfaccia utente in Dear ImGui è protetta dal controllo `!io.WantCaptureMouse`, permettendo di regolare la velocità della nave, ricaricare a caldo la texture della cabina o monitorare le prestazioni a 60/120 FPS senza che i click del mouse interferiscano con i controlli di guida."*
 
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~45 sec):
+> *"Tutte le librerie esterne (GLFW, GLAD, GLM, Dear ImGui, `stb_image`) sono incluse nel repository, garantendo compilazione su macOS, Windows e Linux.*  
+> *`Input` gestisce le callback GLFW invertendo l'asse Y del cursore rispetto all'origine in basso a sinistra di OpenGL e aggiornando `glViewport` al resize.*  
+> *L'HUD in **Dear ImGui** è in modalità immediata con `io.IniFilename = nullptr` (così non crea `imgui.ini` su disco) e auto-compressione protetta da `!io.WantCaptureMouse`: mostra vite, monete, stato del drone, slider per velocità della navicella ed effetto psichedelico, la spunta **Wireframe** (`glPolygonMode`) per ispezionare le mesh e il pulsante di hot-reload della texture cabina."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"A cosa serve il pulsante 'Ricarica Texture Cabina' nell'HUD e come evita sprechi di memoria?"*
 * **Risposta vincente:** *"Implementa l'hot-reload a runtime della foto del pilota (`assets/textures/player_face.bmp/.png/.jpg`) senza riavviare l'app: prima di caricare il nuovo file con `stbi_load` e `glTexImage2D`, `Texture::load()` dealloca l'handle precedente con `glDeleteTextures`, garantendo l'assenza di memory leak in VRAM."*
@@ -197,6 +246,10 @@ Per ogni slide trovi:
 > *"Questo conclude l'inquadramento teorico e architetturale del progetto.  
 > Avvio ora con piacere la dimostrazione dal vivo per illustrare in tempo reale la fluidità del controllo a frecce, la rotazione delle monete d'oro, il laser al plasma, l'ammiccamento interattivo dell'Alien Drone e la sequenza di completamento del Warp Gate.  
 > Sono a sua completa disposizione per qualsiasi approfondimento sul codice o sulla teoria."*
+
+#### 🗣️ Versione estesa (8–9 min totali, senza demo live – ~25 sec):
+> *"In sintesi, Astro-Miner 2D integra in un'unica architettura modulare e RAII i concetti fondamentali della grafica 2D programmabile: trasformazioni gerarchiche, spline di Hermite, buffer sharing statico, shader procedurali in NDC e simulazione fisica indipendente dal framerate.*  
+> *Grazie per l'attenzione, sono a disposizione per eventuali domande sul codice o sulla teoria."*
 
 ---
 
