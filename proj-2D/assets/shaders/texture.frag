@@ -20,4 +20,3 @@ void main()
     float edgeAlpha = smoothstep(1.0, 0.82, dist);
     FragColor = vec4(texColor.rgb, texColor.a * edgeAlpha) * uColorTint;
 }
-r
