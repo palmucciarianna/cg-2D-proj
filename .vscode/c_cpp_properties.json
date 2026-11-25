@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/proj-2D/include",
+                "${workspaceFolder}/proj-2D/external",
+                "${workspaceFolder}/proj-2D/external/glad/include",
+                "${workspaceFolder}/proj-2D/external/glfw/include",
+                "${workspaceFolder}/proj-2D/external/glm",
+                "${workspaceFolder}/proj-2D/external/imgui",
+                "${workspaceFolder}/proj-2D/external/imgui/backends"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compileCommands": "${workspaceFolder}/proj-2D/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

@@ -32,7 +32,7 @@ void HazardManager::init()
     MeshData shotData = ShapeGenerator::createDiamond(
         34.0f, 14.0f,
         glm::vec4(1.0f, 0.95f, 0.8f, 1.0f),  // Centro bianco rovente
-        glm::vec4(1.0f, 0.15f, 0.1f, 1.0f)   // Bordi rosso cremisi
+        glm::vec4(1.0f, 0.15f, 0.1f, 1.0f)   // Bordi rosso fuoco
     );
     m_projectileGeo.uploadMesh(shotData);
 
@@ -93,7 +93,7 @@ void HazardManager::update(float dt, float screenWidth, float screenHeight, Part
         }
 
         shot.speed = 880.0f + std::min((m_level - 1) * 35.0f, 220.0f); // Leggero boost di velocità per livello
-        shot.radius = 16.0f;       // Raggio del collider circolare del proiettile
+        shot.radius = 16.0f; // Raggio del collider circolare del proiettile
         shot.warningTimer = std::max(0.60f, 0.85f - (m_level - 1) * 0.04f); // Finestra di preavviso più serrata nei livelli alti
         shot.fired = false;  // Parte in fase di preavviso (non ancora lanciato)
         shot.active = true;  // Segnala che l'oggetto è attivo
@@ -151,9 +151,9 @@ void HazardManager::draw(const Shader& shader, float currentTime, float screenWi
 {
     for (const auto& h : m_hazards) // Itera tutte le minacce attive
     {
-        if (!h.fired) // Caso 1: Fase di allerta sul bordo
+        if (!h.fired) // Caso 1: Fase di allerta sul bordo -> disegna il mirino lampeggiante
         {
-            // Segnale di preavviso stroboscopico sul bordo:
+            // Segnale di preavviso sul bordo:
             // Funzione sinusoidale a 30 rad/s per un effetto visivo d'emergenza intermittente.
             float blink = std::sin(currentTime * 30.0f);
             if (blink > -0.2f) // Mostra il triangolo solo nei picchi positivi dell'onda

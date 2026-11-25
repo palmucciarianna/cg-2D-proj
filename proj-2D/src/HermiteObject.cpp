@@ -125,14 +125,14 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     bool weakened = (m_weakenedTimer > 0.0f);
     if (weakened)
     {
-        m_weakenedTimer -= dt;
+        m_weakenedTimer -= dt; // Decremento del timer di indebolimento residuo
         speedMultiplier *= 0.35f; // Rallentamento drastico del 65%: moto faticoso e vulnerabile
     }
 
-    float omega = 0.85f * speedMultiplier;
-    m_orbitPhase += omega * dt;
+    float omega = 0.85f * speedMultiplier; // velocità angolare orbitale in rad/s (più veloce ai livelli alti)
+    m_orbitPhase += omega * dt; // Aggiornamento della fase orbitale per la traiettoria a 8
 
-    // 1. Traiettoria orbitale armonica a figura di 8 (Curva di Lissajous con rapporto 1:2):
+    // 1. Traiettoria orbitale armonica a figura di 8
     // x(t) = x_0 + A * cos(phi)
     // y(t) = y_0 + B * sin(2 * phi)
     // Ampiezza orizzontale A = 340px, ampiezza verticale B = 160px.
@@ -151,11 +151,13 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
             // Attiva una manovra rapida di 0.75s con direzione casuale:
             m_dashTimer = 0.75f;
             float randAngle = static_cast<float>(rand() % 360) * 0.0174533f;
-            m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle));
+            m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle)); // direzione unitaria casuale
+            // costruisco un versore di offset iniziale per il dash (per evitare che parta da zero)
 
             // Prossimo scatto tra 4.5 e 8.0 secondi (più frequente nei livelli alti):
             float minInterval = std::max(2.8f, 5.0f - (m_level - 1) * 0.4f);
-            m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f;
+            m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f; 
+            // tra quanti secondi il drone potrà scattare di nuovo
         }
     }
     else
@@ -167,18 +169,19 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
 
     if (m_dashTimer > 0.0f)
     {
-        m_dashTimer -= dt;
+        m_dashTimer -= dt; // quando il timer scende a 0, il drone torna alla traiettoria normale
         float progress = 1.0f - (m_dashTimer / 0.75f); // 0.0 all'inizio, 1.0 alla fine
 
         // Profilo a campana sinusoidale (starts at 0, peaks at 1, returns to 0):
         float bell = std::sin(progress * MathConstants::PI);
 
         // Giro strano: slancio direzionale combinato con un loop a vortice ad alta frequenza
-        float loopRadius = 60.0f * bell;
+        float loopRadius = 60.0f * bell; // raggio spirale si allarga e si restringe con la campana
         float loopAngle = progress * MathConstants::TWO_PI * 2.5f; // 2.5 rotazioni complete durante lo scatto
         m_dashOffset = m_dashDirection * (bell * 110.0f) + glm::vec2(std::cos(loopAngle) * loopRadius, std::sin(loopAngle) * loopRadius);
+        // somma due movimenti: uno slancio + la spirale circolare
 
-        // Rollio della testa del drone durante la manovra
+        // Inclina testa del drone durante la manovra
         m_droneAngle = std::sin(progress * MathConstants::TWO_PI * 2.0f) * 45.0f;
     }
     else
@@ -191,7 +194,7 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
         }
         else
         {
-            m_droneAngle = 0.0f;
+            m_droneAngle = 0.0f; // testa dritta quando il drone è in orbita normale
         }
     }
 
@@ -206,8 +209,8 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     // Gestione dell'Interazione Didattica: Sbattimento dell'Occhio (Eye-Blink)
     // "Quando ci passo sopra sbatte l'occhio UNA volta!"
     // ------------------------------------------------------------------------
-    float dist = glm::distance(playerPos, m_dronePos);
-    bool isOver = (dist < 65.0f);
+    float dist = glm::distance(playerPos, m_dronePos); // distanza tra giocatore e drone
+    bool isOver = (dist < 65.0f); // edge-trigger: attiva se il giocatore è entro 65px dal drone
 
     if (isOver)
     {
@@ -236,7 +239,8 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     }
 
     // Integrazione delle rotazioni del portale:
-    // L'anello esterno ruota a 22 gradi/secondo, il vortice interno ruota vorticosamente a 100 gradi/secondo.
+    // L'anello esterno ruota a 22 gradi/secondo
+    // il vortice interno ruota vorticosamente a 100 gradi/secondo.
     m_gateRotation += 22.0f * dt;
     m_vortexRotation += 100.0f * dt;
 }
@@ -287,7 +291,7 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         if (m_eyeBlinkTimer > 0.0f)
         {
             float progress = m_eyeBlinkTimer / 0.38f;
-            eyeScaleY = std::abs(std::sin(progress * MathConstants::PI));
+            eyeScaleY = std::abs(std::sin(progress * MathConstants::PI)); // Oscillazione da 1.0 a 0.0 e ritorno
             eyeScaleY = std::max(eyeScaleY, 0.08f); // Clamping per mantenere la fessura visibile
         }
         else if (weakened)
@@ -336,7 +340,7 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
     // ------------------------------------------------------------------------
     if (m_hasGate)
     {
-        glm::mat4 gateRoot = glm::mat4(1.0f);                           // Matrice identità base portale
+        glm::mat4 gateRoot = glm::mat4(1.0f);                            // Matrice identità base portale
         gateRoot = glm::translate(gateRoot, glm::vec3(m_gatePos, 0.0f)); // Trasla alla posizione fluttuante
 
         bool activeVisual = (gateActive || m_relicPulseTimer > 0.0f); // Attivo visivamente se tutte le monete raccolte o toccato

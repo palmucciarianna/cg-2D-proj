@@ -68,4 +68,5 @@ public:
 private:
     std::vector<LaserBullet> m_bullets; // Collezione dei colpi laser attivi
     Geometry m_bulletGeo;               // Risorsa geometrica condivisa su GPU (VAO/VBO)
+    // tutti i laser sullo schermo condividono 1 sola geometria
 };

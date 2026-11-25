@@ -76,6 +76,7 @@ public:
     void draw(const Shader& shader, float currentTime, float screenWidth, float screenHeight);
 
     // Verifica se un dardo di plasma attivo ha colpito il giocatore.
+    // uno dei proiettili nemici laterali ha colpito la mia navicella?
     bool checkPlayerHit(const CircleCollider& playerCol, ParticleSystem& particles);
 
     // Cancella tutte le minacce attive nella scena.
