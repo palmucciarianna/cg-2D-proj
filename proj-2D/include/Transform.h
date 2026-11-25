@@ -57,6 +57,7 @@ public:
     // Per applicare prima la scala, poi la rotazione e infine la traslazione a un vertice v:
     // v' = M * v = (T * R * S) * v = T * (R * (S * v))
     // GLM utilizza matrici in formato column-major (standard OpenGL).
+    // [Domanda 6: Spazi affini, coordinate omogenee e non-commutatività T*R*S]
     glm::mat4 localMatrix() const
     {
         // 1. Inizializza con la matrice identità 4x4:
@@ -87,6 +88,7 @@ public:
     // la matrice finale nel mondo è data dal prodotto tra la matrice del nodo genitore e la matrice locale:
     // M_world = M_parent * M_local
     // Se non viene passato alcun genitore, parentMatrix è l'identità e M_world = M_local.
+    // [Domanda 8: Cambiamento di sistema di riferimento (M_world = M_parent * M_local)]
     glm::mat4 worldMatrix(const glm::mat4& parentMatrix = glm::mat4(1.0f)) const
     {
         return parentMatrix * localMatrix();

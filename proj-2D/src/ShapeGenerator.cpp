@@ -62,6 +62,7 @@ MeshData ShapeGenerator::createRectangle(
     float hw = width * 0.5f;
     float hh = height * 0.5f;
 
+    // [Domanda 14: Rasterizzazione dei triangoli (rettangolo decomposto in 2 triangoli GL_TRIANGLES)]
     // Triangolo 1 (inferiore-destro): Bottom-Left, Bottom-Right, Top-Right
     data.positions.push_back(glm::vec3(-hw, -hh, 0.0f));
     data.positions.push_back(glm::vec3( hw, -hh, 0.0f));
@@ -113,6 +114,7 @@ MeshData ShapeGenerator::createCoin(
         data.positions.push_back(p1);
         data.positions.push_back(p2);
 
+        // [Domanda 7: Coordinate baricentriche e interpolazione Gouraud dei colori di vertice]
         // Colore interno dorato brillante al centro, metallico scuro sul bordo esterno.
         data.colors.push_back(innerColor);
         data.colors.push_back(outerColor);
@@ -223,6 +225,7 @@ MeshData ShapeGenerator::createCircle(
     // Passo angolare di campionamento.
     const float step = 2.0f * PI / static_cast<float>(segments);
 
+    // [Domanda 2 & Domanda 13: Geometria vettoriale polare per la circonferenza (rasterizzata su GPU)]
     // 2. Vertici perimetrali calcolati con formule trigonometriche: x = rx*cos(t), y = ry*sin(t).
     for (int i = 0; i <= segments; ++i)
     {

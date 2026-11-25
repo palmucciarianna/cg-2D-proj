@@ -119,6 +119,7 @@ void GameWorld::init(const std::string& assetDir)
 // ============================================================================
 // Aggiornamento della Simulazione e della Logica di Gioco (Game Loop Update)
 // ============================================================================
+// [Domanda 4: Stadi della Graphics Rendering Pipeline - Fase Application su CPU]
 void GameWorld::update(float dt, GLFWwindow* window)
 {
     float currentTime = static_cast<float>(glfwGetTime());
@@ -282,6 +283,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
 // ============================================================================
 void GameWorld::render(float currentTime)
 {
+    // [Domanda 20: Ordine di rendering Back-to-Front per trasparenza corretta]
     // 1. Disegna il background cosmico procedurale (stelle e nebulosa in NDC).
     m_bgRenderer->draw(currentTime, m_psychedelic, m_currentLevel);
 
@@ -293,6 +295,7 @@ void GameWorld::render(float currentTime)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
 
+    // [Domanda 9: Sottosistema geometrico - Proiezione Ortografica 2D]
     // 3. Configura la matrice di Proiezione Ortografica per lo spazio di gioco:
     // Mappa lo spazio [0, screenWidth] su X e [0, screenHeight] su Y.
     // L'origine (0, 0) è l'angolo inferiore sinistro dello schermo.
@@ -355,6 +358,7 @@ void GameWorld::renderUI(float dt)
     // ------------------------------------------------------------------------
     if (!m_hudCompact)
     {
+        // [Domanda 19: Organizzazione UI e input non invasivo tramite !io.WantCaptureMouse]
         bool clickedOnGameArea = !io.WantCaptureMouse && (io.MouseClicked[0] || io.MouseClicked[1]);
         if (clickedOnGameArea)
         {

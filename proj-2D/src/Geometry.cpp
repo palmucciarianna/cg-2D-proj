@@ -111,6 +111,7 @@ void Geometry::upload(bool dynamic)
     // 1. Generazione e Binding del Vertex Array Object (VAO)
     // ------------------------------------------------------------------------
     // Il VAO incapsula e "registra" tutti i binding dei VBO e i formati degli attributi.
+    // [Domanda 17: VAO, VBO: VAO registra lo stato degli attributi ("ricetta"), VBO contiene i dati]
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
 
@@ -121,6 +122,7 @@ void Geometry::upload(bool dynamic)
     glGenBuffers(1, &m_VBO_positions);
     // Lega il buffer come array corrente per i vertici.
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO_positions);
+    // [Domanda 1: Architettura della GPU (allocazione buffer in VRAM)]
     // Invia i byte dei vertici dalla RAM di sistema alla VRAM della scheda video.
     // Parametri: target, dimensione in byte totale, puntatore ai byte raw, modalità di utilizzo.
     glBufferData(
@@ -257,6 +259,7 @@ void Geometry::draw() const
     // - mode: tipo di primitiva (es. GL_TRIANGLES, GL_TRIANGLE_FAN, GL_LINE_STRIP)
     // - first: indice del primo vertice da cui iniziare il rendering (0)
     // - count: numero totale di vertici da rasterizzare
+    // [Domanda 14: Rasterizzazione dei triangoli (edge functions e interpolazione baricentrica su GPU)]
     glDrawArrays(
         m_primitiveType,
         0,

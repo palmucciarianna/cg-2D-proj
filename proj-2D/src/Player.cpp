@@ -252,6 +252,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // Trasla all'attuale posizione del mondo ed applica la rotazione d'orientamento.
     // L'offset -90° compensa l'asse predefinito Y delle coordinate locali della mesh.
+    // [Domanda 8: Cambiamento di sistema di riferimento (frame locale -> mondo)]
     glm::mat4 playerRoot = glm::mat4(1.0f);
     playerRoot = glm::translate(playerRoot, glm::vec3(m_pos, 0.0f));
     playerRoot = glm::rotate(playerRoot, glm::radians(m_angle - 90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -259,6 +260,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 1. Ali a Freccia Gerarchiche (Simmetria tramite Scala Negativa)
     // ------------------------------------------------------------------------
+    // [Domanda 6: Trasformazioni affini - riflessione speculare S(-1, 1, 1) senza duplicare vertici]
     // Ala Destra (+1) e Ala Sinistra (-1 specchiata lungo X locale con scala negativa).
     for (float side : { 1.0f, -1.0f })
     {

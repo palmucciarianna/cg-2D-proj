@@ -25,6 +25,7 @@ namespace Input
     // ========================================================================
     // Callback di Pressione Tasti
     // ========================================================================
+    // [Domanda 19: Input, eventi e callback GLFW (vs polling continuo in Player)]
     void keyCallback(
         GLFWwindow* window,
         int key,

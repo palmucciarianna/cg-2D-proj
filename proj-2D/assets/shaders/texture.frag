@@ -15,6 +15,7 @@ void main()
     // Maschera ellittica: scarta i pixel fuori dal cerchio unitario UV (ellisse sul quad dell'oblò)
     if (dist > 1.0) discard;
 
+    // [Domanda 15: Anti-aliasing analitico sui bordi tramite smoothstep]
     // Campionamento della texture + bordo morbido con anti-aliasing (smoothstep)
     vec4 texColor = texture(uTexture, vTexCoord);
     float edgeAlpha = smoothstep(1.0, 0.82, dist);

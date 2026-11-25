@@ -30,6 +30,7 @@ float starLayer(vec2 uv, float scale, float probability, float twinkleSpeed)
         float d = length(gridUv);
         // Twinkle: crea un effetto di luminosità variabile nel tempo, simulando il brillio delle stelle
         float twinkle = 0.5 + 0.5 * sin(uTime * twinkleSpeed + h * 6.2831);
+        // [Domanda 15: Anti-aliasing analitico con transizione morbida di smoothstep]
         // Stella anti-aliased grazie alla transizione morbida di smoothstep
         float star = smoothstep(0.12, 0.0, d) * twinkle;
         return star;
@@ -37,6 +38,7 @@ float starLayer(vec2 uv, float scale, float probability, float twinkleSpeed)
     return 0.0;
 }
 
+// [Domanda 1: Architettura SIMD/SIMT della GPU: eseguito in parallelo per ogni pixel (1280x720)]
 void main()
 {
     vec2 uv = vUV;

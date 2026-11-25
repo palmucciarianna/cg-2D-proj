@@ -60,6 +60,7 @@ int main()
     // 1. INIZIALIZZAZIONE DI GLFW (Finestra, Contesto e Callback di Sistema)
     // ========================================================================
 
+    // [Domanda 16: Struttura di un'applicazione OpenGL (inizializzazione GLFW)]
     // Inizializza la libreria GLFW; restituisce false se fallisce (es. driver video assente).
     if (!glfwInit())
     {
@@ -71,6 +72,7 @@ int main()
     // Questo esclude tutte le funzioni a pipeline fissa deprecate (glBegin, glEnd, glMatrixMode).
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    // [Domanda 3: Dalla pipeline fissa a quella programmabile (Core Profile esclude glBegin/glEnd)]
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -129,6 +131,7 @@ int main()
 
     // Configura il blending alfa (trasparenza):
     // Abilita il canale alfa per il rendering corretto di particelle traslucide e texture PNG/RGBA.
+    // [Domanda 20: RGB, alpha, blending e trasparenza: C_out = alpha_s * C_s + (1 - alpha_s) * C_d]
     glEnable(GL_BLEND);
     // Formula di blending standard: Color = SrcColor * SrcAlpha + DstColor * (1 - SrcAlpha)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

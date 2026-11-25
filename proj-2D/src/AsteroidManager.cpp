@@ -119,6 +119,7 @@ void AsteroidManager::draw(const Shader& shader, float currentTime)
             m = glm::rotate(m, glm::radians(a.rotation), glm::vec3(0, 0, 1));
             m = glm::scale(m, glm::vec3(a.scale, a.scale, 1.0f));
 
+            // [Domanda 17: Geometria vs Istanza (Buffer Sharing: 1 VAO/VBO condiviso, N matrici model)]
             // Aggiorna la variabile uniform 'model' nello shader attivo.
             shader.setMat4("model", m);
 

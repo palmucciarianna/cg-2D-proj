@@ -76,7 +76,8 @@ namespace Collision2D
     {
         // Vettore differenza tra i due centri.
         glm::vec2 diff = c1 - c2;
-        // Prodotto scalare del vettore per se stesso, pari alla distanza quadratica.
+        // [Domanda 5: Spazi vettoriali e prodotto scalare]
+        // Prodotto scalare del vettore per se stesso, pari alla distanza quadratica (evita sqrt).
         float distSq = glm::dot(diff, diff);
         // Somma dei raggi algebrici.
         float radSum = r1 + r2;

@@ -13,6 +13,7 @@ out vec4 vColor;
 
 void main()
 {
+    // [Domanda 9 & Domanda 18: Catena P * M * v nel Vertex Shader]
     // Trasformazione classica 2D: porta il vertice in clip space / NDC
     gl_Position = projection * model * vec4(aPosition, 1.0);
     // Passa il colore al fragment shader (verrà interpolato dal rasterizzatore sui triangoli)

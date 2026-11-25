@@ -9,6 +9,7 @@ uniform vec4 uColorTint = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main()
 {
+    // [Domanda 18: Fragment Shader - colore interpolato (varying) * uniform uColorTint]
     // Moltiplica il colore interpolato dal rasterizzatore per la tinta dinamica globale
     FragColor = vColor * uColorTint;
 }

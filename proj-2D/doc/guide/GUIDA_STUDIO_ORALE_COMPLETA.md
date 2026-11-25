@@ -561,11 +561,12 @@ Ecco come collegare direttamente il tuo progetto a ciascuna delle 20 domande d'e
 ### Domanda 16: Struttura di un'applicazione OpenGL
 * **Cosa chiede:** Inizializzazione, ciclo di rendering, rilascio risorse, ruoli di GLFW, GLAD e GLM.
 * **Come colleghi il tuo progetto:**
-  > *"La struttura del mio file `main.cpp` rispecchia fedelmente l'architettura standard:
-  1. **GLFW:** Crea la finestra del sistema operativo, alloca il contesto OpenGL 3.3 Core Profile e gestisce la coda eventi e il double buffering con `glfwSwapBuffers`.
-  2. **GLAD:** Inizializzato subito dopo aver reso corrente il contesto con `gladLoadGLLoader`, carica gli indirizzi a runtime delle funzioni OpenGL moderne dal driver grafico.
-  3. **GLM:** Libreria matematica header-only che fornisce i tipi vettoriali (`glm::vec2, vec3, vec4`) e matriciali (`glm::mat4`), nonché le funzioni di trasformazione affine (`translate, rotate, scale, ortho`).
-  Il ciclo di rendering legge gli input, calcola il delta time clampato, aggiorna la fisica, pulisce il buffer colore con `glClear(GL_COLOR_BUFFER_BIT)`, invia le draw call e scambia i buffer."*
+  > *"La struttura del mio file `main.cpp` rispecchia fedelmente l'architettura standard:*
+  > 1. ***GLFW:** Crea la finestra del sistema operativo, alloca il contesto OpenGL 3.3 Core Profile e gestisce la coda eventi e il double buffering con `glfwSwapBuffers`.*
+  > 2. ***GLAD:** Inizializzato subito dopo aver reso corrente il contesto con `gladLoadGLLoader`, carica gli indirizzi a runtime delle funzioni OpenGL moderne dal driver grafico.*
+  > 3. ***GLM:** Libreria matematica header-only che fornisce i tipi vettoriali (`glm::vec2, vec3, vec4`) e matriciali (`glm::mat4`), nonché le funzioni di trasformazione affine (`translate, rotate, scale, ortho`).*
+  >
+  > *Il ciclo di rendering legge gli input, calcola il delta time clampato, aggiorna la fisica, pulisce il buffer colore con `glClear(GL_COLOR_BUFFER_BIT)`, invia le draw call e scambia i buffer."*
 
 ### Domanda 17: VAO, VBO, EBO: geometria e istanza
 * **Cosa chiede:** Ruoli di VBO (dati vertici), VAO (stato configurazione attributi), EBO (indici), differenza tra geometria e istanza.
@@ -580,25 +581,25 @@ Ecco come collegare direttamente il tuo progetto a ciascuna delle 20 domande d'e
 ### Domanda 19: Input, eventi e organizzazione in classi
 * **Cosa chiede:** Polling vs callback con GLFW, separazione delle responsabilità tra logica, geometria, shader, rendering e interfaccia.
 * **Come colleghi il tuo progetto:**
-  > *"Il progetto separa nettamente le responsabilità:
-  - `Input.cpp` e GLFW gestiscono gli eventi discreti tramite callback (`keyCallback` per restart o uscita) e gli eventi continui tramite polling (`glfwGetKey` per la propulsione della navicella a ogni frame).
-  - `GameWorld.cpp` coordina la logica di gioco, lo stato FSM e le collisioni.
-  - `Geometry.cpp` incapsula i buffer hardware (VBO/VAO).
-  - `Shader.cpp` compila e gestisce i programmi GLSL.
-  - `ShapeGenerator.cpp` calcola le coordinate matematiche delle mesh su CPU.
-  - `ImGui` gestisce l'interfaccia utente (Mission Control HUD) in modo non invasivo, controllando `!io.WantCaptureMouse` per non bloccare l'input di gioco durante l'interazione con gli slider."*
+  > *"Il progetto separa nettamente le responsabilità:*
+  > - *`Input.cpp` e GLFW gestiscono gli eventi discreti tramite callback (`keyCallback` per restart o uscita) e gli eventi continui tramite polling (`glfwGetKey` per la propulsione della navicella a ogni frame).*
+  > - *`GameWorld.cpp` coordina la logica di gioco, lo stato FSM e le collisioni.*
+  > - *`Geometry.cpp` incapsula i buffer hardware (VBO/VAO).*
+  > - *`Shader.cpp` compila e gestisce i programmi GLSL.*
+  > - *`ShapeGenerator.cpp` calcola le coordinate matematiche delle mesh su CPU.*
+  > - *`ImGui` gestisce l'interfaccia utente (Mission Control HUD) in modo non invasivo, controllando `!io.WantCaptureMouse` per non bloccare l'input di gioco durante l'interazione con gli slider."*
 
 ### Domanda 20: RGB, alpha, blending e trasparenza
 * **Cosa chiede:** Modello RGB, canale alpha come opacità, equazione di blending $C_{out} = F_s C_s + F_d C_d$, `glBlendFunc`, ordine di rendering dal fondo alla camera.
 * **Come colleghi il tuo progetto:**
-  > *"Nel mio progetto i colori sono definiti nel modello RGBA normalizzato $[0, 1]^4$. In `main.cpp` ho abilitato il blending con `glEnable(GL_BLEND)` e impostato la funzione standard:
-  $$\text{glBlendFunc}(\text{GL\_SRC\_ALPHA}, \text{GL\_ONE\_MINUS\_SRC\_ALPHA})$$
-  che corrisponde all'equazione algebrica:
-  $$C_{\text{out}} = \alpha_s \cdot C_s + (1 - \alpha_s) \cdot C_d$$
-  dove $C_s$ è il colore sorgente del frammento con opacità $\alpha_s$, e $C_d$ è il colore già presente nel framebuffer. Per garantire la correttezza visiva della trasparenza ed evitare artefatti, l'ordine di rendering in `GameWorld::render` è rigorosamente **Back-to-Front**:
-  1. Prima lo Sfondo procedurale opaco;
-  2. Poi gli oggetti solidi (portale, asteroidi, monete, nemico);
-  3. Infine la navicella e tutti gli elementi traslucidi (fiamme del reattore, luci stroboscopiche LED e il sistema particellare di fumo e scintille con alpha decadente)."*
+  > *"Nel mio progetto i colori sono definiti nel modello RGBA normalizzato $[0, 1]^4$. In `main.cpp` ho abilitato il blending con `glEnable(GL_BLEND)` e impostato la funzione standard:*
+  > $$\text{glBlendFunc}(\text{GL\_SRC\_ALPHA}, \text{GL\_ONE\_MINUS\_SRC\_ALPHA})$$
+  > *che corrisponde all'equazione algebrica:*
+  > $$C_{\text{out}} = \alpha_s \cdot C_s + (1 - \alpha_s) \cdot C_d$$
+  > *dove $C_s$ è il colore sorgente del frammento con opacità $\alpha_s$, e $C_d$ è il colore già presente nel framebuffer. Per garantire la correttezza visiva della trasparenza ed evitare artefatti, l'ordine di rendering in `GameWorld::render` è rigorosamente **Back-to-Front**:*
+  > 1. *Prima lo Sfondo procedurale opaco;*
+  > 2. *Poi gli oggetti solidi (portale, asteroidi, monete, nemico);*
+  > 3. *Infine la navicella e tutti gli elementi traslucidi (fiamme del reattore, luci stroboscopiche LED e il sistema particellare di fumo e scintille con alpha decadente)."*
 
 ---
 

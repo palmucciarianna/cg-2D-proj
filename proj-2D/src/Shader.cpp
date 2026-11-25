@@ -64,6 +64,7 @@ void Shader::setMat4(const char* name, const glm::mat4& matrix) const
     // Se la uniform non esiste nello shader (o è stata ottimizzata via dal compilatore), esce silenziosamente.
     if (location == -1) return;
 
+    // [Domanda 18: Passaggio delle variabili Uniform dalla CPU alla GPU]
     // glUniformMatrix4fv trasferisce una matrice 4x4 di float alla GPU:
     // Parametri:
     // - location: indice della variabile uniform

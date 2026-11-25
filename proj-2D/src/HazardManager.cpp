@@ -130,6 +130,7 @@ void HazardManager::update(float dt, float screenWidth, float screenHeight, Part
                 particles.emitCoinSparkles(it->pos, 2); // Genera 2 particelle luminose in scia
             }
 
+            // [Domanda 10: Clipping (scarto logico fuori dai margini schermo, analogo al clipping GPU in [-w, w]^3)]
             // Rimuove il proiettile se ha superato completamente i margini dello schermo.
             if (it->pos.x < -80.0f || it->pos.x > screenWidth + 80.0f ||
                 it->pos.y < -80.0f || it->pos.y > screenHeight + 80.0f)

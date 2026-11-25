@@ -105,7 +105,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.8f, 0.95f, 1.0f, 0.90f), // Nucleo centrale luminoso
         glm::vec4(0.1f, 0.45f, 0.85f, 0.30f) // Alone esterno sfumato
     );
-    m_vortexGeo.uploadMesh(vortexData); // Carica VAO/VBO del vortice in VRAM
+    m_vortexGeo.uploadMesh(vortexData); // [Domanda 12: Curve interpolanti di Hermite C^1 per Drone e Warp Gate] Carica VAO/VBO del vortice in VRAM
 }
 
 // ============================================================================
@@ -133,6 +133,7 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     float omega = 0.85f * speedMultiplier; // velocità angolare orbitale in rad/s (più veloce ai livelli alti)
     m_orbitPhase += omega * dt; // Aggiornamento della fase orbitale per la traiettoria a 8
 
+    // [Domanda 11: Curve parametriche e continuità C^1 (orbita chiusa regolare di Lissajous)]
     // 1. Traiettoria orbitale armonica a figura di 8
     // x(t) = x_0 + A * cos(phi)
     // y(t) = y_0 + B * sin(2 * phi)

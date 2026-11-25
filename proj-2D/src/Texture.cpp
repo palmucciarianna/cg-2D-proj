@@ -101,6 +101,7 @@ bool Texture::load(const std::string& filepath)
     // Ribaltiamo l'asse Y durante il caricamento per ottenere l'orientamento corretto.
     stbi_set_flip_vertically_on_load(1);
 
+    // [Domanda 2: Grafica raster (griglia discreta di pixel caricata da file e campionata in UV)]
     // Carica i pixel dell'immagine dalla memoria di massa:
     // Forziamo 4 canali (RGBA) per garantire trasparenza uniforme e allineamento a 32 bit.
     unsigned char* data = stbi_load(filepath.c_str(), &m_width, &m_height, &m_channels, 4);
