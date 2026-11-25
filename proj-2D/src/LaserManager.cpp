@@ -37,8 +37,7 @@ void LaserManager::init()
     );
 
     // Carica la geometria nei buffer della scheda video.
-    m_bulletGeo.setData(laserData.positions, laserData.colors, laserData.primitiveType);
-    m_bulletGeo.upload();
+    m_bulletGeo.uploadMesh(laserData);
 }
 
 // ============================================================================

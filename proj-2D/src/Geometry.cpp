@@ -13,6 +13,7 @@
 // ============================================================================
 
 #include "Geometry.h"
+#include "MeshData.h"
 #include <utility>
 
 // ============================================================================
@@ -81,6 +82,15 @@ void Geometry::setData(
     m_positions = positions;
     m_colors = colors;
     m_primitiveType = primitiveType;
+}
+
+// ============================================================================
+// Helper Compatto: setData + upload in un'unica chiamata
+// ============================================================================
+void Geometry::uploadMesh(const MeshData& data, bool dynamic)
+{
+    setData(data.positions, data.colors, data.primitiveType); // Copia i vertici e i colori CPU
+    upload(dynamic);                                          // Alloca e invia i VAO/VBO in VRAM
 }
 
 // ============================================================================

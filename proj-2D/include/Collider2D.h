@@ -84,6 +84,12 @@ namespace Collision2D
         return distSq <= (radSum * radSum);
     }
 
+    // Overload di comodità per confrontare direttamente due struct CircleCollider.
+    inline bool checkCircleCircle(const CircleCollider& a, const CircleCollider& b)
+    {
+        return checkCircleCircle(a.center, a.radius, b.center, b.radius);
+    }
+
     // ========================================================================
     // 2. Test di Collisione AABB - AABB (Axis-Aligned Bounding Box)
     // ========================================================================

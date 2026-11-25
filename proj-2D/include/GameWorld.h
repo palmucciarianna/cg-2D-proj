@@ -86,6 +86,9 @@ public:
 
 
 private:
+    // Helper condiviso per inizializzare o resettare un livello di gioco (usato da nextLevel e restartGame).
+    void startLevel(int level, bool clearParticles);
+
     int m_screenWidth;  // Larghezza logica della finestra in pixel (1280)
     int m_screenHeight; // Altezza logica della finestra in pixel (720)
 

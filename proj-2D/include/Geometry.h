@@ -36,6 +36,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+struct MeshData;
+
 class Geometry
 {
 public:
@@ -76,6 +78,9 @@ public:
     // - dynamic = false: utilizza GL_STATIC_DRAW (i dati non cambieranno spesso, massime prestazioni).
     // - dynamic = true:  utilizza GL_DYNAMIC_DRAW (i dati cambieranno ogni frame, es. particelle o curve animate).
     void upload(bool dynamic = false);
+
+    // Helper compatto: copia una MeshData CPU e la carica subito su GPU (setData + upload).
+    void uploadMesh(const MeshData& data, bool dynamic = false);
 
     // Aggiorna solo il buffer delle posizioni tramite glBufferSubData senza riallocare il buffer GPU.
     void updatePositions(const std::vector<glm::vec3>& newPositions);

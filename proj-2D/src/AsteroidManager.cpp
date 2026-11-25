@@ -40,8 +40,7 @@ void AsteroidManager::init()
     );
 
     // Trasferisce i vertici dell'asteroide in memoria VRAM della GPU una sola volta.
-    m_asteroidGeo.setData(asteroidData.positions, asteroidData.colors, asteroidData.primitiveType);
-    m_asteroidGeo.upload();
+    m_asteroidGeo.uploadMesh(asteroidData);
 }
 
 // ============================================================================
@@ -61,20 +60,9 @@ void AsteroidManager::spawnLevel(int levelCount, float screenWidth, float screen
     {
         Asteroid a;
 
-        // Distribuzione polare attorno al centro dello schermo:
-        // Evita che gli asteroidi compaiano direttamente sopra la navicella del giocatore.
-        float angle = (i * MathConstants::TWO_PI) / count + (rand() % 100) * 0.005f;
-        float dist = 220.0f + (rand() % 260);
-
-        // Calcola le coordinate cartesiane (x, y) a partire da raggio e angolo polare.
-        a.pos = glm::vec2(
-            screenWidth * 0.5f + std::cos(angle) * dist,
-            screenHeight * 0.5f + std::sin(angle) * dist
-        );
-
-        // Clamping di sicurezza per mantenere le istanze all'interno dei bordi del display.
-        a.pos.x = glm::clamp(a.pos.x, 80.0f, screenWidth - 80.0f);
-        a.pos.y = glm::clamp(a.pos.y, 80.0f, screenHeight - 80.0f);
+        // Distribuzione polare attorno al centro dello schermo (distanza 220..480px + piccolo scarto angolare):
+        // evita che gli asteroidi compaiano sopra la navicella e applica clamping ai bordi per non tagliare le rocce.
+        a.pos = MathConstants::sampleRingPosition(i, count, 220.0f, 480.0f, 0.50f, screenWidth, screenHeight);
 
         // Angolo di rotazione iniziale casuale [0°, 360°].
         a.rotation = static_cast<float>(rand() % 360);
@@ -147,21 +135,14 @@ bool AsteroidManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadi
 {
     for (auto& a : m_asteroids)
     {
-        if (a.active)
+        if (a.active && Collision2D::checkCircleCircle(bulletPos, bulletRadius, a.pos, a.radius))
         {
-            // Test di intersezione cerchio-cerchio privo di sqrt():
-            float distSq = glm::dot(bulletPos - a.pos, bulletPos - a.pos);
-            float radSum = bulletRadius + a.radius;
-
-            if (distSq <= radSum * radSum)
-            {
-                // Impatto confermato:
-                // 1. Disattiva l'asteroide rimuovendolo dalla scena.
-                a.active = false;
-                // 2. Genera un'esplosione fisica particellare di 32 schegge rocciose.
-                particles.emitAsteroidExplosion(a.pos, 32);
-                return true;
-            }
+            // Impatto confermato:
+            // 1. Disattiva l'asteroide rimuovendolo dalla scena.
+            a.active = false;
+            // 2. Genera un'esplosione fisica particellare di 32 schegge rocciose.
+            particles.emitAsteroidExplosion(a.pos, 32);
+            return true;
         }
     }
     return false;
@@ -174,16 +155,9 @@ bool AsteroidManager::checkPlayerCollision(const CircleCollider& playerCol)
 {
     for (auto& a : m_asteroids)
     {
-        if (a.active)
+        if (a.active && Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, a.pos, a.radius))
         {
-            // Verifica la distanza quadratica rispetto al collider del giocatore.
-            float distSq = glm::dot(playerCol.center - a.pos, playerCol.center - a.pos);
-            float radSum = playerCol.radius + a.radius;
-
-            if (distSq <= radSum * radSum)
-            {
-                return true; // Collisione rilevata
-            }
+            return true; // Collisione rilevata
         }
     }
     return false;

@@ -17,7 +17,6 @@
 #include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
-#include <cstdlib>
 
 // ============================================================================
 // Costruttore
@@ -40,8 +39,7 @@ void CollectibleManager::init()
     );
 
     // Carica la mesh nei buffer VBO/VAO della scheda video.
-    m_coinGeo.setData(coinData.positions, coinData.colors, coinData.primitiveType);
-    m_coinGeo.upload();
+    m_coinGeo.uploadMesh(coinData);
 }
 
 // ============================================================================
@@ -62,15 +60,7 @@ void CollectibleManager::spawnLevel(int levelCount, float screenWidth, float scr
         CosmicCoin c;
 
         // Distribuzione polare distanziata dal centro per favorire l'esplorazione della mappa.
-        float angle = (i * MathConstants::TWO_PI) / count + (rand() % 80) * 0.01f;
-        float dist = 180.0f + (rand() % 240);
-
-        c.basePos.x = screenWidth * 0.5f + std::cos(angle) * dist;
-        c.basePos.y = screenHeight * 0.5f + std::sin(angle) * dist;
-
-        // Limita le posizioni all'interno dello schermo giocabile.
-        c.basePos.x = glm::clamp(c.basePos.x, 80.0f, screenWidth - 80.0f);
-        c.basePos.y = glm::clamp(c.basePos.y, 80.0f, screenHeight - 80.0f);
+        c.basePos = MathConstants::sampleRingPosition(i, count, 180.0f, 420.0f, 0.80f, screenWidth, screenHeight);
 
         c.currentPos = c.basePos;
         // Assegna uno sfasamento temporale per rendere il moto oscillatorio asincrono tra le monete.
@@ -137,22 +127,15 @@ int CollectibleManager::checkCollisions(const CircleCollider& playerCol, Particl
 
     for (auto& c : m_coins)
     {
-        if (!c.collected)
+        if (!c.collected && Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, c.currentPos, c.radius))
         {
-            // Test di intersezione tra cerchi basato sulla distanza quadratica.
-            float distSq = glm::dot(playerCol.center - c.currentPos, playerCol.center - c.currentPos);
-            float radSum = playerCol.radius + c.radius;
+            // La moneta viene raccolta:
+            c.collected = true;
+            m_collectedCount++;
+            newlyCollected++;
 
-            if (distSq <= radSum * radSum)
-            {
-                // La moneta viene raccolta:
-                c.collected = true;
-                m_collectedCount++;
-                newlyCollected++;
-
-                // Genera un'esplosione di 18 scintille dorate con fisica particellare.
-                particles.emitCoinSparkles(c.currentPos, 18);
-            }
+            // Genera un'esplosione di 18 scintille dorate con fisica particellare.
+            particles.emitCoinSparkles(c.currentPos, 18);
         }
     }
 

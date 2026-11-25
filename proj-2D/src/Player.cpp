@@ -110,84 +110,62 @@ void Player::init()
     // ------------------------------------------------------------------------
 
     // Fusoliera centrale (trapezio metallico con sfumatura di profondità).
-    MeshData fuseData = ShapeGenerator::createTrapezoid(24.0f, 38.0f, 48.0f,
+    m_fuselageGeo.uploadMesh(ShapeGenerator::createTrapezoid(24.0f, 38.0f, 48.0f,
         glm::vec4(0.18f, 0.45f, 0.72f, 1.0f),  // Colore bordo anteriore
-        glm::vec4(0.08f, 0.16f, 0.32f, 1.0f)); // Colore bordo posteriore
-    m_fuselageGeo.setData(fuseData.positions, fuseData.colors, fuseData.primitiveType); // Copia i dati CPU nella Geometry
-    m_fuselageGeo.upload(); // Carica VAO/VBO della fusoliera in VRAM
+        glm::vec4(0.08f, 0.16f, 0.32f, 1.0f))); // Colore bordo posteriore
 
     // Muso anteriore affilato (triangolo con punta ciano brillante).
-    MeshData noseData = ShapeGenerator::createTriangle(
+    m_noseConeGeo.uploadMesh(ShapeGenerator::createTriangle(
         glm::vec4(0.20f, 0.75f, 0.95f, 1.0f),  // Vertice 1: punta ciano
         glm::vec4(0.12f, 0.30f, 0.55f, 1.0f),  // Vertice 2: base blu
-        glm::vec4(0.12f, 0.30f, 0.55f, 1.0f)); // Vertice 3: base blu
-    m_noseConeGeo.setData(noseData.positions, noseData.colors, noseData.primitiveType); // Imposta dati CPU del muso
-    m_noseConeGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.12f, 0.30f, 0.55f, 1.0f))); // Vertice 3: base blu
 
     // Tettuccio cabina in cristallo (ellisse con bordo turchese).
-    MeshData canopyData = ShapeGenerator::createCircle(0.0f, 0.0f, 9.0f, 16.0f, 32,
+    m_canopyGeo.uploadMesh(ShapeGenerator::createCircle(0.0f, 0.0f, 9.0f, 16.0f, 32,
         glm::vec4(0.85f, 0.98f, 1.0f, 0.95f),  // Centro vetro luminoso
-        glm::vec4(0.10f, 0.55f, 0.85f, 0.85f)); // Bordo turchese semi-trasparente
-    m_canopyGeo.setData(canopyData.positions, canopyData.colors, canopyData.primitiveType); // Imposta dati CPU del cupolino
-    m_canopyGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.10f, 0.55f, 0.85f, 0.85f))); // Bordo turchese semi-trasparente
 
     // Riflesso geometrico 2D del vetro sul cupolino (ellisse bianca semi-trasparente).
-    MeshData shineData = ShapeGenerator::createCircle(2.0f, 3.0f, 3.5f, 7.0f, 16,
+    m_canopyShineGeo.uploadMesh(ShapeGenerator::createCircle(2.0f, 3.0f, 3.5f, 7.0f, 16,
         glm::vec4(1.0f, 1.0f, 1.0f, 0.85f), // Centro riflesso bianco
-        glm::vec4(0.9f, 0.95f, 1.0f, 0.0f)); // Bordo sfumato a alpha 0
-    m_canopyShineGeo.setData(shineData.positions, shineData.colors, shineData.primitiveType); // Imposta dati riflesso
-    m_canopyShineGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.9f, 0.95f, 1.0f, 0.0f))); // Bordo sfumato a alpha 0
 
-    // Ala a freccia con pannellatura.
-    MeshData wingData = ShapeGenerator::createTriangle(
+    // Ala a freccia con pannellatura (riutilizzata sia per SX che per DX).
+    m_wingsGeo.uploadMesh(ShapeGenerator::createTriangle(
         glm::vec4(0.12f, 0.35f, 0.65f, 1.0f),  // Vertice interno blu
         glm::vec4(0.25f, 0.65f, 0.90f, 1.0f),  // Vertice esterno azzurro
-        glm::vec4(0.06f, 0.15f, 0.30f, 1.0f)); // Vertice posteriore scuro
-    m_wingsGeo.setData(wingData.positions, wingData.colors, wingData.primitiveType); // Imposta mesh dell'ala (riutilizzata per SX e DX)
-    m_wingsGeo.upload(); // Carica una sola volta in VRAM
+        glm::vec4(0.06f, 0.15f, 0.30f, 1.0f))); // Vertice posteriore scuro
 
     // Cannoni laser sulle estremità alari.
-    MeshData cannonData = ShapeGenerator::createRectangle(5.0f, 26.0f,
+    m_cannonsGeo.uploadMesh(ShapeGenerator::createRectangle(5.0f, 26.0f,
         glm::vec4(0.20f, 0.90f, 1.0f, 1.0f),   // Punta cannone ciano
-        glm::vec4(0.15f, 0.18f, 0.22f, 1.0f)); // Base cannone metallica
-    m_cannonsGeo.setData(cannonData.positions, cannonData.colors, cannonData.primitiveType); // Imposta dati cannone
-    m_cannonsGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.15f, 0.18f, 0.22f, 1.0f))); // Base cannone metallica
 
     // Ugelli propulsori posteriori in titanio scuro.
-    MeshData nozzleData = ShapeGenerator::createRectangle(8.0f, 10.0f,
+    m_thrusterNozzleGeo.uploadMesh(ShapeGenerator::createRectangle(8.0f, 10.0f,
         glm::vec4(0.25f, 0.28f, 0.35f, 1.0f),  // Parte superiore grigia
-        glm::vec4(0.08f, 0.08f, 0.12f, 1.0f)); // Bordo inferiore scuro
-    m_thrusterNozzleGeo.setData(nozzleData.positions, nozzleData.colors, nozzleData.primitiveType); // Imposta dati ugello
-    m_thrusterNozzleGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.08f, 0.08f, 0.12f, 1.0f))); // Bordo inferiore scuro
 
     // Nucleo fiamma di propulsione (bianco-azzurro termico).
-    MeshData coreFlame = ShapeGenerator::createTriangle(
+    m_flameCoreGeo.uploadMesh(ShapeGenerator::createTriangle(
         glm::vec4(0.70f, 0.95f, 1.0f, 1.0f),  // Base calda bianco-azzurra
         glm::vec4(0.20f, 0.60f, 1.0f, 0.9f),  // Lato azzurro
-        glm::vec4(0.10f, 0.30f, 1.0f, 0.0f)); // Punta sfumata trasparente
-    m_flameCoreGeo.setData(coreFlame.positions, coreFlame.colors, coreFlame.primitiveType); // Imposta dati nucleo fiamma
-    m_flameCoreGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.10f, 0.30f, 1.0f, 0.0f))); // Punta sfumata trasparente
 
     // Alone esterno della fiamma (arancio-fuoco).
-    MeshData haloFlame = ShapeGenerator::createTriangle(
+    m_flameHaloGeo.uploadMesh(ShapeGenerator::createTriangle(
         glm::vec4(1.0f, 0.85f, 0.3f, 0.95f),  // Base giallo acceso
         glm::vec4(1.0f, 0.35f, 0.05f, 0.80f), // Lato arancio vivo
-        glm::vec4(0.8f, 0.05f, 0.00f, 0.00f)); // Punta rossa trasparente
-    m_flameHaloGeo.setData(haloFlame.positions, haloFlame.colors, haloFlame.primitiveType); // Imposta dati alone fiamma
-    m_flameHaloGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.8f, 0.05f, 0.00f, 0.00f))); // Punta rossa trasparente
 
     // Luci stroboscopiche di navigazione: verde a destra e rossa a sinistra.
-    MeshData beaconGreen = ShapeGenerator::createCircle(0.0f, 0.0f, 3.5f, 3.5f, 12,
+    m_beaconGreenGeo.uploadMesh(ShapeGenerator::createCircle(0.0f, 0.0f, 3.5f, 3.5f, 12,
         glm::vec4(0.3f, 1.0f, 0.4f, 1.0f),  // Centro verde brillante
-        glm::vec4(0.1f, 0.8f, 0.2f, 0.2f)); // Bordo verde tenue
-    m_beaconGreenGeo.setData(beaconGreen.positions, beaconGreen.colors, beaconGreen.primitiveType); // Imposta dati LED verde
-    m_beaconGreenGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.1f, 0.8f, 0.2f, 0.2f))); // Bordo verde tenue
 
-    MeshData beaconRed = ShapeGenerator::createCircle(0.0f, 0.0f, 3.5f, 3.5f, 12,
+    m_beaconRedGeo.uploadMesh(ShapeGenerator::createCircle(0.0f, 0.0f, 3.5f, 3.5f, 12,
         glm::vec4(1.0f, 0.2f, 0.3f, 1.0f),  // Centro rosso brillante
-        glm::vec4(0.8f, 0.1f, 0.1f, 0.2f)); // Bordo rosso tenue
-    m_beaconRedGeo.setData(beaconRed.positions, beaconRed.colors, beaconRed.primitiveType); // Imposta dati LED rosso
-    m_beaconRedGeo.upload(); // Trasferisce in VRAM
+        glm::vec4(0.8f, 0.1f, 0.1f, 0.2f))); // Bordo rosso tenue
 }
 
 // ============================================================================
@@ -249,23 +227,25 @@ void Player::update(float dt, GLFWwindow* window, int screenWidth, int screenHei
 }
 
 // ============================================================================
+// Helper: Tinta Stroboscopica di Invulnerabilità
+// ============================================================================
+glm::vec4 Player::computeDamageTint(float currentTime) const
+{
+    if (m_invulnerableTimer > 0.0f && std::sin(currentTime * 28.0f) < 0.0f)
+    {
+        return glm::vec4(1.0f, 0.35f, 0.35f, 0.85f); // Rosso semitrasparente durante la semionda negativa
+    }
+    return glm::vec4(1.0f); // Bianco opaco neutro negli altri casi
+}
+
+// ============================================================================
 // Rendering Gerarchico dell'Oggetto Composto Navicella
 // ============================================================================
 void Player::draw(const Shader& shader, float currentTime, const glm::mat4& projection)
 {
-    // Feedback visivo di invulnerabilità: lampeggio stroboscopico con onda sinusoidale.
-    if (m_invulnerableTimer > 0.0f)
-    {
-        float blink = std::sin(currentTime * 28.0f);
-        if (blink < 0.0f)
-            shader.setVec4("uColorTint", glm::vec4(1.0f, 0.35f, 0.35f, 0.85f));
-        else
-            shader.setVec4("uColorTint", glm::vec4(1.0f));
-    }
-    else
-    {
-        shader.setVec4("uColorTint", glm::vec4(1.0f));
-    }
+    // Feedback visivo di invulnerabilità calcolato una volta tramite helper condiviso.
+    const glm::vec4 damageTint = computeDamageTint(currentTime);
+    shader.setVec4("uColorTint", damageTint);
 
     // ------------------------------------------------------------------------
     // Matrice Radice della Navicella (Root Transformation)
@@ -279,29 +259,24 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 1. Ali a Freccia Gerarchiche (Simmetria tramite Scala Negativa)
     // ------------------------------------------------------------------------
-    // Ala Destra: traslazione relativa (+18, -6) e scala (26, 32).
-    glm::mat4 wingRight = glm::translate(playerRoot, glm::vec3(18.0f, -6.0f, 0.0f));
-    wingRight = glm::scale(wingRight, glm::vec3(26.0f, 32.0f, 1.0f));
-    shader.setMat4("model", wingRight); // Invia la matrice gerarchica allo shader
-    m_wingsGeo.draw();                  // Disegna la mesh dell'ala destra
-
-    // Ala Sinistra: ottenuta specchiando la stessa geometria dell'ala destra lungo l'asse X locale
-    // tramite una matrice di riflessione con scala negativa: S(-26.0f, 32.0f, 1.0f).
-    glm::mat4 wingLeft = glm::translate(playerRoot, glm::vec3(-18.0f, -6.0f, 0.0f));
-    wingLeft = glm::scale(wingLeft, glm::vec3(-26.0f, 32.0f, 1.0f));
-    shader.setMat4("model", wingLeft); // Invia la matrice riflessa allo shader
-    m_wingsGeo.draw();                 // Riusa lo stesso VAO dell'ala senza duplicare vertici
+    // Ala Destra (+1) e Ala Sinistra (-1 specchiata lungo X locale con scala negativa).
+    for (float side : { 1.0f, -1.0f })
+    {
+        glm::mat4 wingMat = glm::translate(playerRoot, glm::vec3(18.0f * side, -6.0f, 0.0f));
+        wingMat = glm::scale(wingMat, glm::vec3(26.0f * side, 32.0f, 1.0f));
+        shader.setMat4("model", wingMat); // Invia la matrice gerarchica allo shader
+        m_wingsGeo.draw();                // Riusa lo stesso VAO dell'ala senza duplicare vertici
+    }
 
     // ------------------------------------------------------------------------
     // 2. Doppi Cannoni Laser sulle Punte Alari
     // ------------------------------------------------------------------------
-    glm::mat4 cannonRight = glm::translate(playerRoot, glm::vec3(31.0f, 4.0f, 0.0f)); // Offset relativo cannone destro
-    shader.setMat4("model", cannonRight); // Imposta la model matrix
-    m_cannonsGeo.draw();                  // Disegna il cannone destro
-
-    glm::mat4 cannonLeft = glm::translate(playerRoot, glm::vec3(-31.0f, 4.0f, 0.0f)); // Offset relativo cannone sinistro
-    shader.setMat4("model", cannonLeft); // Imposta la model matrix
-    m_cannonsGeo.draw();                 // Riusa la mesh del cannone per il lato sinistro
+    for (float side : { 1.0f, -1.0f })
+    {
+        glm::mat4 cannonMat = glm::translate(playerRoot, glm::vec3(31.0f * side, 4.0f, 0.0f)); // Offset alare DX/SX
+        shader.setMat4("model", cannonMat); // Imposta la model matrix
+        m_cannonsGeo.draw();                // Disegna il cannone
+    }
 
     // ------------------------------------------------------------------------
     // 3. Fusoliera Centrale Rastremata
@@ -337,16 +312,8 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
         faceMat = glm::scale(faceMat, glm::vec3(8.5f, 15.0f, 1.0f));
         m_textureShader->setMat4("model", faceMat);
 
-        // Applica il medesimo effetto di lampeggio se invulnerabile.
-        if (m_invulnerableTimer > 0.0f)
-        {
-            float blink = std::sin(currentTime * 28.0f);
-            m_textureShader->setVec4("uColorTint", (blink < 0.0f) ? glm::vec4(1.0f, 0.35f, 0.35f, 0.85f) : glm::vec4(1.0f));
-        }
-        else
-        {
-            m_textureShader->setVec4("uColorTint", glm::vec4(1.0f));
-        }
+        // Applica il medesimo effetto di lampeggio condiviso se invulnerabile.
+        m_textureShader->setVec4("uColorTint", damageTint);
 
         // Lega la texture alla slot 0.
         m_faceTexture.bind(0);
@@ -357,7 +324,7 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 
-        m_faceTexture.unbind();
+        m_faceTexture.unbind(); // stacca VAO e texture per evitare side effect su altri oggetti
 
         // Riattiva lo shader generale dei colori per i rimanenti componenti geometrici.
         shader.use();
@@ -370,13 +337,12 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
     // ------------------------------------------------------------------------
     // 6. Ugelli Reattori Posteriori
     // ------------------------------------------------------------------------
-    glm::mat4 nozzleRight = glm::translate(playerRoot, glm::vec3(10.0f, -28.0f, 0.0f)); // Posizione ugello destro
-    shader.setMat4("model", nozzleRight); // Invia matrice allo shader
-    m_thrusterNozzleGeo.draw();           // Disegna ugello destro
-
-    glm::mat4 nozzleLeft = glm::translate(playerRoot, glm::vec3(-10.0f, -28.0f, 0.0f)); // Posizione ugello sinistro
-    shader.setMat4("model", nozzleLeft);  // Invia matrice allo shader
-    m_thrusterNozzleGeo.draw();           // Disegna ugello sinistro
+    for (float side : { 1.0f, -1.0f })
+    {
+        glm::mat4 nozzleMat = glm::translate(playerRoot, glm::vec3(10.0f * side, -28.0f, 0.0f)); // Posizione ugello DX/SX
+        shader.setMat4("model", nozzleMat); // Invia matrice allo shader
+        m_thrusterNozzleGeo.draw();         // Disegna ugello
+    }
 
     // ------------------------------------------------------------------------
     // 7. Fiamme di Propulsione Animate (Doppio Post-Bruciatore)
@@ -387,27 +353,19 @@ void Player::draw(const Shader& shader, float currentTime, const glm::mat4& proj
         float flameLength = (24.0f + 14.0f * std::sin(currentTime * 35.0f)) * m_thrustIntensity;
         float flameWidth  = 12.0f * m_thrustIntensity; // Larghezza proporzionale alla spinta
 
-        // Propulsore Destro:
-        glm::mat4 flameRight = glm::translate(playerRoot, glm::vec3(10.0f, -32.0f, 0.0f)); // Origine dietro ugello DX
-        flameRight = glm::rotate(flameRight, glm::radians(180.0f), glm::vec3(0, 0, 1));   // Ruota di 180° per puntare indietro
-        flameRight = glm::scale(flameRight, glm::vec3(flameWidth, flameLength, 1.0f));    // Scala dinamica pulsante
-        shader.setMat4("model", flameRight); // Invia matrice dell'alone esterno
-        m_flameHaloGeo.draw();               // Disegna alone arancione
+        // Disegna entrambi i propulsori (Destro +1, Sinistro -1) con gerarchia a 3 livelli (root -> fiamma -> nucleo).
+        for (float side : { 1.0f, -1.0f })
+        {
+            glm::mat4 flameMat = glm::translate(playerRoot, glm::vec3(10.0f * side, -32.0f, 0.0f)); // Dietro ugello
+            flameMat = glm::rotate(flameMat, glm::radians(180.0f), glm::vec3(0, 0, 1));             // Punta indietro (-Y)
+            flameMat = glm::scale(flameMat, glm::vec3(flameWidth, flameLength, 1.0f));              // Scala pulsante
+            shader.setMat4("model", flameMat); // Invia matrice alone esterno
+            m_flameHaloGeo.draw();             // Disegna alone arancione
 
-        glm::mat4 coreRight = glm::scale(flameRight, glm::vec3(0.6f, 0.7f, 1.0f)); // Nucleo interno più stretto e corto
-        shader.setMat4("model", coreRight); // Invia matrice del nucleo
-        m_flameCoreGeo.draw();              // Disegna nucleo bianco-azzurro
-
-        // Propulsore Sinistro:
-        glm::mat4 flameLeft = glm::translate(playerRoot, glm::vec3(-10.0f, -32.0f, 0.0f)); // Origine dietro ugello SX
-        flameLeft = glm::rotate(flameLeft, glm::radians(180.0f), glm::vec3(0, 0, 1));    // Ruota di 180° indietro
-        flameLeft = glm::scale(flameLeft, glm::vec3(flameWidth, flameLength, 1.0f));     // Scala dinamica pulsante
-        shader.setMat4("model", flameLeft); // Invia matrice alone sinistro
-        m_flameHaloGeo.draw();              // Disegna alone arancione
-
-        glm::mat4 coreLeft = glm::scale(flameLeft, glm::vec3(0.6f, 0.7f, 1.0f)); // Nucleo interno sinistro
-        shader.setMat4("model", coreLeft); // Invia matrice nucleo sinistro
-        m_flameCoreGeo.draw();             // Disegna nucleo bianco-azzurro
+            glm::mat4 coreMat = glm::scale(flameMat, glm::vec3(0.6f, 0.7f, 1.0f)); // Nucleo interno più stretto e corto
+            shader.setMat4("model", coreMat); // Invia matrice del nucleo
+            m_flameCoreGeo.draw();            // Disegna nucleo bianco-azzurro
+        }
     }
 
     // ------------------------------------------------------------------------

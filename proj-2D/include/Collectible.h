@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 // 1. A COSA SERVE:
 //    - Gestisce le 5 monete d'oro collezionabili richieste per sbloccare il Warp Gate (Requisito 7.2).
-//    - Implementa l'animazione di rotazione pseudo-3D e l'oscillazione armonica verticale (Requisito 6).
+//    - Implementa l'animazione di rotazione e l'oscillazione armonica verticale (Requisito 6).
 //    - Condivide un unico VAO/VBO in VRAM per tutte le 5 monete (Buffer Sharing come per gli asteroidi).
 //    - Notifica GameWorld della raccolta, erogando punti e generando scintille dorate particellari.
 //
@@ -17,7 +17,7 @@
 //      * ParticleSystem: chiamato da GameWorld per emettere particelle dorate alla raccolta.
 //
 // 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
-//    - Rotazione Pseudo-3D via Proiezione Ortogonale (Requisito 6 & Domande 6, 9):
+//    - Rotazione via Proiezione Ortogonale (Requisito 6 & Domande 6, 9):
 //      Un disco circolare 3D che ruota attorno all'asse Y a velocità angolare omega, se proiettato
 //      ortogonalmente sul piano XY, si comprime orizzontalmente come:
 //      s_x(t) = s_base * |cos(omega * t)|.

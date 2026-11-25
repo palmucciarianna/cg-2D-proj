@@ -34,8 +34,7 @@ void HazardManager::init()
         glm::vec4(1.0f, 0.95f, 0.8f, 1.0f),  // Centro bianco rovente
         glm::vec4(1.0f, 0.15f, 0.1f, 1.0f)   // Bordi rosso cremisi
     );
-    m_projectileGeo.setData(shotData.positions, shotData.colors, shotData.primitiveType);
-    m_projectileGeo.upload();
+    m_projectileGeo.uploadMesh(shotData);
 
     // Geometria dell'indicatore di allerta (mirino rettangolare rosso).
     MeshData warnData = ShapeGenerator::createRectangle(
@@ -43,8 +42,7 @@ void HazardManager::init()
         glm::vec4(1.0f, 0.2f, 0.2f, 1.0f),
         glm::vec4(1.0f, 0.05f, 0.05f, 0.8f)
     );
-    m_warningGeo.setData(warnData.positions, warnData.colors, warnData.primitiveType);
-    m_warningGeo.upload();
+    m_warningGeo.uploadMesh(warnData);
 }
 
 // ============================================================================
@@ -206,19 +204,12 @@ bool HazardManager::checkPlayerHit(const CircleCollider& playerCol, ParticleSyst
 {
     for (auto& h : m_hazards) // Scorre tutti i proiettili in scena
     {
-        if (h.fired && h.active) // Controlla solo quelli effettivamente lanciati e ancora attivi
+        if (h.fired && h.active && Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, h.pos, h.radius))
         {
-            // Test di intersezione tra cerchi senza sqrt(): ||c1 - c2||^2 <= (r1 + r2)^2
-            float distSq = glm::dot(playerCol.center - h.pos, playerCol.center - h.pos); // Distanza euclidea al quadrato
-            float radSum = playerCol.radius + h.radius; // Somma dei due raggi
-
-            if (distSq <= radSum * radSum) // Collisione rilevata
-            {
-                h.active = false; // Disattiva il proiettile per evitare danni multipli
-                // Innesca un'esplosione particellare massiccia (45 frammenti).
-                particles.emitAsteroidExplosion(h.pos, 45);
-                return true; // Segnala impatto avvenuto
-            }
+            h.active = false; // Disattiva il proiettile per evitare danni multipli
+            // Innesca un'esplosione particellare massiccia (45 frammenti).
+            particles.emitAsteroidExplosion(h.pos, 45);
+            return true; // Segnala impatto avvenuto
         }
     }
     return false; // Nessuna collisione rilevata

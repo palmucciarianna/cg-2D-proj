@@ -41,8 +41,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     MeshData headData;
     if (PlayerShapeLoader::load(alienObjPath, headData, err))
     {
-        m_headGeo.setData(headData.positions, headData.colors, headData.primitiveType);
-        m_headGeo.upload();
+        m_headGeo.uploadMesh(headData);
         m_hasDrone = true;
     }
     else
@@ -59,8 +58,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(1.0f, 0.98f, 0.20f, 1.0f),
         glm::vec4(1.0f, 0.65f, 0.05f, 1.0f)
     );
-    m_evilEyeGeo.setData(eyeData.positions, eyeData.colors, eyeData.primitiveType);
-    m_evilEyeGeo.upload();
+    m_evilEyeGeo.uploadMesh(eyeData);
 
     // Pupilla a fessura rettangolare verticale con sfumatura rosso sangue.
     MeshData pupilData = ShapeGenerator::createRectangle(
@@ -68,8 +66,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.05f, 0.05f, 0.05f, 1.0f),
         glm::vec4(0.40f, 0.02f, 0.02f, 1.0f)
     );
-    m_pupilGeo.setData(pupilData.positions, pupilData.colors, pupilData.primitiveType);
-    m_pupilGeo.upload();
+    m_pupilGeo.uploadMesh(pupilData);
 
     // Sopracciglio triangolare inclinato aggressivo.
     MeshData browData = ShapeGenerator::createTriangle(
@@ -77,8 +74,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.6f, 0.05f, 0.05f, 1.0f),   // Vertice rosso intenso
         glm::vec4(0.05f, 0.02f, 0.02f, 1.0f)   // Vertice ombra esterna
     );
-    m_eyebrowsGeo.setData(browData.positions, browData.colors, browData.primitiveType); // Copia dati CPU
-    m_eyebrowsGeo.upload(); // Carica VAO/VBO sopracciglia in VRAM
+    m_eyebrowsGeo.uploadMesh(browData); // Carica VAO/VBO sopracciglia in VRAM
 
     // Bocca a ghigno malefico con zanna aguzza.
     MeshData mouthData = ShapeGenerator::createTriangle(
@@ -86,8 +82,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),  // Angolo destro scuro
         glm::vec4(0.95f, 0.95f, 0.95f, 1.0f)   // Punta zanna bianca
     );
-    m_evilMouthGeo.setData(mouthData.positions, mouthData.colors, mouthData.primitiveType); // Copia dati CPU
-    m_evilMouthGeo.upload(); // Carica VAO/VBO bocca in VRAM
+    m_evilMouthGeo.uploadMesh(mouthData); // Carica VAO/VBO bocca in VRAM
 
     // ------------------------------------------------------------------------
     // 3. Caricamento del Warp Gate (Portale Monumentale Hermite)
@@ -95,8 +90,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     MeshData gateData; // Struttura CPU per l'anello del Warp Gate
     if (PlayerShapeLoader::load(warpGateObjPath, gateData, err)) // Parsing del file OBJ/MTL a spline Hermite
     {
-        m_gateGeo.setData(gateData.positions, gateData.colors, gateData.primitiveType); // Popola la geometria
-        m_gateGeo.upload(); // Trasferisce i 144 vertici in VRAM
+        m_gateGeo.uploadMesh(gateData); // Trasferisce i 144 vertici in VRAM
         m_hasGate = true;   // Segnala caricamento riuscito
     }
     else // Gestione errore se il file OBJ manca
@@ -110,8 +104,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.8f, 0.95f, 1.0f, 0.90f), // Nucleo centrale luminoso
         glm::vec4(0.1f, 0.45f, 0.85f, 0.30f) // Alone esterno sfumato
     );
-    m_vortexGeo.setData(vortexData.positions, vortexData.colors, vortexData.primitiveType); // Copia dati CPU
-    m_vortexGeo.upload(); // Carica VAO/VBO del vortice in VRAM
+    m_vortexGeo.uploadMesh(vortexData); // Carica VAO/VBO del vortice in VRAM
 }
 
 // ============================================================================
@@ -394,10 +387,8 @@ bool HermiteManager::checkPlayerGateEnter(const CircleCollider& playerCol, bool 
 {
     if (!m_hasGate || !gateActive) return false;
 
-    // Raggio di attivazione del trigger circolare: 58 pixel.
-    float distSq = glm::dot(playerCol.center - m_gatePos, playerCol.center - m_gatePos);
-    float triggerRad = 58.0f;
-    return distSq <= (triggerRad * triggerRad);
+    // Raggio di attivazione del trigger circolare: 58 pixel (raggio punto = 0.0f).
+    return Collision2D::checkCircleCircle(playerCol.center, 0.0f, m_gatePos, 58.0f);
 }
 
 // ============================================================================
@@ -406,9 +397,8 @@ bool HermiteManager::checkPlayerGateEnter(const CircleCollider& playerCol, bool 
 bool HermiteManager::checkDroneCollision(const CircleCollider& playerCol) const
 {
     if (!m_hasDrone) return false;
-    float dist = glm::distance(playerCol.center, m_dronePos);
     float droneRadius = (m_weakenedTimer > 0.0f) ? 28.0f : 36.0f;
-    return dist <= (playerCol.radius + droneRadius);
+    return Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, m_dronePos, droneRadius);
 }
 
 // ============================================================================
@@ -421,11 +411,9 @@ bool HermiteManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadiu
         return false;
     }
 
-    // Calcola la distanza cartesiana tra il dardo laser e il centro del Drone Rosso
-    float dist = glm::distance(bulletPos, m_dronePos);
     float hitRadius = (m_weakenedTimer > 0.0f) ? 30.0f : 36.0f;
 
-    if (dist <= (hitRadius + bulletRadius))
+    if (Collision2D::checkCircleCircle(bulletPos, bulletRadius, m_dronePos, hitRadius))
     {
         // 1. Applica o estende lo stato di indebolimento (4.5 secondi di durata)
         m_weakenedTimer = 4.5f;

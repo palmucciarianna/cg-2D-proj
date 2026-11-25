@@ -2,7 +2,7 @@
 // GUIDA RAPIDA PER L'ORALE - CLASSE: AsteroidManager
 // ----------------------------------------------------------------------------
 // 1. A COSA SERVE:
-//    - Gestisce la cintura di asteroidi ostili (da 4 a 9 a seconda del livello di gioco).
+//    - Gestisce la cintura di asteroidi ostili (da 4 a 10 a seconda del livello di gioco).
 //    - Implementa la tecnica cardine del Buffer Sharing (Requisito 4):
 //      tutti gli asteroidi condividono la STESSA geometria su VRAM (un solo VAO e VBO).
 //    - Gestisce la distruzione degli asteroidi all'impatto con i laser o la navicella,

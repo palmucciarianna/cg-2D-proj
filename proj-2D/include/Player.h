@@ -114,6 +114,8 @@ public:
     void resetFireCooldown(float cd = 0.20f) { m_fireCooldown = cd; }
 
 private:
+    // Helper: calcola la tinta di lampeggio rosso quando la navicella è invulnerabile.
+    glm::vec4 computeDamageTint(float currentTime) const;
     // Posizione 2D nel sistema di coordinate del mondo (in pixel).
     glm::vec2 m_pos{ 640.0f, 360.0f };
     // Vettore velocità istantanea.
