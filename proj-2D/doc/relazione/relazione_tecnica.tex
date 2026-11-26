@@ -162,17 +162,6 @@ L'ambientazione scelta è uno scenario fantascientifico arcade ad alto ritmo: il
 
 In ossequio al \textbf{Requisito 8 (Organizzazione del codice)}, il software adotta il principio della \textit{Separation of Concerns} (SoC), disaccoppiando nettamente il caricamento delle risorse OpenGL, la gestione della scena, il calcolo analitico delle collisioni e la logica di gioco.
 
-\begin{figure}[H]
-    \centering
-    \IfFileExists{assets/screenshots/screenshot_gameplay.jpg}{
-        \includegraphics[width=0.88\linewidth]{assets/screenshots/screenshot_gameplay.jpg}
-        \caption{Schermata di gioco attiva: navicella composita controllata dal giocatore con foto pilota proiettata nel cupolino, drone alieno cornuto Hermite (ostacolo letale a 3 colpi con occhio giallo), Warp Gate dimensionale blu, monete d'oro rotanti, asteroidi a buffer condiviso e HUD Mission Control.}
-    }{
-        \framebox[0.88\linewidth]{\parbox{0.85\linewidth}{\centering \vspace{1.5cm} \textbf{[Schermata di Gioco: Navicella, Asteroidi Condivisi, Drone Hermite, Portale e HUD]} \vspace{1.5cm}}}
-    }
-    \label{fig:gameplay}
-\end{figure}
-
 \begin{table}[H]
 \centering
 \small
@@ -428,17 +417,6 @@ L'applicazione integra molteplici moti continui guidati da $\Delta t$:
 % 7. INTERAZIONE, COLLISIONI E GAMEPLAY
 % ==============================================================================
 \section{Interazione, Meccaniche di Gioco e Collisioni (Requisito 7)}
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{assets/screenshots/screenshot_gameover.jpg}{
-        \includegraphics[width=0.88\linewidth]{assets/screenshots/screenshot_gameover.jpg}
-        \caption{Pop-up di Game Over perfettamente centrato a schermo con visualizzazione del punteggio finale, drone alieno con occhio socchiuso e Warp Gate blu sullo sfondo.}
-    }{
-        \framebox[0.88\linewidth]{\parbox{0.85\linewidth}{\centering \vspace{1.5cm} \textbf{[Schermata di Game Over Centrata e Drone Hermite con Occhio Giallo]} \vspace{1.5cm}}}
-    }
-    \label{fig:gameover}
-\end{figure}
 
 \subsection{Algoritmi di Collisione 2D}
 Nel modulo \texttt{Collider2D.h} sono implementati i test analitici:
