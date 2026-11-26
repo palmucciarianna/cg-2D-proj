@@ -1,11 +1,34 @@
 // ============================================================================
-// File: include/AsteroidManager.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore delle istanze condivise degli asteroidi (Requisito 4).
-//              Tutti gli asteroidi condividono la STESSA risorsa geometrica su VRAM
-//              (un unico VAO/VBO), riducendo a zero la duplicazione di memoria GPU
-//              e variando per ogni istanza unicamente la matrice di modellazione (Model Matrix).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: AsteroidManager
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce la cintura di asteroidi ostili (da 4 a 10 a seconda del livello di gioco).
+//    - Implementa la tecnica cardine del Buffer Sharing (Requisito 4):
+//      tutti gli asteroidi condividono la STESSA geometria su VRAM (un solo VAO e VBO).
+//    - Gestisce la distruzione degli asteroidi all'impatto con i laser o la navicella,
+//      innescando il sistema particellare di frammentazione rocciosa.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (in init(), spawnLevel(), update(dt), draw(shader)).
+//    - Collabora con:
+//      * ShapeGenerator: crea la mesh CPU poligonale irregolare (cerchio perturbato a 13 segmenti).
+//      * Geometry: memorizza l'unico blocco di dati su VRAM (m_asteroidGeo).
+//      * Collider2D: fornisce il CircleCollider (r = 30px * scale) per i test di collisione.
+//      * ParticleSystem: chiamato da GameWorld per generare l'esplosione di 32 detriti rocciosi.
+//      * Shader basic: riceve la matrice 'uniform mat4 model' per ogni istanza disegnata.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Buffer Sharing & Instancing Logico (Requisito 4 & Domande 4, 17):
+//      Invece di inviare vertici alla GPU a ogni frame o allocare N buffer identici in VRAM,
+//      esiste 1 sola copia geometrica caricata con GL_STATIC_DRAW. Nel render loop la CPU invia
+//      soltanto la matrice Model: M_i = T(pos_i) * R(rot_i) * S(scale_i).
+//    - Distribuzione Spaziale in Coordinate Polari (Domanda 5):
+//      Gli asteroidi sono generati in posizioni polari attorno al centro dello schermo:
+//      x = x_centro + cos(theta) * r,  y = y_centro + sin(theta) * r, con theta ed r casuali,
+//      impedendo che compaiano direttamente sopra la navicella del giocatore.
+//    - Differenza tra Geometria e Istanza (Domanda 17):
+//      'Geometry' è il dato oggettivo della forma locale condivisa; 'Asteroid' (Instance)
+//      rappresenta lo stato individuale (posizione, rotazione, scala, stato vitale attivo).
 // ============================================================================
 
 #pragma once

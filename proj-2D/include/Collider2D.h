@@ -1,12 +1,32 @@
 // ============================================================================
-// File: include/Collider2D.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Sistema di rilevamento delle collisioni 2D (bounding volumes).
-//              Implementa test matematici ad alte prestazioni per:
-//              1. Bounding Circle vs Bounding Circle (senza radice quadrata)
-//              2. Bounding Box AABB vs AABB (teorema degli assi separatori)
-//              3. Bounding Circle vs AABB (clamping del punto più vicino)
+// GUIDA RAPIDA PER L'ORALE - MODULO: Collider2D (Bounding Volumes & Geometria Computazionale)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Fornisce le strutture dati dei volumi di delimitazione (Bounding Volumes):
+//      * CircleCollider (centro, raggio);
+//      * AABBCollider (Axis-Aligned Bounding Box: minPoint, maxPoint).
+//    - Implementa i tre algoritmi matematici fondamentali di intersezione geometrica:
+//      * checkCircleCircle: test Cerchio vs Cerchio (ottimizzato senza radice quadrata);
+//      * checkAABB_AABB: test AABB vs AABB (Teorema degli Assi Separatori SAT);
+//      * checkCircleAABB: test Cerchio vs AABB (clamping del punto più vicino).
+//
+// 2. A CHI È COLLEGATO:
+//    - Utilizzato in tutte le entità di gioco: Player, AsteroidManager, CollectibleManager, HermiteManager, HazardManager.
+//    - Invocato ad ogni frame dal coordinatore GameWorld::checkCollisions() per risolvere le interazioni fisiche.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Cerchio vs Cerchio & Prodotto Scalare (Requisito 7 & Domande 5, 7):
+//      Condizione: dist(c1, c2) <= r1 + r2.
+//      Elevando al quadrato per evitare la costosa funzione sqrt():
+//      diff = c1 - c2;  distSq = dot(diff, diff);
+//      Collisione se: distSq <= (r1 + r2)^2.
+//    - Teorema degli Assi Separatori (SAT) per AABB (Domanda 10):
+//      Due rettangoli si intersecano se e solo se i loro intervalli proiettati si sovrappongono
+//      contemporaneamente sia sull'asse X che sull'asse Y:
+//      (a.min.x <= b.max.x && a.max.x >= b.min.x) && (a.min.y <= b.max.y && a.max.y >= b.min.y).
+//    - Cerchio vs AABB tramite Punto Clamped (Domanda 5):
+//      Trova il punto p sul bordo/interno dell'AABB più vicino al centro c del cerchio:
+//      p = clamp(c, box.min, box.max);  testa se dot(c - p, c - p) <= r^2.
 // ============================================================================
 
 #pragma once
@@ -56,12 +76,19 @@ namespace Collision2D
     {
         // Vettore differenza tra i due centri.
         glm::vec2 diff = c1 - c2;
-        // Prodotto scalare del vettore per se stesso, pari alla distanza quadratica.
+        // [Domanda 5: Spazi vettoriali e prodotto scalare]
+        // Prodotto scalare del vettore per se stesso, pari alla distanza quadratica (evita sqrt).
         float distSq = glm::dot(diff, diff);
         // Somma dei raggi algebrici.
         float radSum = r1 + r2;
         // Test di intersezione scalare.
         return distSq <= (radSum * radSum);
+    }
+
+    // Overload di comodità per confrontare direttamente due struct CircleCollider.
+    inline bool checkCircleCircle(const CircleCollider& a, const CircleCollider& b)
+    {
+        return checkCircleCircle(a.center, a.radius, b.center, b.radius);
     }
 
     // ========================================================================

@@ -1,15 +1,20 @@
 // ============================================================================
-// File: src/AsteroidManager.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore degli asteroidi a geometria condivisa.
-//              Dimostra l'efficienza della pipeline OpenGL:
-//              1 sola allocazione VBO/VAO per N oggetti distinti nello spazio,
-//              differenziati a runtime tramite la Model Matrix Uniform.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: AsteroidManager.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Genera e anima la cintura di asteroidi rotanti (Requisito 4).
+//    - Implementa la tecnica del Buffer Sharing: 1 solo VBO/VAO per tutti gli asteroidi.
+// 2. A CHI È COLLEGATO:
+//    - Coordinato da GameWorld; interagisce con LaserManager e ParticleSystem.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Buffer Sharing su VRAM con GL_STATIC_DRAW (Domanda 17).
+//    - Invio uniforme Model Matrix CPU -> GPU: M_i = T * R * S per ogni istanza (Domande 6, 18).
+//    - Distribuzione in coordinate polari: x = cx + r*cos(theta), y = cy + r*sin(theta) (Domanda 5).
 // ============================================================================
 
 #include "AsteroidManager.h"
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <cstdlib>
@@ -35,8 +40,7 @@ void AsteroidManager::init()
     );
 
     // Trasferisce i vertici dell'asteroide in memoria VRAM della GPU una sola volta.
-    m_asteroidGeo.setData(asteroidData.positions, asteroidData.colors, asteroidData.primitiveType);
-    m_asteroidGeo.upload();
+    m_asteroidGeo.uploadMesh(asteroidData);
 }
 
 // ============================================================================
@@ -48,28 +52,17 @@ void AsteroidManager::spawnLevel(int levelCount, float screenWidth, float screen
     m_asteroids.clear();
 
     // Calcola il numero di asteroidi da generare in base alla difficoltà:
-    // Livello 1: 4 asteroidi; cresce di 2 a livello fino a un tetto massimo di 9.
+    // Livello 1: 4 asteroidi; cresce di 2 a livello fino a un tetto massimo di 10.
     int count = 4 + (levelCount - 1) * 2;
-    if (count > 9) count = 9;
+    if (count > 10) count = 10;
 
     for (int i = 0; i < count; ++i)
     {
         Asteroid a;
 
-        // Distribuzione polare attorno al centro dello schermo:
-        // Evita che gli asteroidi compaiano direttamente sopra la navicella del giocatore.
-        float angle = (i * 6.28318f) / count + (rand() % 100) * 0.005f;
-        float dist = 220.0f + (rand() % 260);
-
-        // Calcola le coordinate cartesiane (x, y) a partire da raggio e angolo polare.
-        a.pos = glm::vec2(
-            screenWidth * 0.5f + std::cos(angle) * dist,
-            screenHeight * 0.5f + std::sin(angle) * dist
-        );
-
-        // Clamping di sicurezza per mantenere le istanze all'interno dei bordi del display.
-        a.pos.x = glm::clamp(a.pos.x, 80.0f, screenWidth - 80.0f);
-        a.pos.y = glm::clamp(a.pos.y, 80.0f, screenHeight - 80.0f);
+        // Distribuzione polare attorno al centro dello schermo (distanza 220..480px + piccolo scarto angolare):
+        // evita che gli asteroidi compaiano sopra la navicella e applica clamping ai bordi per non tagliare le rocce.
+        a.pos = MathConstants::sampleRingPosition(i, count, 220.0f, 480.0f, 0.50f, screenWidth, screenHeight);
 
         // Angolo di rotazione iniziale casuale [0°, 360°].
         a.rotation = static_cast<float>(rand() % 360);
@@ -134,6 +127,7 @@ void AsteroidManager::draw(const Shader& shader, float currentTime)
             m = glm::rotate(m, glm::radians(a.rotation), glm::vec3(0, 0, 1));
             m = glm::scale(m, glm::vec3(a.scale, a.scale, 1.0f));
 
+            // [Domanda 17: Geometria vs Istanza (Buffer Sharing: 1 VAO/VBO condiviso, N matrici model)]
             // Aggiorna la variabile uniform 'model' nello shader attivo.
             shader.setMat4("model", m);
 
@@ -163,21 +157,14 @@ bool AsteroidManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadi
 {
     for (auto& a : m_asteroids)
     {
-        if (a.active)
+        if (a.active && Collision2D::checkCircleCircle(bulletPos, bulletRadius, a.pos, a.radius))
         {
-            // Test di intersezione cerchio-cerchio privo di sqrt():
-            float distSq = glm::dot(bulletPos - a.pos, bulletPos - a.pos);
-            float radSum = bulletRadius + a.radius;
-
-            if (distSq <= radSum * radSum)
-            {
-                // Impatto confermato:
-                // 1. Disattiva l'asteroide rimuovendolo dalla scena.
-                a.active = false;
-                // 2. Genera un'esplosione fisica particellare di 32 schegge rocciose.
-                particles.emitAsteroidExplosion(a.pos, 32);
-                return true;
-            }
+            // Impatto confermato:
+            // 1. Disattiva l'asteroide rimuovendolo dalla scena.
+            a.active = false;
+            // 2. Genera un'esplosione fisica particellare di 32 schegge rocciose.
+            particles.emitAsteroidExplosion(a.pos, 32);
+            return true;
         }
     }
     return false;
@@ -190,16 +177,9 @@ bool AsteroidManager::checkPlayerCollision(const CircleCollider& playerCol)
 {
     for (auto& a : m_asteroids)
     {
-        if (a.active)
+        if (a.active && Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, a.pos, a.radius))
         {
-            // Verifica la distanza quadratica rispetto al collider del giocatore.
-            float distSq = glm::dot(playerCol.center - a.pos, playerCol.center - a.pos);
-            float radSum = playerCol.radius + a.radius;
-
-            if (distSq <= radSum * radSum)
-            {
-                return true; // Collisione rilevata
-            }
+            return true; // Collisione rilevata
         }
     }
     return false;

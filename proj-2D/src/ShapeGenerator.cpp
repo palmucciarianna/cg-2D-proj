@@ -1,26 +1,24 @@
+// ORIGINE: Base dai laboratori della prof (cerchio, farfalla di Fay, cuore, luna, Sierpinski, primitive base) + estensioni per il gioco (moneta, trapezio, diamante) adattate a MeshData.
 // ============================================================================
-// File: src/ShapeGenerator.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del generatore procedurale delle forme geometriche 2D.
-//              Include le formule matematiche per:
-//              - Primitiva Triangolo, Rettangolo, Trapezio e Rombo
-//              - Moneta circolare e Disco parametrico (Triangle Fan)
-//              - Curva Polare della Farfalla (Fay): r = exp(cos t) - 2*cos(4t) + sin(t/12)^5
-//              - Curva Cardioide del Cuore: x = 16*sin(t)^3, y = 13*cos(t)-5*cos(2t)-2*cos(3t)-cos(4t)
-//              - Curva della Luna crescente: x = 3*sin(t), y = 0.5*cos(2t) - cos(t)
-//              - Frattale Chaos Game di Sierpinski con Mersenne Twister (std::mt19937)
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ShapeGenerator.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Factory matematica per la creazione di mesh poligonali e curve parametriche su CPU.
+//    - Genera cerchi, monete, rettangoli, triangoli, stelle e forme complesse (farfalla, cuore, Sierpinski).
+// 2. A CHI È COLLEGATO:
+//    - Fornisce strutture MeshData a Player, AsteroidManager, CollectibleManager, HermiteManager.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Coordinate Polari per cerchi e dischi: x = cx + r*cos(theta), y = cy + r*sin(theta) (Domanda 2, 13).
+//    - Triangolazione a ventaglio (GL_TRIANGLE_FAN) e a coppie di triangoli (GL_TRIANGLES) (Domanda 14).
+//    - Assegnazione dei colori di vertice per l'interpolazione baricentrica di Gouraud (Domanda 7).
 // ============================================================================
 
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <random>
 #include <cmath>
 
-namespace
-{
-    // Costante matematica Pi-Greco a 32 bit di precisione.
-    constexpr float PI = 3.14159265358979323846f;
-}
+using MathConstants::PI;
 
 // ============================================================================
 // Costruzione Triangolo di Base (GL_TRIANGLES)
@@ -64,6 +62,7 @@ MeshData ShapeGenerator::createRectangle(
     float hw = width * 0.5f;
     float hh = height * 0.5f;
 
+    // [Domanda 14: Rasterizzazione dei triangoli (rettangolo decomposto in 2 triangoli GL_TRIANGLES)]
     // Triangolo 1 (inferiore-destro): Bottom-Left, Bottom-Right, Top-Right
     data.positions.push_back(glm::vec3(-hw, -hh, 0.0f));
     data.positions.push_back(glm::vec3( hw, -hh, 0.0f));
@@ -115,6 +114,7 @@ MeshData ShapeGenerator::createCoin(
         data.positions.push_back(p1);
         data.positions.push_back(p2);
 
+        // [Domanda 7: Coordinate baricentriche e interpolazione Gouraud dei colori di vertice]
         // Colore interno dorato brillante al centro, metallico scuro sul bordo esterno.
         data.colors.push_back(innerColor);
         data.colors.push_back(outerColor);
@@ -135,29 +135,29 @@ MeshData ShapeGenerator::createTrapezoid(
     const glm::vec4& colorTop,
     const glm::vec4& colorBottom)
 {
-    MeshData data;
-    float h = height * 0.5f;
-    float hwTop = topWidth * 0.5f;
-    float hwBottom = bottomWidth * 0.5f;
+    MeshData data;                   // Struttura CPU di ritorno
+    float h = height * 0.5f;         // Semialtezza verticale
+    float hwTop = topWidth * 0.5f;   // Semilarghezza lato superiore
+    float hwBottom = bottomWidth * 0.5f; // Semilarghezza lato inferiore
 
     // Triangolo 1: Bottom-Left, Bottom-Right, Top-Right
-    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f));
-    data.positions.push_back(glm::vec3( hwBottom, -h, 0.0f));
-    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f));
-    data.colors.push_back(colorBottom);
-    data.colors.push_back(colorBottom);
-    data.colors.push_back(colorTop);
+    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f)); // Vertice inferiore sinistro
+    data.positions.push_back(glm::vec3( hwBottom, -h, 0.0f)); // Vertice inferiore destro
+    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f)); // Vertice superiore destro
+    data.colors.push_back(colorBottom); // Colore associato a Bottom-Left
+    data.colors.push_back(colorBottom); // Colore associato a Bottom-Right
+    data.colors.push_back(colorTop);    // Colore associato a Top-Right
 
     // Triangolo 2: Bottom-Left, Top-Right, Top-Left
-    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f));
-    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f));
-    data.positions.push_back(glm::vec3(-hwTop,     h, 0.0f));
-    data.colors.push_back(colorBottom);
-    data.colors.push_back(colorTop);
-    data.colors.push_back(colorTop);
+    data.positions.push_back(glm::vec3(-hwBottom, -h, 0.0f)); // Vertice inferiore sinistro
+    data.positions.push_back(glm::vec3( hwTop,     h, 0.0f)); // Vertice superiore destro
+    data.positions.push_back(glm::vec3(-hwTop,     h, 0.0f)); // Vertice superiore sinistro
+    data.colors.push_back(colorBottom); // Colore Bottom-Left
+    data.colors.push_back(colorTop);    // Colore Top-Right
+    data.colors.push_back(colorTop);    // Colore Top-Left
 
-    data.primitiveType = GL_TRIANGLES;
-    return data;
+    data.primitiveType = GL_TRIANGLES; // Primitiva a triangoli indipendenti
+    return data;                       // Restituisce i vertici CPU
 }
 
 // ============================================================================
@@ -169,34 +169,34 @@ MeshData ShapeGenerator::createDiamond(
     const glm::vec4& centerColor,
     const glm::vec4& edgeColor)
 {
-    MeshData data;
-    float hw = width * 0.5f;
-    float hh = height * 0.5f;
+    MeshData data;            // Struttura CPU di ritorno
+    float hw = width * 0.5f;  // Semilarghezza orizzontale
+    float hh = height * 0.5f; // Semialtezza verticale
 
-    glm::vec3 center(0.0f, 0.0f, 0.0f);
-    glm::vec3 top(0.0f, hh, 0.0f);
-    glm::vec3 bottom(0.0f, -hh, 0.0f);
-    glm::vec3 right(hw, 0.0f, 0.0f);
-    glm::vec3 left(-hw, 0.0f, 0.0f);
+    glm::vec3 center(0.0f, 0.0f, 0.0f); // Origine centrale del diamante
+    glm::vec3 top(0.0f, hh, 0.0f);      // Vertice superiore
+    glm::vec3 bottom(0.0f, -hh, 0.0f);  // Vertice inferiore
+    glm::vec3 right(hw, 0.0f, 0.0f);    // Vertice destro
+    glm::vec3 left(-hw, 0.0f, 0.0f);    // Vertice sinistro
 
     // Lambda per aggiungere un triangolo con gradiente dal centro verso la punta esterna.
     auto addTri = [&](const glm::vec3& p1, const glm::vec3& p2) {
-        data.positions.push_back(center);
-        data.positions.push_back(p1);
-        data.positions.push_back(p2);
-        data.colors.push_back(centerColor);
-        data.colors.push_back(edgeColor);
-        data.colors.push_back(edgeColor);
+        data.positions.push_back(center);      // Primo vertice: centro
+        data.positions.push_back(p1);          // Secondo vertice perimetrale
+        data.positions.push_back(p2);          // Terzo vertice perimetrale
+        data.colors.push_back(centerColor);    // Colore centrale luminoso
+        data.colors.push_back(edgeColor);      // Colore esterno di p1
+        data.colors.push_back(edgeColor);      // Colore esterno di p2
     };
 
-    // Costruisce i 4 quadranti del rombo.
-    addTri(top, right);
-    addTri(right, bottom);
-    addTri(bottom, left);
-    addTri(left, top);
+    // Costruisce i 4 quadranti del rombo in senso orario.
+    addTri(top, right);    // Quadrante superiore destro
+    addTri(right, bottom); // Quadrante inferiore destro
+    addTri(bottom, left);  // Quadrante inferiore sinistro
+    addTri(left, top);     // Quadrante superiore sinistro
 
-    data.primitiveType = GL_TRIANGLES;
-    return data;
+    data.primitiveType = GL_TRIANGLES; // Primitiva a triangoli indipendenti
+    return data;                       // Restituisce la mesh
 }
 
 // ============================================================================
@@ -225,6 +225,7 @@ MeshData ShapeGenerator::createCircle(
     // Passo angolare di campionamento.
     const float step = 2.0f * PI / static_cast<float>(segments);
 
+    // [Domanda 2 & Domanda 13: Geometria vettoriale polare per la circonferenza (rasterizzata su GPU)]
     // 2. Vertici perimetrali calcolati con formule trigonometriche: x = rx*cos(t), y = ry*sin(t).
     for (int i = 0; i <= segments; ++i)
     {
@@ -309,22 +310,22 @@ MeshData ShapeGenerator::createMoon(
 
     for (int i = 0; i <= segments; ++i)
     {
-        float t = 2.0f * PI * static_cast<float>(i) / static_cast<float>(segments);
+        float t = 2.0f * PI * static_cast<float>(i) / static_cast<float>(segments); // Parametro angolare in [0, 2*PI]
 
         // Valutazione delle coordinate cartesiane della curvatura lunare.
         float x = 3.0f * std::sin(t);
         float y = 0.5f * std::cos(2.0f * t) - std::cos(t);
 
-        // Applicazione dei fattori di scala.
+        // Applicazione dei fattori di scala sugli assi X e Y.
         x = scaleX * x;
         y = scaleY * y;
 
-        data.positions.push_back(glm::vec3(x, y, 0.0f));
-        data.colors.push_back(color);
+        data.positions.push_back(glm::vec3(x, y, 0.0f)); // Inserisce il vertice calcolato
+        data.colors.push_back(color);                    // Assegna il colore uniforme
     }
 
-    data.primitiveType = GL_TRIANGLE_FAN;
-    return data;
+    data.primitiveType = GL_TRIANGLE_FAN; // Disegna a ventaglio dal primo vertice
+    return data;                          // Restituisce i vertici CPU
 }
 
 // ============================================================================

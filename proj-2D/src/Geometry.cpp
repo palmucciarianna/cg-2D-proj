@@ -1,14 +1,20 @@
+// ORIGINE: Pattern VAO/VBO e attributi OpenGL dai laboratori della prof, incapsulato in classe C++ RAII con Rule of Five.
 // ============================================================================
-// File: src/Geometry.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione dettagliata dei metodi della classe Geometry.
-//              Gestisce la creazione dei VAO, il binding dei VBO, la configurazione
-//              dei puntatori agli attributi dei vertici (location 0 e 1) e
-//              l'esecuzione delle draw call per OpenGL 3.3 Core Profile.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Geometry.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Incapsula e gestisce le risorse OpenGL su VRAM: VAO, VBO posizioni, VBO colori.
+//    - Trasferisce i dati da CPU a GPU con upload() ed emette il disegno con draw().
+// 2. A CHI È COLLEGATO:
+//    - Riceve i vertici da MeshData; utilizzata da tutte le entità per il rendering.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - VAO registra lo stato degli attributi (glVertexAttribPointer) (Domanda 17).
+//    - VBO memorizza fisicamente i dati in memoria VRAM (glBufferData) (Domande 1, 17).
+//    - Gestione RAII con glDeleteVertexArrays e glDeleteBuffers nel distruttore (Domanda 16).
 // ============================================================================
 
 #include "Geometry.h"
+#include "MeshData.h"
 #include <utility>
 
 // ============================================================================
@@ -80,6 +86,15 @@ void Geometry::setData(
 }
 
 // ============================================================================
+// Helper Compatto: setData + upload in un'unica chiamata
+// ============================================================================
+void Geometry::uploadMesh(const MeshData& data, bool dynamic)
+{
+    setData(data.positions, data.colors, data.primitiveType); // Copia i vertici e i colori CPU
+    upload(dynamic);                                          // Alloca e invia i VAO/VBO in VRAM
+}
+
+// ============================================================================
 // Caricamento Dati dalla CPU alla Memoria Video GPU (Upload)
 // ============================================================================
 void Geometry::upload(bool dynamic)
@@ -96,6 +111,7 @@ void Geometry::upload(bool dynamic)
     // 1. Generazione e Binding del Vertex Array Object (VAO)
     // ------------------------------------------------------------------------
     // Il VAO incapsula e "registra" tutti i binding dei VBO e i formati degli attributi.
+    // [Domanda 17: VAO, VBO: VAO registra lo stato degli attributi ("ricetta"), VBO contiene i dati]
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
 
@@ -106,6 +122,7 @@ void Geometry::upload(bool dynamic)
     glGenBuffers(1, &m_VBO_positions);
     // Lega il buffer come array corrente per i vertici.
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO_positions);
+    // [Domanda 1: Architettura della GPU (allocazione buffer in VRAM)]
     // Invia i byte dei vertici dalla RAM di sistema alla VRAM della scheda video.
     // Parametri: target, dimensione in byte totale, puntatore ai byte raw, modalità di utilizzo.
     glBufferData(
@@ -242,6 +259,7 @@ void Geometry::draw() const
     // - mode: tipo di primitiva (es. GL_TRIANGLES, GL_TRIANGLE_FAN, GL_LINE_STRIP)
     // - first: indice del primo vertice da cui iniziare il rendering (0)
     // - count: numero totale di vertici da rasterizzare
+    // [Domanda 14: Rasterizzazione dei triangoli (edge functions e interpolazione baricentrica su GPU)]
     glDrawArrays(
         m_primitiveType,
         0,

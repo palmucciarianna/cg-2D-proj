@@ -1,13 +1,17 @@
 // ============================================================================
-// File: src/GameWorld.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del GameWorld.
-//              - Orchestrazione del game loop (aggiornamento fisico e rendering)
-//              - Costruzione della matrice di proiezione ortografica glm::ortho
-//              - Risoluzione geometrica di tutte le collisioni tra entità
-//              - Interfaccia grafica ImGui con auto-compressione non invasiva
-//              - Gestione transizioni di stato (PLAYING, LEVEL_CLEARED_HURRA, GAME_OVER)
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: GameWorld.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Coordinatore centrale del motore di gioco (orchestra init, update, render e HUD).
+//    - Macchina a stati FSM (PLAYING, LEVEL_CLEARED_HURRA, GAME_OVER).
+//    - Risolve le collisioni (Player vs Asteroidi, Player vs Monete, Laser vs Asteroidi/Drone).
+//    - Costruisce la proiezione ortografica e controlla l'interfaccia non invasiva ImGui.
+// 2. A CHI È COLLEGATO:
+//    - Invocato dal loop principale in main.cpp; coordina tutti i manager e renderers.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - P = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f, -1.0f, 1.0f) (Domanda 9).
+//    - Disegno Back-to-Front con Alpha Blending (Domanda 20).
+//    - Delta-Time Clamping a 0.05s per stabilita' fisica (Requisito 6).
 // ============================================================================
 
 #include "GameWorld.h"
@@ -83,14 +87,20 @@ void GameWorld::init(const std::string& assetDir)
     // ------------------------------------------------------------------------
     // 2. Inizializzazione dei Singoli Sottosistemi
     // ------------------------------------------------------------------------
+    // Inizializza la geometria condivisa del sistema particellare (scintille, detriti, coriandoli).
     m_particles.init();
+    // Inizializza il gestore dei pericoli perimetrali supersonici.
     m_hazards.init();
+    // Alloca le 11 componenti gerarchiche e la texture della navicella del giocatore.
     m_player.init();
     // Colloca la navicella esattamente al centro dello schermo (640, 360).
     m_player.reset(glm::vec2(m_screenWidth * 0.5f, m_screenHeight * 0.5f));
 
+    // Prepara il VAO statico condiviso per le 5 monete d'oro collezionabili.
     m_collectibles.init();
+    // Prepara il VAO statico condiviso (Buffer Sharing) per tutti gli asteroidi.
     m_asteroids.init();
+    // Prepara la geometria condivisa per i proiettili laser al plasma.
     m_lasers.init();
     m_powerUps.init();
     m_blackHole.init();
@@ -98,14 +108,16 @@ void GameWorld::init(const std::string& assetDir)
     m_cosmicDust.init(static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight), 160);
 
     // Carica i modelli poligonali delle spline di Hermite (Drone Nemico e Portale Warp Gate).
-    std::string alienObj = resolveAsset(assetDir, "models/alien_drone.obj");
-    std::string warpObj  = resolveAsset(assetDir, "models/warp_gate.obj");
-    m_hermite.init(alienObj, warpObj);
+    std::string alienObj = resolveAsset(assetDir, "models/alien_drone.obj"); // Risolve il percorso della mesh del Drone
+    std::string warpObj  = resolveAsset(assetDir, "models/warp_gate.obj");   // Risolve il percorso della mesh del Warp Gate
+    m_hermite.init(alienObj, warpObj); // Carica e invia in VRAM i due modelli spline di Hermite
 
     // ------------------------------------------------------------------------
     // 3. Generazione Procedurale delle Entità per il Livello 1
     // ------------------------------------------------------------------------
+    // Posiziona le 5 monete d'oro evitando sovrapposizioni con lo spawn centrale.
     m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+    // Genera il campo iniziale di asteroidi con orbite e velocità casuali.
     m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 
     // Inizializza la pipeline FBO di Post-Processing (Shockwave, CRT, Aberrazione Cromatica)
@@ -155,6 +167,7 @@ void GameWorld::submitScore(const std::string& name, int score, int level)
 // ============================================================================
 // Aggiornamento della Simulazione e della Logica di Gioco (Game Loop Update)
 // ============================================================================
+// [Domanda 4: Stadi della Graphics Rendering Pipeline - Fase Application su CPU]
 void GameWorld::update(float dt, GLFWwindow* window)
 {
     float currentTime = static_cast<float>(glfwGetTime());
@@ -368,15 +381,15 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // Raccolta delle Monete d'Oro (+100 punti per ciascuna moneta):
-        int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles);
-        if (collectedNow > 0)
+        int collectedNow = m_collectibles.checkCollisions(m_player.getCollider(), m_particles); // Verifica impatto cerchio-cerchio
+        if (collectedNow > 0) // Se almeno una moneta è stata raccolta in questo frame
         {
             m_player.addScore(collectedNow * 100);
             AudioEngine::instance().playCoin();
         }
 
         // Interazione facoltativa di prossimità con la reliquia monumentale (+50 punti bonus):
-        int relicScore = 0;
+        int relicScore = 0; // Accumulatore per il bonus di prossimità
         if (!m_collectibles.allCollected() && m_hermite.checkRelicInteraction(m_player.getCollider(), m_particles, relicScore))
         {
             m_player.addScore(relicScore);
@@ -386,15 +399,15 @@ void GameWorld::update(float dt, GLFWwindow* window)
         // --------------------------------------------------------------------
         // Collisione con l'Alien Sentinel Drone (quello Rosso):
         // --------------------------------------------------------------------
-        if (m_hermite.checkDroneCollision(m_player.getCollider()))
+        if (m_hermite.checkDroneCollision(m_player.getCollider())) // Test distanza al quadrato tra navicella e Drone
         {
-            if (m_hermite.isWeakened())
+            if (m_hermite.isWeakened()) // Caso 1: il Drone è stato temporaneamente disattivato dal laser
             {
                 // Drone indebolito: innocuo! Scintille di rimbalzo senza perdita di vite
                 m_particles.emitDroneHitSparks(m_hermite.dronePosition(), 12);
                 AudioEngine::instance().playDroneHit();
             }
-            else if (!m_player.isInvulnerable())
+            else if (!m_player.isInvulnerable()) // Caso 2: Drone attivo e giocatore non invulnerabile
             {
                 bool tookDmg = m_player.takeDamage();
                 m_hermite.triggerEyeBlink();
@@ -408,7 +421,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // Collisione con gli asteroidi rocciosi in transito:
-        if (m_asteroids.checkPlayerCollision(m_player.getCollider()))
+        if (m_asteroids.checkPlayerCollision(m_player.getCollider())) // Test cerchio-cerchio con tutti gli asteroidi attivi
         {
             bool tookDmg = m_player.takeDamage();
             m_particles.emitAsteroidExplosion(m_player.position(), 16);
@@ -420,7 +433,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
         }
 
         // Se le vite sono terminate, scatta il Game Over:
-        if (!m_player.isAlive())
+        if (!m_player.isAlive()) // Controlla se m_lives <= 0
         {
             m_state = GameState::GAME_OVER;
             triggerScreenShake(0.45f, 16.0f);
@@ -464,7 +477,7 @@ void GameWorld::update(float dt, GLFWwindow* window)
         // Al termine del timer di celebrazione, avanza automaticamente al livello successivo.
         if (m_hurraTimer <= 0.0f)
         {
-            nextLevel();
+            nextLevel(); // Genera il livello m_currentLevel + 1
         }
     }
     // ------------------------------------------------------------------------
@@ -484,6 +497,7 @@ void GameWorld::render(float currentTime)
     // 0. Attiva l'FBO per catturare la scena nella texture di post-processing
     m_postProcess.bind();
 
+    // [Domanda 20: Ordine di rendering Back-to-Front per trasparenza corretta]
     // 1. Disegna il background cosmico procedurale (stelle e nebulosa in NDC).
     m_bgRenderer->draw(currentTime, m_psychedelic, m_currentLevel);
 
@@ -497,6 +511,7 @@ void GameWorld::render(float currentTime)
     }
 #endif
 
+    // [Domanda 9: Sottosistema geometrico - Proiezione Ortografica 2D]
     // 3. Configura la matrice di Proiezione Ortografica per lo spazio di gioco:
     // Mappa lo spazio [0, screenWidth] su X e [0, screenHeight] su Y.
     // L'origine (0, 0) è l'angolo inferiore sinistro dello schermo.
@@ -813,6 +828,8 @@ void GameWorld::renderUI(float dt)
             m_showCustomizer = !m_showCustomizer;
         }
         ImGui::SameLine();
+        // Hot-reload a caldo: dealloca la texture precedente (glDeleteTextures) e ricarica
+        // da disco player_face.bmp/.png/.jpg senza riavviare l'applicazione.
         if (ImGui::Button("Ricarica Texture Cabina"))
         {
             m_player.reloadFaceTexture("assets/textures/player_face.bmp") ||
@@ -1071,91 +1088,87 @@ void GameWorld::renderUI(float dt)
     // ------------------------------------------------------------------------
     // Banner di Allerta: Portale Attivo (Centrato in alto)
     // ------------------------------------------------------------------------
-    if (m_state == GameState::PLAYING && m_collectibles.allCollected())
+    if (m_state == GameState::PLAYING && m_collectibles.allCollected()) // Mostra il banner quando tutte le 5 monete sono state raccolte
     {
-        float bannerWidth = 560.0f;
-        float bannerHeight = 68.0f;
+        float bannerWidth = 560.0f;  // Larghezza fissa del banner in pixel
+        float bannerHeight = 68.0f;  // Altezza fissa del banner in pixel
+        // Posiziona il banner centrato orizzontalmente (pivot X=0.5) a 32px dal bordo superiore.
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 32.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("GateActivePrompt", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        ImGui::Dummy(ImVec2(0.0f, 2.0f));
-        ImGui::SetWindowFontScale(1.25f);
-        renderCenteredText(">> PORTALE ATTIVO! ENTRA NEL WARP GATE! <<", ImVec4(0.2f, 1.0f, 0.45f, 1.0f));
-        ImGui::SetWindowFontScale(0.95f);
-        renderCenteredText("Vola dentro il Warp Gate a destra per chiudere la partita con l'HURRA'!", ImVec4(0.85f, 0.95f, 1.0f, 1.0f));
-        ImGui::End();
+        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight)); // Applica le dimensioni fisse alla finestra
+        ImGui::Begin("GateActivePrompt", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove); // Finestra senza barra titolo né trascinamento
+        ImGui::Dummy(ImVec2(0.0f, 2.0f)); // Piccola spaziatura verticale superiore
+        ImGui::SetWindowFontScale(1.25f); // Ingrandisce il font per il titolo del prompt
+        renderCenteredText(">> PORTALE ATTIVO! ENTRA NEL WARP GATE! <<", ImVec4(0.2f, 1.0f, 0.45f, 1.0f)); // Testo verde brillante
+        ImGui::SetWindowFontScale(0.95f); // Ripristina la scala del font per il sottotitolo
+        renderCenteredText("Vola dentro il Warp Gate a destra per chiudere la partita con l'HURRA'!", ImVec4(0.85f, 0.95f, 1.0f, 1.0f)); // Istruzione per il giocatore
+        ImGui::End(); // Chiude il contesto della finestra ImGui
     }
+
+    // Helper condiviso per disegnare un banner modale centrato (HURRÀ o Game Over) evitando codice UI duplicato.
+    auto renderCenteredModal = [&](
+        const char* id, float width, float height,
+        const char* title, const ImVec4& titleColor, float titleScale,
+        const char* buttonLabel, float buttonWidth, auto&& drawBody)
+    {
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(width, height));
+        ImGui::Begin(id, nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        ImGui::Dummy(ImVec2(0.0f, 14.0f));
+        ImGui::SetWindowFontScale(titleScale);
+        renderCenteredText(title, titleColor);
+        ImGui::SetWindowFontScale(1.0f);
+
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+
+        drawBody();
+
+        ImGui::Dummy(ImVec2(0.0f, 10.0f));
+        ImGui::SetCursorPosX((width - buttonWidth) * 0.5f);
+        bool clicked = ImGui::Button(buttonLabel, ImVec2(buttonWidth, 38));
+        ImGui::End();
+        return clicked;
+    };
 
     // ------------------------------------------------------------------------
     // Banner Vittoria: "HURRÀ! SEI ENTRATO NEL WARP GATE!" (Perfettamente centrato sullo schermo)
     // ------------------------------------------------------------------------
     if (m_state == GameState::LEVEL_CLEARED_HURRA)
     {
-        float bannerWidth = 500.0f;
-        float bannerHeight = 240.0f;
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("CelebrationBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-        ImGui::Dummy(ImVec2(0.0f, 14.0f));
-        ImGui::SetWindowFontScale(1.75f);
-        renderCenteredText("HURRA'! SEI ENTRATO NEL WARP GATE!", ImVec4(1.0f, 0.90f, 0.10f, 1.0f));
-        ImGui::SetWindowFontScale(1.0f);
-
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
-        ImGui::Separator();
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
-
-        renderCenteredText("Salto dimensionale completato con successo!", ImVec4(0.3f, 1.0f, 0.4f, 1.0f));
-        renderCenteredText("Bonus Livello: +500 Punti!", ImVec4(0.2f, 0.9f, 1.0f, 1.0f));
-
-        char nextLvlBuf[128];
-        snprintf(nextLvlBuf, sizeof(nextLvlBuf), "Generazione del Livello %d in corso (%.1f s)...", m_currentLevel + 1, m_hurraTimer);
-        renderCenteredText(nextLvlBuf, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
-
-        ImGui::Dummy(ImVec2(0.0f, 10.0f));
-        float btnWidth = 380.0f;
-        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f);
-        if (ImGui::Button("Passa Subito al Prossimo Livello >>", ImVec2(btnWidth, 38)))
-        {
-            nextLevel();
-        }
-        ImGui::End();
+        bool goNext = renderCenteredModal(
+            "CelebrationBanner", 500.0f, 240.0f,
+            "HURRA'! SEI ENTRATO NEL WARP GATE!", ImVec4(1.0f, 0.90f, 0.10f, 1.0f), 1.75f,
+            "Passa Subito al Prossimo Livello >>", 380.0f,
+            [&]() {
+                renderCenteredText("Salto dimensionale completato con successo!", ImVec4(0.3f, 1.0f, 0.4f, 1.0f));
+                renderCenteredText("Bonus Livello: +500 Punti!", ImVec4(0.2f, 0.9f, 1.0f, 1.0f));
+                char nextLvlBuf[128];
+                snprintf(nextLvlBuf, sizeof(nextLvlBuf), "Generazione del Livello %d in corso (%.1f s)...", m_currentLevel + 1, m_hurraTimer);
+                renderCenteredText(nextLvlBuf, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+            }
+        );
+        if (goNext) nextLevel();
     }
     // ------------------------------------------------------------------------
     // Banner Game Over: (Perfettamente centrato sullo schermo)
     // ------------------------------------------------------------------------
     else if (m_state == GameState::GAME_OVER)
     {
-        float bannerWidth = 420.0f;
-        float bannerHeight = 210.0f;
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(bannerWidth, bannerHeight));
-        ImGui::Begin("GameOverBanner", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-        ImGui::Dummy(ImVec2(0.0f, 14.0f));
-        ImGui::SetWindowFontScale(1.8f);
-        renderCenteredText("GAME OVER!", ImVec4(1.0f, 0.25f, 0.25f, 1.0f));
-        ImGui::SetWindowFontScale(1.0f);
-
-        ImGui::Dummy(ImVec2(0.0f, 4.0f));
-        ImGui::Separator();
-        ImGui::Dummy(ImVec2(0.0f, 6.0f));
-
-        renderCenteredText("La navicella e' andata distrutta!", ImVec4(0.95f, 0.95f, 0.95f, 1.0f));
-
-        char scoreBuf[64];
-        snprintf(scoreBuf, sizeof(scoreBuf), "Punteggio finale: %d", m_player.score());
-        renderCenteredText(scoreBuf, ImVec4(1.0f, 0.85f, 0.2f, 1.0f));
-
-        ImGui::Dummy(ImVec2(0.0f, 10.0f));
-        float btnWidth = 280.0f;
-        ImGui::SetCursorPosX((bannerWidth - btnWidth) * 0.5f);
-        if (ImGui::Button("Riprova Partita", ImVec2(btnWidth, 38)))
-        {
-            restartGame();
-        }
-        ImGui::End();
+        bool retry = renderCenteredModal(
+            "GameOverBanner", 420.0f, 210.0f,
+            "GAME OVER!", ImVec4(1.0f, 0.25f, 0.25f, 1.0f), 1.8f,
+            "Riprova Partita", 280.0f,
+            [&]() {
+                ImGui::Dummy(ImVec2(0.0f, 2.0f));
+                renderCenteredText("La navicella e' andata distrutta!", ImVec4(0.95f, 0.95f, 0.95f, 1.0f));
+                char scoreBuf[64];
+                snprintf(scoreBuf, sizeof(scoreBuf), "Punteggio finale: %d", m_player.score());
+                renderCenteredText(scoreBuf, ImVec4(1.0f, 0.85f, 0.2f, 1.0f));
+            }
+        );
+        if (retry) restartGame();
     }
 
     // ------------------------------------------------------------------------
@@ -1189,6 +1202,31 @@ void GameWorld::renderUI(float dt)
     {
         renderRadar(static_cast<float>(glfwGetTime()));
     }
+}
+
+// ============================================================================
+// Helper Condiviso: Preparazione e Avvio di un Livello
+// ============================================================================
+void GameWorld::startLevel(int level, bool clearParticles)
+{
+    m_currentLevel = level;                   // Imposta il numero del livello corrente
+    m_state = GameState::PLAYING;             // Riporta la FSM in stato di gioco attivo
+    m_lasers.clear();                         // Rimuove tutti i proiettili laser residui
+    if (clearParticles)
+    {
+        m_particles.clear();                  // Svuota eventuali particelle residue al restart
+    }
+    m_hazards.reset();                        // Azzera i pericoli laterali attivi
+    m_hazards.setLevel(m_currentLevel);       // Scala la difficoltà dei pericoli al livello target
+    m_hermite.setLevel(m_currentLevel);       // Aggiorna la velocità del Drone al livello target
+    m_hermite.resetWeakness();                // Ripristina lo stato attivo del Drone Rosso
+
+    // Riposiziona il giocatore al centro dello schermo (il punteggio cumulativo non viene mai azzerato).
+    m_player.reset(glm::vec2(static_cast<float>(m_screenWidth) * 0.5f, static_cast<float>(m_screenHeight) * 0.5f));
+    // Rigenera le 5 monete d'oro per il livello corrente.
+    m_collectibles.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+    // Rigenera il campo di asteroidi per il livello corrente.
+    m_asteroids.spawnLevel(m_currentLevel, static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
 }
 
 // ============================================================================

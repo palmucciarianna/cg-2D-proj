@@ -1,11 +1,32 @@
+// ORIGINE: Base dai laboratori della prof (cerchio, farfalla di Fay, cuore, luna, Sierpinski, primitive base) + estensioni per il gioco (moneta, trapezio, diamante) adattate a MeshData.
 // ============================================================================
-// File: include/ShapeGenerator.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Generatore procedurale CPU di geometrie 2D complesse e primitive.
-//              Costruisce strutture MeshData contenenti vertici e gradienti cromatici
-//              usando formule matematiche (trigonometria, curve polari, equazioni parametriche,
-//              algoritmo del caos per frattali di Sierpinski).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: ShapeGenerator (Factory Mesh Procedurali)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - È la factory matematica statica che genera su memoria CPU le strutture MeshData.
+//    - Costruisce le primitive geometriche bidimensionali e le forme parametriche:
+//      * createCircle: cerchi/dischi con suddivisione polare in Triangle Fan;
+//      * createCoin: monete d'oro con gradiente radiale metallico;
+//      * createRectangle: quad/rettangoli triangolati in 2 triangoli (6 vertici);
+//      * createTriangle: triangoli con colori di vertice differenziati (Gouraud);
+//      * createStar: stelle a N punte con raggi polari alternati (r_min, r_max);
+//      * createSierpinski: frattale a triangoli annidati tramite l'Algoritmo del Caos.
+//
+// 2. A CHI È COLLEGATA:
+//    - Invocata durante la fase di init() da: Player, AsteroidManager, CollectibleManager, HermiteManager.
+//    - Restituisce: strutture MeshData (array di glm::vec3 posizioni, glm::vec4 colori, GLenum primitiva).
+//    - I suoi dati vengono poi passati a Geometry::setData() e caricati su VRAM con upload().
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Coordinate Polari per Dischi e Cerchi (Domande 2, 5, 13):
+//      Dato un angolo theta_i = 2*pi * i / N, le coordinate sono:
+//      x_i = cx + rx * cos(theta_i);  y_i = cy + ry * sin(theta_i).
+//      Il centro è (cx, cy); la decomposizione in triangoli usa la topologia GL_TRIANGLE_FAN.
+//    - Triangolazione di Poligoni Convessi e Quad (Domanda 14):
+//      Un rettangolo è decomposto nei due triangoli: (v0, v1, v2) e (v0, v2, v3).
+//    - Assegnazione dei Colori di Vertice (Vertex Color) (Domande 7, 20):
+//      Ad ogni vertice viene associata una quaterna RGBA. Durante la rasterizzazione la GPU calcola
+//      le coordinate baricentriche, generando sfumature continue morbide (Gouraud Shading).
 // ============================================================================
 
 #pragma once

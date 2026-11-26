@@ -1,10 +1,36 @@
+// ORIGINE: In parte basato sul modulo Hermite dei laboratori della prof (spline cubiche), esteso con logica di gioco Alien Sentinel Drone e Warp Gate.
 // ============================================================================
-// File: include/HermiteObject.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore degli oggetti curvilinei generati con curve cubiche di Hermite (Requisito 3.2):
-//              1. Alien Sentinel Drone (Faccina cattiva cornuta con animazione sbattimento occhio)
-//              2. Cosmic Warp Gate (Portale dimensionale ad anello monumentale e vortice rotante)
+// GUIDA RAPIDA PER L'ORALE - CLASSE: HermiteManager (Alien Drone & Warp Gate)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Implementa le due geometrie curvilinee avanzate a spline cubiche di Hermite (Requisito 3.2):
+//      * 1. Alien Sentinel Drone (Ostacolo Dinamico Ostile): pattuglia lungo una curva armonica
+//           a figura di 8 (Lissajous) e sbatte l'occhio (eye-blink) quando il Player ci vola sopra.
+//      * 2. Cosmic Warp Gate (Portale Monumentale): anello circolare cavo a curve di Hermite
+//           con vortice rotante bifase (dormiente -> attivo alla raccolta delle 5 monete).
+//    - Gestisce la meccanica di indebolimento del Drone se colpito dai laser (rallenta e si stordisce).
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (in init(), update(dt, time, playerPos), draw(shader, ...)).
+//    - Collabora con:
+//      * PlayerShapeLoader: carica e triangola i file Wavefront 'alien_drone.obj' e 'warp_gate.obj'.
+//      * ShapeGenerator: crea i dettagli del viso (occhio dorato, pupilla a fessura, sopracciglia, bocca).
+//      * Geometry: memorizza i buffer VBO/VAO della testa e delle parti del portale.
+//      * Collider2D: fornisce cerchi di collisione per il drone (ostacolo) e per il portale (traguardo).
+//      * Shader basic: disegna le mesh applicando tinte cromatiche dinamiche ('uColorTint').
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Spline Cubiche di Hermite & Continuità C^1 (Requisito 3.2 & Domanda 12):
+//      Un arco cubico interpola due punti P0, P1 e due derivate tangenti D0, D1:
+//      C(t) = h_00(t)*P0 + h_01(t)*P1 + h_10(t)*D0 + h_11(t)*D1,
+//      con h_00=2t^3-3t^2+1, h_01=-2t^3+3t^2, h_10=t^3-2t^2+t, h_11=t^3-t^2.
+//      I tratti sono raccordati a continuità C^1 condividendo sia la posizione sia la derivata tangente.
+//    - Traiettoria Orbitale a 8 di Lissajous (Requisito 6 & Domanda 11):
+//      Curva parametrica piana regolare con rapporto armonico 1:2:
+//      x(t) = x_0 + A * cos(omega * t);  y(t) = y_0 + B * sin(2 * omega * t).
+//    - Animazione Interattiva di Ammiccamento (Eye-Blink) (Requisito 6):
+//      Quando il player è a distanza critica (d < 65px), un edge-trigger attiva una contrazione
+//      sinusoidale della scala verticale Y dell'occhio: s_y = max(0.08, |sin(pi * progress)|).
 // ============================================================================
 
 #pragma once

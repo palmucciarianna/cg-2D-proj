@@ -1,11 +1,34 @@
+// ORIGINE: Pattern VAO/VBO e attributi OpenGL dai laboratori della prof, incapsulato in classe C++ RAII con Rule of Five.
 // ============================================================================
-// File: include/Geometry.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Incapsulamento orientato agli oggetti delle risorse geometriche OpenGL.
-//              Gestisce l'allocazione, il trasferimento CPU -> GPU (VAO e VBO)
-//              e il disegno tramite draw call (glDrawArrays), implementando
-//              l'idioma RAII e la semantica di movimento (move semantics).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: Geometry (Incapsulamento Risorse GPU)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Incapsula e gestisce il ciclo di vita delle risorse hardware geometriche della GPU:
+//      * VAO (Vertex Array Object): memorizza la configurazione degli attributi;
+//      * VBO Positions (Vertex Buffer Object): coordinate spaziali (x, y, z);
+//      * VBO Colors: attributi colore per vertice (r, g, b, a).
+//    - Carica i dati in VRAM (upload()) ed emette la chiamata di disegno (draw() -> glDrawArrays).
+//    - Implementa rigorosamente l'idioma RAII e la Rule of Five (move semantics abilitate, copia vietata).
+//
+// 2. A CHI È COLLEGATA:
+//    - Utilizzata da praticamente tutte le entità del motore grafico:
+//      Player, AsteroidManager, CollectibleManager, HermiteManager, LaserManager, HazardManager, ParticleSystem.
+//    - Riceve i dati CPU da: MeshData (creata da ShapeGenerator o da PlayerShapeLoader).
+//    - Interagisce direttamente con OpenGL Core 3.3 (GLAD) e gli shader GLSL via location di attributo.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Ruolo di VBO vs VAO (Requisito 4 & Domanda 17):
+//      * VBO: contiene l'array grezzo di byte memorizzato in memoria VRAM della GPU (glBufferData);
+//      * VAO: memorizza lo "stato" e il formato dei dati (glVertexAttribPointer + glEnableVertexAttribArray).
+//        Il VAO non contiene vertici di per sé, ma la "ricetta" con cui la GPU legge il VBO.
+//    - Mapping Attributi nello Shader (Domande 17, 18):
+//      Location 0: vec3 aPosition -> 3 float, stride = sizeof(glm::vec3);
+//      Location 1: vec4 aColor    -> 4 float, stride = sizeof(glm::vec4).
+//    - Primitiva e Draw Call (Domanda 17):
+//      glBindVertexArray(m_vao);  glDrawArrays(m_primitiveType, 0, m_vertexCount);
+//    - Gestione della Memoria RAII (Requisito 8):
+//      I buffer vengono deallocati nel distruttore con glDeleteVertexArrays e glDeleteBuffers,
+//      azzerando qualsiasi possibilità di memory leak sulla GPU.
 // ============================================================================
 
 #pragma once
@@ -13,6 +36,8 @@
 #include "OpenGL_Headers.h"
 #include <glm/glm.hpp>
 #include <vector>
+
+struct MeshData;
 
 class Geometry
 {
@@ -54,6 +79,9 @@ public:
     // - dynamic = false: utilizza GL_STATIC_DRAW (i dati non cambieranno spesso, massime prestazioni).
     // - dynamic = true:  utilizza GL_DYNAMIC_DRAW (i dati cambieranno ogni frame, es. particelle o curve animate).
     void upload(bool dynamic = false);
+
+    // Helper compatto: copia una MeshData CPU e la carica subito su GPU (setData + upload).
+    void uploadMesh(const MeshData& data, bool dynamic = false);
 
     // Aggiorna solo il buffer delle posizioni tramite glBufferSubData senza riallocare il buffer GPU.
     void updatePositions(const std::vector<glm::vec3>& newPositions);

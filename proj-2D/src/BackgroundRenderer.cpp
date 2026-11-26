@@ -1,11 +1,15 @@
 // ============================================================================
-// File: src/BackgroundRenderer.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del BackgroundRenderer.
-//              Alloca due triangoli che coprono l'intervallo [-1.0, +1.0] su X e Y.
-//              Il fragment shader calcola un campo stellare con scintillio pseudo-casuale
-//              e gradienti di nebulosa dipendenti dal tempo.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: BackgroundRenderer.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Alloca e disegna un Fullscreen Quad (2 triangoli, 6 vertici) per lo sfondo cosmico.
+//    - Esegue il rendering procedurale puro senza immagini o texture di memoria.
+// 2. A CHI È COLLEGATO:
+//    - Invocato da GameWorld all'inizio del render frame; pilota background.vert e frag.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Coordinate NDC pure [-1, 1] x [-1, 1]: zero matrici Model e Projection (Domanda 9).
+//    - Gestione risorse RAII e Rule of Five per buffer hardware OpenGL (Domanda 17).
+//    - Shader procedurale SIMD: hash, parallasse stellare e domain warping (Domande 1, 3, 5).
 // ============================================================================
 
 #include "BackgroundRenderer.h"

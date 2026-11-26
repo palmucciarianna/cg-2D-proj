@@ -1,12 +1,26 @@
 // ============================================================================
-// File: include/HazardManager.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore delle minacce ambientali perimetrali (dardi di plasma ad alta velocità).
-//              Implementa un pattern telegraph-and-fire:
-//              1. Indicatore stroboscopico di preavviso sul bordo (0.85s)
-//              2. Lancio del missile di plasma a 880 px/s attraverso lo schermo
-//              3. Test di collisione con il giocatore e innesco esplosione
+// GUIDA RAPIDA PER L'ORALE - CLASSE: HazardManager (Pericoli Perimetrali)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce i pericoli dinamici ad alta velocità (missili di plasma da 880 px/s).
+//    - Implementa la meccanica arcade "telegraph-and-fire":
+//      * Fase 1: Spia stroboscopica d'allerta sul bordo per 0.85s (dà tempo al giocatore di reagire);
+//      * Fase 2: Lancio del dardo supersonico che attraversa trasversalmente la schermata.
+//    - Se impatta la navicella, sottrae 1 vita, attiva Screen Shake e genera detriti particellari.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (in init(), spawnLevel(), update(dt), checkCollisions(), draw()).
+//    - Interagisce con: Player (collisioni cerchio-AABB), ParticleSystem (esplosione da impatto).
+//    - Utilizza: Geometry per il proiettile a punta di diamante e lo Shader basic.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Lampeggio Stroboscopico con Funzione Seno (Requisito 6 & Domanda 20):
+//      alpha(t) = 0.5 + 0.5 * sin(freq * t);  invia 'uColorTint' con alpha variabile per l'allerta.
+//    - Collisione Cerchio vs AABB (Domanda 5 & Collider2D):
+//      Calcola il punto più vicino sul rettangolo del dardo tramite clamping del centro della navicella:
+//      p_clamped = clamp(player_pos, box_min, box_max);  verifica se ||player_pos - p_clamped||^2 <= r^2.
+//    - Trasformazione di Scala e Posizione Spaziale (Domanda 6):
+//      La matrice Model mappa la freccia di plasma posizionandola e orientandola lungo la traiettoria.
 // ============================================================================
 
 #pragma once
@@ -62,6 +76,7 @@ public:
     void draw(const Shader& shader, float currentTime, float screenWidth, float screenHeight);
 
     // Verifica se un dardo di plasma attivo ha colpito il giocatore.
+    // uno dei proiettili nemici laterali ha colpito la mia navicella?
     bool checkPlayerHit(const CircleCollider& playerCol, ParticleSystem& particles);
 
     // Cancella tutte le minacce attive nella scena.

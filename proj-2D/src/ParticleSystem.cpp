@@ -1,25 +1,65 @@
 // ============================================================================
-// File: src/ParticleSystem.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del motore fisico particellare.
-//              - Integrazione cinematica di Eulero semi-implicito
-//              - Smorzamento per attrito fluido (viscous drag): v' = v * (1 - gamma * dt)
-//              - Decadimento lineare della vita residua (life) con dissolvenza alfa (fade-out)
-//              - Restringimento proporzionale del raggio durante l'invecchiamento
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: ParticleSystem.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Simula la cinematica e il rendering di centinaia di particelle per effetti visivi reattivi.
+//    - Esplosione asteroidi (32 detriti rocciosi), scintille dorate, coriandoli HURRÀ e scia fumo.
+// 2. A CHI È COLLEGATO:
+//    - Invocato da GameWorld, AsteroidManager, CollectibleManager e LaserManager.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Smorzamento per attrito viscoso: v(t+dt) = v(t) * (1 - gamma * dt) (Domanda 4).
+//    - Dissolvenza lineare dell'alpha: a(t) = a0 * (life / maxLife) (Domanda 20).
+//    - Composizione in Alpha Blending: Cout = as*Cs + (1-as)*Cd (Domanda 20).
 // ============================================================================
 
 #include "ParticleSystem.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstdlib>
 #include <cmath>
 #include "ShapeGenerator.h"
 
-// Funzione statica di supporto per generare numeri pseudo-casuali continui nell'intervallo [minVal, maxVal].
-static float randRange(float minVal, float maxVal)
+using MathConstants::randRange;
+
+namespace
 {
-    float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-    return minVal + r * (maxVal - minVal);
+    // Descrittore parametrico condiviso per generare un burst di particelle con qualsiasi palette/range.
+    struct ParticleBurstSpec
+    {
+        float minOffset = 0.0f, maxOffset = 0.0f;
+        float minSpeed = 80.0f, maxSpeed = 200.0f;
+        float minSize = 8.0f, maxSize = 18.0f;
+        float maxRotSpeed = 200.0f;
+        float minLife = 0.4f, maxLife = 1.0f;
+    };
+
+    // Helper unificato che genera 'count' particelle radiali attorno a 'origin' usando i parametri di 'spec'.
+    template <typename ColorFn>
+    void spawnRadialBurst(
+        std::vector<Particle>& particles,
+        const glm::vec2& origin,
+        int count,
+        const ParticleBurstSpec& spec,
+        ColorFn&& pickColor)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            float angle = MathConstants::randRange(0.0f, MathConstants::TWO_PI); // Direzione casuale [0, 2*PI]
+            float speed = MathConstants::randRange(spec.minSpeed, spec.maxSpeed); // Velocità iniziale casuale
+            float offset = (spec.maxOffset > 0.0f) ? MathConstants::randRange(spec.minOffset, spec.maxOffset) : 0.0f;
+
+            Particle p;
+            p.pos = origin + glm::vec2(std::cos(angle), std::sin(angle)) * offset; // Posizione iniziale
+            p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;           // Vettore velocità cartesiano
+            p.color = pickColor();                                                 // Colore dalla palette scelta
+            p.size = MathConstants::randRange(spec.minSize, spec.maxSize);         // Dimensione casuale
+            p.rotation = MathConstants::randRange(0.0f, 360.0f);                   // Orientamento iniziale [0, 360]
+            p.rotSpeed = MathConstants::randRange(-spec.maxRotSpeed, spec.maxRotSpeed); // Spin casuale
+            p.maxLife = MathConstants::randRange(spec.minLife, spec.maxLife);      // Durata vita
+            p.life = p.maxLife;                                                    // Inizializza vita residua
+            particles.push_back(p);                                                // Accoda nel pool attivo
+        }
+    }
 }
 
 // ============================================================================
@@ -43,8 +83,7 @@ void ParticleSystem::init()
     );
 
     // Carica la geometria in GPU.
-    m_rockFragGeo.setData(fragMesh.positions, fragMesh.colors, fragMesh.primitiveType);
-    m_rockFragGeo.upload(false);
+    m_rockFragGeo.uploadMesh(fragMesh, false);
 
     // Pre-alloca la capacità del vettore per evitare frequenti riallocazioni di memoria dinamica.
     m_particles.reserve(256);
@@ -92,7 +131,7 @@ void ParticleSystem::draw(const Shader& shader)
     // Se non ci sono particelle attive, esce subito.
     if (m_particles.empty()) return;
 
-    for (const auto& p : m_particles)
+    for (const auto& p : m_particles) // scorre tutte le particelle attive
     {
         // Calcola la percentuale di vita rimanente in [0.0, 1.0]:
         // progress = 1.0 alla nascita, progress = 0.0 alla morte.
@@ -108,10 +147,13 @@ void ParticleSystem::draw(const Shader& shader)
         m = glm::scale(m, glm::vec3(currentScale, currentScale, 1.0f));
 
         // Applica la dissolvenza alfa: il canale di trasparenza sfuma a zero verso fine vita.
+        // in pratica riduce gradualmente la trasparenza
+        // progress = 1.0 -> alpha = 1.0, progress = 0.0 -> alpha = 0.0
         glm::vec4 c = p.color;
         c.a *= progress;
 
         // Imposta le uniform del colore e della matrice di modellazione.
+        // invio delle uniform al shader -> GPU
         shader.setVec4("uColorTint", c);
         shader.setMat4("model", m);
 
@@ -120,6 +162,7 @@ void ParticleSystem::draw(const Shader& shader)
     }
 
     // Ripristina la tinta uniforme a bianco opaco (1.0).
+    // rimette a bianco opaco (1,1,1,1)
     shader.setVec4("uColorTint", glm::vec4(1.0f));
 }
 
@@ -128,34 +171,17 @@ void ParticleSystem::draw(const Shader& shader)
 // ============================================================================
 void ParticleSystem::emitAsteroidExplosion(const glm::vec2& origin, int count)
 {
-    for (int i = 0; i < count; ++i)
-    {
-        // Direzione angolare casuale a 360 gradi [0, 2*PI].
-        float angle = randRange(0.0f, 6.28318f);
-        // Velocità esplosiva di proiezione [80, 320] px/s.
-        float speed = randRange(80.0f, 320.0f);
-
-        Particle p;
-        // Posizione iniziale con piccolo offset casuale attorno al centro dell'asteroide.
-        p.pos = origin + glm::vec2(std::cos(angle), std::sin(angle)) * randRange(2.0f, 18.0f);
-        // Vettore velocità cartesiano.
-        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
-
+    const ParticleBurstSpec spec{ 2.0f, 18.0f, 80.0f, 320.0f, 10.0f, 24.0f, 350.0f, 0.5f, 1.1f };
+    spawnRadialBurst(m_particles, origin, count, spec, []() {
         // Variazione cromatica dei frammenti: toni rocciosi e fiammate arancioni da impatto.
-        float tone = randRange(0.4f, 0.9f);
-        float r = tone * randRange(0.9f, 1.2f);
-        float g = tone * randRange(0.6f, 0.9f);
-        float b = tone * randRange(0.4f, 0.6f);
-        p.color = glm::vec4(r, g, b, 1.0f);
-
-        p.size = randRange(10.0f, 24.0f);
-        p.rotation = randRange(0.0f, 360.0f);
-        p.rotSpeed = randRange(-350.0f, 350.0f);
-        p.maxLife = randRange(0.5f, 1.1f);
-        p.life = p.maxLife;
-
-        m_particles.push_back(p);
-    }
+        float tone = MathConstants::randRange(0.4f, 0.9f);
+        return glm::vec4(
+            tone * MathConstants::randRange(0.9f, 1.2f),
+            tone * MathConstants::randRange(0.6f, 0.9f),
+            tone * MathConstants::randRange(0.4f, 0.6f),
+            1.0f
+        );
+    });
 }
 
 // ============================================================================
@@ -163,24 +189,11 @@ void ParticleSystem::emitAsteroidExplosion(const glm::vec2& origin, int count)
 // ============================================================================
 void ParticleSystem::emitCoinSparkles(const glm::vec2& origin, int count)
 {
-    for (int i = 0; i < count; ++i)
-    {
-        float angle = randRange(0.0f, 6.28318f);
-        float speed = randRange(60.0f, 200.0f);
-
-        Particle p;
-        p.pos = origin;
-        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
+    const ParticleBurstSpec spec{ 0.0f, 0.0f, 60.0f, 200.0f, 6.0f, 14.0f, 180.0f, 0.4f, 0.75f };
+    spawnRadialBurst(m_particles, origin, count, spec, []() {
         // Colore giallo oro scintillante.
-        p.color = glm::vec4(1.0f, randRange(0.8f, 1.0f), randRange(0.1f, 0.4f), 1.0f);
-        p.size = randRange(6.0f, 14.0f);
-        p.rotation = randRange(0.0f, 360.0f);
-        p.rotSpeed = randRange(-180.0f, 180.0f);
-        p.maxLife = randRange(0.4f, 0.75f);
-        p.life = p.maxLife;
-
-        m_particles.push_back(p);
-    }
+        return glm::vec4(1.0f, MathConstants::randRange(0.8f, 1.0f), MathConstants::randRange(0.1f, 0.4f), 1.0f);
+    });
 }
 
 // ============================================================================
@@ -188,35 +201,24 @@ void ParticleSystem::emitCoinSparkles(const glm::vec2& origin, int count)
 // ============================================================================
 void ParticleSystem::emitHurraCelebration(float screenWidth, float screenHeight, int count)
 {
+    // Palette cromatica festosa: oro brillante, ciano cosmico, magenta e verde smeraldo.
+    static const glm::vec4 celebrationColors[] = {
+        glm::vec4(1.0f, 0.85f, 0.1f, 1.0f),
+        glm::vec4(0.2f, 0.95f, 1.0f, 1.0f),
+        glm::vec4(1.0f, 0.25f, 0.7f, 1.0f),
+        glm::vec4(0.25f, 1.0f, 0.4f, 1.0f)
+    };
+    const ParticleBurstSpec spec{ 0.0f, 0.0f, 120.0f, 380.0f, 12.0f, 26.0f, 280.0f, 1.0f, 1.8f };
     for (int i = 0; i < count; ++i)
     {
-        Particle p;
-        // Posizione casuale distribuita su un ampio rettangolo centrale dello schermo.
-        p.pos = glm::vec2(
-            randRange(screenWidth * 0.15f, screenWidth * 0.85f),
-            randRange(screenHeight * 0.3f, screenHeight * 0.7f)
+        // Ogni coriandolo nasce in un punto casuale nell'area centrale dello schermo.
+        glm::vec2 pos(
+            MathConstants::randRange(screenWidth * 0.15f, screenWidth * 0.85f),
+            MathConstants::randRange(screenHeight * 0.3f, screenHeight * 0.7f)
         );
-
-        float angle = randRange(0.0f, 6.28318f);
-        float speed = randRange(120.0f, 380.0f);
-        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
-
-        // Palette cromatica festosa: oro brillante, ciano cosmico, magenta e verde smeraldo.
-        static const glm::vec4 celebrationColors[] = {
-            glm::vec4(1.0f, 0.85f, 0.1f, 1.0f),
-            glm::vec4(0.2f, 0.95f, 1.0f, 1.0f),
-            glm::vec4(1.0f, 0.25f, 0.7f, 1.0f),
-            glm::vec4(0.25f, 1.0f, 0.4f, 1.0f)
-        };
-        p.color = celebrationColors[rand() % 4];
-
-        p.size = randRange(12.0f, 26.0f);
-        p.rotation = randRange(0.0f, 360.0f);
-        p.rotSpeed = randRange(-280.0f, 280.0f);
-        p.maxLife = randRange(1.0f, 1.8f);
-        p.life = p.maxLife;
-
-        m_particles.push_back(p);
+        spawnRadialBurst(m_particles, pos, 1, spec, []() {
+            return celebrationColors[rand() % 4];
+        });
     }
 }
 
@@ -225,31 +227,16 @@ void ParticleSystem::emitHurraCelebration(float screenWidth, float screenHeight,
 // ============================================================================
 void ParticleSystem::emitRelicEnergy(const glm::vec2& origin, int count)
 {
-    for (int i = 0; i < count; ++i)
-    {
-        float angle = randRange(0.0f, 6.28318f);
-        float speed = randRange(90.0f, 260.0f);
-
-        Particle p;
-        p.pos = origin + glm::vec2(std::cos(angle), std::sin(angle)) * randRange(10.0f, 35.0f);
-        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
-
-        // Tonalità eteree ciano, viola quantico e bianco energia.
-        static const glm::vec4 relicColors[] = {
-            glm::vec4(0.2f, 0.9f, 1.0f, 1.0f),
-            glm::vec4(0.5f, 0.4f, 1.0f, 1.0f),
-            glm::vec4(0.8f, 1.0f, 1.0f, 1.0f)
-        };
-        p.color = relicColors[rand() % 3];
-
-        p.size = randRange(8.0f, 18.0f);
-        p.rotation = randRange(0.0f, 360.0f);
-        p.rotSpeed = randRange(-200.0f, 200.0f);
-        p.maxLife = randRange(0.6f, 1.2f);
-        p.life = p.maxLife;
-
-        m_particles.push_back(p);
-    }
+    // Tonalità eteree ciano, viola quantico e bianco energia.
+    static const glm::vec4 relicColors[] = {
+        glm::vec4(0.2f, 0.9f, 1.0f, 1.0f),
+        glm::vec4(0.5f, 0.4f, 1.0f, 1.0f),
+        glm::vec4(0.8f, 1.0f, 1.0f, 1.0f)
+    };
+    const ParticleBurstSpec spec{ 10.0f, 35.0f, 90.0f, 260.0f, 8.0f, 18.0f, 200.0f, 0.6f, 1.2f };
+    spawnRadialBurst(m_particles, origin, count, spec, []() {
+        return relicColors[rand() % 3];
+    });
 }
 
 // ============================================================================
@@ -257,32 +244,17 @@ void ParticleSystem::emitRelicEnergy(const glm::vec2& origin, int count)
 // ============================================================================
 void ParticleSystem::emitDroneHitSparks(const glm::vec2& origin, int count)
 {
-    for (int i = 0; i < count; ++i)
-    {
-        float angle = randRange(0.0f, 6.28318f);
-        float speed = randRange(70.0f, 260.0f);
-
-        Particle p;
-        p.pos = origin + glm::vec2(std::cos(angle), std::sin(angle)) * randRange(4.0f, 18.0f);
-        p.vel = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
-
-        // Scintille ad alto contrasto: cremisi, oro rovente e azzurro ionico da dispersione di campo
-        static const glm::vec4 sparkColors[] = {
-            glm::vec4(1.0f, 0.2f, 0.35f, 1.0f),  // Cremisi vivo
-            glm::vec4(1.0f, 0.85f, 0.2f, 1.0f),  // Oro rovente
-            glm::vec4(0.3f, 0.9f, 1.0f, 1.0f),   // Azzurro laser ionizzato
-            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)    // Bianco plasma
-        };
-        p.color = sparkColors[rand() % 4];
-
-        p.size = randRange(7.0f, 16.0f);
-        p.rotation = randRange(0.0f, 360.0f);
-        p.rotSpeed = randRange(-320.0f, 320.0f);
-        p.maxLife = randRange(0.4f, 0.85f);
-        p.life = p.maxLife;
-
-        m_particles.push_back(p);
-    }
+    // Scintille ad alto contrasto: cremisi, oro rovente e azzurro ionico da dispersione di campo.
+    static const glm::vec4 sparkColors[] = {
+        glm::vec4(1.0f, 0.2f, 0.35f, 1.0f),
+        glm::vec4(1.0f, 0.85f, 0.2f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 1.0f, 1.0f),
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
+    };
+    const ParticleBurstSpec spec{ 4.0f, 18.0f, 70.0f, 260.0f, 7.0f, 16.0f, 320.0f, 0.4f, 0.85f };
+    spawnRadialBurst(m_particles, origin, count, spec, []() {
+        return sparkColors[rand() % 4];
+    });
 }
 
 // ============================================================================

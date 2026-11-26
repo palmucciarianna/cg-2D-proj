@@ -1,11 +1,35 @@
+// ORIGINE: Scheletro standard di avvio/chiusura GLFW + GLAD + ImGui dai laboratori della prof 
+// (glfwInit, contesto 3.3 Core Profile, gladLoadGLLoader, ImGui_Impl*, swap/terminate), 
+// esteso con GameWorld, Input, V-Sync, Alpha Blending e Delta-Time Clamping.
 // ============================================================================
-// File: src/main.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Entry-point principale dell'applicazione. Inizializza il sottosistema
-//              grafico GLFW, carica i puntatori a funzione OpenGL con GLAD, configura
-//              il contesto dell'interfaccia Dear ImGui, istanzia il GameWorld ed
-//              esegue il game-loop a framerate controllato (con gestione del delta-time).
+// GUIDA RAPIDA PER L'ORALE - ENTRY-POINT: main.cpp (Architettura & Render Loop)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - È il punto di ingresso dell'applicazione (main function).
+//    - Inizializza le librerie fondamentali: GLFW, GLAD, Dear ImGui.
+//    - Configura il contesto OpenGL 3.3 Core Profile e il double buffering V-Sync.
+//    - Esegue il game-loop principale a framerate controllato (con Delta-Time Clamping a 0.05s).
+//    - Rilascia ordinatamente tutte le risorse software e hardware alla chiusura della finestra.
+//
+// 2. A CHI È COLLEGATO:
+//    - Crea e coordina: GameWorld (mondo di gioco 2D) e Input (callback periferiche).
+//    - Si interfaccia direttamente con i driver grafici del sistema operativo e della GPU.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Sequenza di Inizializzazione OpenGL (Domanda 16):
+//      1) glfwInit();
+//      2) glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR/MINOR, 3) + GLFW_OPENGL_CORE_PROFILE;
+//      3) window = glfwCreateWindow(1280, 720, ...);
+//      4) glfwMakeContextCurrent(window);  // FONDAMENTALE prima di GLAD!
+//      5) gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+//    - Configurazione Blending per Trasparenza (Domanda 20):
+//      glEnable(GL_BLEND);  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//      C_out = alpha_s * C_s + (1 - alpha_s) * C_d.
+//    - Delta-Time Clamping & Indipendenza da Framerate (Requisito 6):
+//      dt = currentFrame - lastFrame;  dt = min(dt, 0.05f);
+//      Evita glitch di attraversamento muri o instabilità numerica in caso di lag/pausa.
+//    - Double Buffering & Swap Buffers (Domande 1, 16):
+//      Disegna nel Back Buffer invisibile e lo scambia col Front Buffer a video (glfwSwapBuffers).
 // ============================================================================
 
 // Inclusione centralizzata cross-platform OpenGL / WebGL
@@ -102,6 +126,7 @@ int main()
     // 1. INIZIALIZZAZIONE DI GLFW (Finestra, Contesto e Callback di Sistema)
     // ========================================================================
 
+    // [Domanda 16: Struttura di un'applicazione OpenGL (inizializzazione GLFW)]
     // Inizializza la libreria GLFW; restituisce false se fallisce (es. driver video assente).
     if (!glfwInit())
     {
@@ -118,6 +143,7 @@ int main()
     // Versione 3.3 Core Profile su Desktop.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    // [Domanda 3: Dalla pipeline fissa a quella programmabile (Core Profile esclude glBegin/glEnd)]
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -179,6 +205,7 @@ int main()
 
     // Configura il blending alfa (trasparenza):
     // Abilita il canale alfa per il rendering corretto di particelle traslucide e texture PNG/RGBA.
+    // [Domanda 20: RGB, alpha, blending e trasparenza: C_out = alpha_s * C_s + (1 - alpha_s) * C_d]
     glEnable(GL_BLEND);
     // Formula di blending standard: Color = SrcColor * SrcAlpha + DstColor * (1 - SrcAlpha)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

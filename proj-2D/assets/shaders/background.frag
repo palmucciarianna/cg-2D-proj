@@ -7,7 +7,8 @@ uniform float uTime;
 uniform float uPsychedelic; // Intensità effetto psichedelico (0.0 = calmo, 1.0 = cosmico/vortice)
 uniform int uLevel;          // Livello corrente: alterna le palette cromatiche tra pari e dispari
 
-// Hash pseudo-casuale per generare stelle procedurali senza texture
+// Funzione pseudo-casuale deterministica: trasforma una cella 2D in un numero in [0, 1)
+// per generare stelle procedurali senza texture
 float hash(vec2 p)
 {
     p = fract(p * vec2(123.34, 456.21));
@@ -15,9 +16,11 @@ float hash(vec2 p)
     return fract(p.x * p.y);
 }
 
-// Strato stellare con scintillio trigonometrico
+// Strato stellare procedurale con scintillio trigonometrico (parallasse)
 float starLayer(vec2 uv, float scale, float probability, float twinkleSpeed)
 {
+    // Suddivide lo schermo in una griglia: gridId identifica la cella,
+    // gridUv contiene le coordinate locali centrate nella cella [-0.5, 0.5]
     vec2 gridId = floor(uv * scale);
     vec2 gridUv = fract(uv * scale) - 0.5;
 
@@ -25,13 +28,17 @@ float starLayer(vec2 uv, float scale, float probability, float twinkleSpeed)
     if (h > probability)
     {
         float d = length(gridUv);
+        // Twinkle: crea un effetto di luminosità variabile nel tempo, simulando il brillio delle stelle
         float twinkle = 0.5 + 0.5 * sin(uTime * twinkleSpeed + h * 6.2831);
+        // [Domanda 15: Anti-aliasing analitico con transizione morbida di smoothstep]
+        // Stella anti-aliased grazie alla transizione morbida di smoothstep
         float star = smoothstep(0.12, 0.0, d) * twinkle;
         return star;
     }
     return 0.0;
 }
 
+// [Domanda 1: Architettura SIMD/SIMT della GPU: eseguito in parallelo per ogni pixel (1280x720)]
 void main()
 {
     vec2 uv = vUV;

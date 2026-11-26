@@ -1,10 +1,28 @@
+// ORIGINE: Gestione input e callback GLFW basata sul pattern dei laboratori della prof, incapsulata in classe.
 // ============================================================================
-// File: include/Input.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Dichiarazione delle funzioni di callback per il sistema di input GLFW.
-//              Include la gestione di tastiera, posizione del cursore e ridimensionamento
-//              del framebuffer, incapsulate in un namespace dedicato senza variabili globali.
+// GUIDA RAPIDA PER L'ORALE - MODULO: Input (Gestione Eventi & Callback GLFW)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce la ricezione degli eventi periferici di sistema (tastiera, mouse, finestra).
+//    - Fornisce le tre funzioni di callback statiche registrate presso GLFW:
+//      * keyCallback: intercetta tasti singoli discreti (es. ESC per uscire, R per riavviare);
+//      * cursorPositionCallback: traccia le coordinate cartesiane del mouse;
+//      * framebufferSizeCallback: aggiorna la viewport OpenGL al ridimensionamento della finestra.
+//    - Separa nettamente gli eventi discreti (callback) dalla cinematica continua (polling).
+//
+// 2. A CHI È COLLEGATA:
+//    - Registrata da: main.cpp (tramite glfwSetKeyCallback, glfwSetCursorPosCallback, glfwSetFramebufferSizeCallback).
+//    - Interagisce con: GameWorld e Player (che leggono lo stato continuo tramite glfwGetKey).
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Polling vs Callback con GLFW (Domanda 19):
+//      * Callback: funzione asincrona invocata dal driver OS quando si verifica un evento discreto
+//        (durante glfwPollEvents). Ideale per cambi di stato, menu, restart o sparo singolo.
+//      * Polling: interrogazione sincrona attiva ad ogni frame (glfwGetKey). Ideale per il movimento
+//        continuo della navicella integrato con la fisica del delta time: p(t+dt) = p(t) + v*dt.
+//    - Trasformazione di Viewport su Resize (Domanda 9):
+//      framebufferSizeCallback invoca glViewport(0, 0, width, height), aggiornando la matrice
+//      di trasformazione da coordinate NDC [-1, 1] ai pixel effettivi del framebuffer del display.
 // ============================================================================
 
 #pragma once

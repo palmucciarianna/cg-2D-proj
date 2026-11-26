@@ -8,11 +8,15 @@ uniform vec4 uColorTint = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main()
 {
-    // Ritaglio ellittico morbido per adattarsi alla forma della cabina di pilotaggio
+    // Centra e normalizza le coordinate UV da [0, 1] a [-1, 1]
     vec2 uvNorm = (vTexCoord - vec2(0.5, 0.5)) * 2.0;
+    // Calcola la distanza al quadrato dal centro
     float dist = dot(uvNorm, uvNorm);
-    if (dist > 1.0) discard; // maschera ovale perfetta
+    // Maschera ellittica: scarta i pixel fuori dal cerchio unitario UV (ellisse sul quad dell'oblò)
+    if (dist > 1.0) discard;
 
+    // [Domanda 15: Anti-aliasing analitico sui bordi tramite smoothstep]
+    // Campionamento della texture + bordo morbido con anti-aliasing (smoothstep)
     vec4 texColor = texture(uTexture, vTexCoord);
     float edgeAlpha = smoothstep(1.0, 0.82, dist);
     FragColor = vec4(texColor.rgb, texColor.a * edgeAlpha) * uColorTint;

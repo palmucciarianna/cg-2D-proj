@@ -1,11 +1,33 @@
 // ============================================================================
-// File: include/Collectible.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore delle monete cosmiche collezionabili (Requisito 7.2).
-//              Implementa una simulazione visiva di rotazione pseudo-3D
-//              tramite modulazione non lineare della scala orizzontale (cos(t))
-//              ed oscillazione armonica verticale (levitazione spaziale).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: CollectibleManager (Cosmic Coins)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce le 5 monete d'oro collezionabili richieste per sbloccare il Warp Gate (Requisito 7.2).
+//    - Implementa l'animazione di rotazione e l'oscillazione armonica verticale (Requisito 6).
+//    - Condivide un unico VAO/VBO in VRAM per tutte le 5 monete (Buffer Sharing come per gli asteroidi).
+//    - Notifica GameWorld della raccolta, erogando punti e generando scintille dorate particellari.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (in init(), spawnLevel(), update(dt), draw(shader)).
+//    - Collabora con:
+//      * ShapeGenerator: crea la mesh CPU della moneta d'oro con gradiente radiale a 36 segmenti.
+//      * Geometry: memorizza l'unico VBO/VAO della moneta su GPU (m_coinGeo).
+//      * Collider2D: fornisce il CircleCollider (r = 22px) per il test di raccolta contro il Player.
+//      * Shader basic o coin.vert: riceve la Model Matrix con scalatura non uniforme e parametri uniform.
+//      * ParticleSystem: chiamato da GameWorld per emettere particelle dorate alla raccolta.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Rotazione via Proiezione Ortogonale (Requisito 6 & Domande 6, 9):
+//      Un disco circolare 3D che ruota attorno all'asse Y a velocità angolare omega, se proiettato
+//      ortogonalmente sul piano XY, si comprime orizzontalmente come:
+//      s_x(t) = s_base * |cos(omega * t)|.
+//      Applicando questa legge al fattore di scala X della Model Matrix, il cerchio 2D appare all'occhio
+//      umano come una solida moneta 3D che ruota su se stessa nello spazio!
+//    - Oscillazione Armonica Verticale (Levitazione) (Requisito 6):
+//      y(t) = y_base + A * sin(nu * t + phi), dove phi de-sincronizza il moto tra monete diverse.
+//    - Interpolazione del Colore Gouraud (Domande 7, 14):
+//      La moneta possiede un vertice centrale dorato brillante e vertici periferici ambrati;
+//      le coordinate baricentriche della rasterizzazione interpolano i colori generando riflessi metallici.
 // ============================================================================
 
 #pragma once

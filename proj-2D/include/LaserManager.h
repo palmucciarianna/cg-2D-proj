@@ -1,10 +1,28 @@
 // ============================================================================
-// File: include/LaserManager.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore balistico dei colpi laser (proiettili plasma).
-//              Gestisce il ciclo di vita (sparo con barra spaziatrice), la traiettoria rettilinea
-//              ad alta velocità (720 px/s), la collisione con gli asteroidi e l'assegnazione punti.
+// GUIDA RAPIDA PER L'ORALE - CLASSE: LaserManager (Proiettili Plasma)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Gestisce i proiettili laser sparati dalla navicella con la barra spaziatrice (Requisito 7.1).
+//    - Propaga i raggi a velocità supersonica (720-950 px/s) lungo la direzione frontale della nave.
+//    - Rileva gli impatti contro gli asteroidi (frantumandoli) e contro l'Alien Drone (indebolendolo).
+//    - Implementa il clipping logico eliminando i proiettili che escono dai confini dello schermo.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e gestita da: GameWorld (in init(), update(dt), checkCollisions(), draw(shader)).
+//    - Riceve comandi da: Player (spawn con posizione muso e versore di direzione d).
+//    - Interagisce con: AsteroidManager (distrugge asteroidi), HermiteManager (stordisce drone),
+//      ParticleSystem (innesca l'esplosione rocciosa dei 32 frammenti).
+//    - Utilizza: Geometry per il quad del raggio laser e lo Shader basic.
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Cinematica Rettilinea & Versore Direzione (Domande 4, 5):
+//      Dato l'angolo theta della navicella, il versore di direzione e' d = (cos(theta), sin(theta)).
+//      La posizione si aggiorna a ogni frame con: p(t + dt) = p(t) + d * v_laser * dt.
+//    - Bounding Box & Clipping Software 2D (Domanda 10):
+//      Verifica se p.x o p.y eccedono la finestra [0, 1280] x [0, 720]; se sì, dealloca il raggio
+//      per risparmiare memoria (analogo logico del clipping di Cohen-Sutherland).
+//    - Orientamento Matrice Model per Segmento/Quad (Domanda 6):
+//      M = T(pos) * R(theta) * S(lunghezza, spessore), allineando il quad alla direzione di sparo.
 // ============================================================================
 
 #pragma once
@@ -50,4 +68,5 @@ public:
 private:
     std::vector<LaserBullet> m_bullets; // Collezione dei colpi laser attivi
     Geometry m_bulletGeo;               // Risorsa geometrica condivisa su GPU (VAO/VBO)
+    // tutti i laser sullo schermo condividono 1 sola geometria
 };

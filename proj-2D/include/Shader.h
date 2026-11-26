@@ -1,11 +1,31 @@
+// ORIGINE: Gestione Shader Program e Uniform dai laboratori della prof, incapsulata in classe C++ RAII.
 // ============================================================================
-// File: include/Shader.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Classe C++ orientata agli oggetti (wrapper RAII) per la gestione
-//              del ciclo di vita dei programmi shader OpenGL 3.3.
-//              Fornisce metodi helper per l'impostazione rapida delle variabili Uniform
-//              (matrici 4x4, vettori 4D, scalari float e interi per texture sampler).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: Shader (Gestione Shader Program GLSL)
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Incapsula e gestisce l'handle OpenGL dello Shader Program (`m_programId`).
+//    - Carica, compila e collega a runtime il Vertex Shader e il Fragment Shader (Requisito 5).
+//    - Fornisce i metodi setter per inviare variabili Uniform dalla CPU alla GPU:
+//      * setMat4: invia matrici Model e Projection (glUniformMatrix4fv);
+//      * setVec4: invia tinte e colori modulati (glUniform4fv);
+//      * setFloat / setInt: invia parametri dinamici come 'uTime', 'uPsychedelic', 'uLevel'.
+//    - Attiva il programma nel pipeline state con glUseProgram(m_programId).
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e conservata da: GameWorld (m_bgShader, m_basicShader).
+//    - Invocata per il disegno da: BackgroundRenderer, Player, AsteroidManager, CollectibleManager, HermiteManager.
+//    - Collabora con: ShaderMaker (modulo che legge i file sorgente GLSL e controlla gli errori di compilazione).
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Pipeline Programmabile & Ruolo degli Shader (Domande 3, 4, 18):
+//      Sostituisce i vecchi algoritmi a funzione fissa con programmi GLSL eseguibili sui core della GPU:
+//      * Vertex Shader: riceve attributi dai VBO, calcola gl_Position = P * M * aPosition;
+//      * Fragment Shader: calcola il colore finale per ogni campione/frammento rasterizzato (FragColor).
+//    - Concetto di Variabile Uniform (Domanda 18):
+//      Valore costante comune per tutti i vertici e frammenti di una singola draw call.
+//      Viene inviato dalla CPU prima del disegno (es. glUniformMatrix4fv).
+//    - Gestione delle Risorse RAII (Requisito 8):
+//      Il distruttore invoca glDeleteProgram(m_programId), rilasciando le risorse GPU.
 // ============================================================================
 
 #pragma once

@@ -1,17 +1,23 @@
+// ORIGINE: In parte basato sul modulo Hermite dei laboratori della prof (spline cubiche), esteso con logica di gioco Alien Sentinel Drone e Warp Gate.
 // ============================================================================
-// File: src/HermiteObject.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione del gestore degli oggetti basati su curve di Hermite.
-//              - Alien Sentinel Drone: segue una traiettoria a forma di 8 (curva di Lissajous),
-//                modula la scala Y dell'occhio per l'ammiccamento (blink) quando sorvolato dal player.
-//              - Cosmic Warp Gate: portale a vortice rotante bifase (dormiente/attivo),
-//                costruito da anello cavo Hermite e disco di interpolazione ciano.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: HermiteObject.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Realizza l'Alien Sentinel Drone e il portale monumentale Cosmic Warp Gate (Requisito 3.2).
+//    - Guida il drone lungo un'orbita a 8 di Lissajous ed esegue l'ammiccamento (eye-blink).
+//    - Gestisce la rotazione a doppio anello e l'attivazione del Warp Gate per l'HURRÀ.
+// 2. A CHI È COLLEGATO:
+//    - Carica mesh da PlayerShapeLoader (alien_drone.obj, warp_gate.obj); gestito da GameWorld.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Spline di Hermite C^1: C(t) = h00*P0 + h01*P1 + h10*D0 + h11*D1 (Domanda 12).
+//    - Traiettoria a 8 di Lissajous: x = x0 + A*cos(phi), y = y0 + B*sin(2*phi) (Domanda 11).
+//    - Animazione ammiccamento occhio: scala Y modulata da campana sinusoidale (Requisito 6).
 // ============================================================================
 
 #include "HermiteObject.h"
 #include "PlayerShapeLoader.h"
 #include "ShapeGenerator.h"
+#include "MathConstants.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <iostream>
@@ -36,8 +42,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     MeshData headData;
     if (PlayerShapeLoader::load(alienObjPath, headData, err))
     {
-        m_headGeo.setData(headData.positions, headData.colors, headData.primitiveType);
-        m_headGeo.upload();
+        m_headGeo.uploadMesh(headData);
         m_hasDrone = true;
     }
     else
@@ -54,8 +59,7 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(1.0f, 0.98f, 0.20f, 1.0f),
         glm::vec4(1.0f, 0.65f, 0.05f, 1.0f)
     );
-    m_evilEyeGeo.setData(eyeData.positions, eyeData.colors, eyeData.primitiveType);
-    m_evilEyeGeo.upload();
+    m_evilEyeGeo.uploadMesh(eyeData);
 
     // Pupilla a fessura rettangolare verticale con sfumatura rosso sangue.
     MeshData pupilData = ShapeGenerator::createRectangle(
@@ -63,38 +67,34 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
         glm::vec4(0.05f, 0.05f, 0.05f, 1.0f),
         glm::vec4(0.40f, 0.02f, 0.02f, 1.0f)
     );
-    m_pupilGeo.setData(pupilData.positions, pupilData.colors, pupilData.primitiveType);
-    m_pupilGeo.upload();
+    m_pupilGeo.uploadMesh(pupilData);
 
     // Sopracciglio triangolare inclinato aggressivo.
     MeshData browData = ShapeGenerator::createTriangle(
-        glm::vec4(0.1f, 0.05f, 0.05f, 1.0f),
-        glm::vec4(0.6f, 0.05f, 0.05f, 1.0f),
-        glm::vec4(0.05f, 0.02f, 0.02f, 1.0f)
+        glm::vec4(0.1f, 0.05f, 0.05f, 1.0f),   // Vertice base scuro
+        glm::vec4(0.6f, 0.05f, 0.05f, 1.0f),   // Vertice rosso intenso
+        glm::vec4(0.05f, 0.02f, 0.02f, 1.0f)   // Vertice ombra esterna
     );
-    m_eyebrowsGeo.setData(browData.positions, browData.colors, browData.primitiveType);
-    m_eyebrowsGeo.upload();
+    m_eyebrowsGeo.uploadMesh(browData); // Carica VAO/VBO sopracciglia in VRAM
 
     // Bocca a ghigno malefico con zanna aguzza.
     MeshData mouthData = ShapeGenerator::createTriangle(
-        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),
-        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),
-        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f)
+        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),  // Angolo sinistro scuro
+        glm::vec4(0.10f, 0.02f, 0.02f, 1.0f),  // Angolo destro scuro
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f)   // Punta zanna bianca
     );
-    m_evilMouthGeo.setData(mouthData.positions, mouthData.colors, mouthData.primitiveType);
-    m_evilMouthGeo.upload();
+    m_evilMouthGeo.uploadMesh(mouthData); // Carica VAO/VBO bocca in VRAM
 
     // ------------------------------------------------------------------------
     // 3. Caricamento del Warp Gate (Portale Monumentale Hermite)
     // ------------------------------------------------------------------------
-    MeshData gateData;
-    if (PlayerShapeLoader::load(warpGateObjPath, gateData, err))
+    MeshData gateData; // Struttura CPU per l'anello del Warp Gate
+    if (PlayerShapeLoader::load(warpGateObjPath, gateData, err)) // Parsing del file OBJ/MTL a spline Hermite
     {
-        m_gateGeo.setData(gateData.positions, gateData.colors, gateData.primitiveType);
-        m_gateGeo.upload();
-        m_hasGate = true;
+        m_gateGeo.uploadMesh(gateData); // Trasferisce i 144 vertici in VRAM
+        m_hasGate = true;   // Segnala caricamento riuscito
     }
-    else
+    else // Gestione errore se il file OBJ manca
     {
         std::cerr << "[ERRORE] Caricamento modello Hermite Gate (" << warpGateObjPath << "): " << err << "\n";
     }
@@ -102,11 +102,10 @@ void HermiteManager::init(const std::string& alienObjPath, const std::string& wa
     // Vortice di energia interno (cerchio ciano a sfumatura radiale).
     MeshData vortexData = ShapeGenerator::createCircle(
         0.0f, 0.0f, 30.0f, 30.0f, 32,
-        glm::vec4(0.8f, 0.95f, 1.0f, 0.90f),
-        glm::vec4(0.1f, 0.45f, 0.85f, 0.30f)
+        glm::vec4(0.8f, 0.95f, 1.0f, 0.90f), // Nucleo centrale luminoso
+        glm::vec4(0.1f, 0.45f, 0.85f, 0.30f) // Alone esterno sfumato
     );
-    m_vortexGeo.setData(vortexData.positions, vortexData.colors, vortexData.primitiveType);
-    m_vortexGeo.upload();
+    m_vortexGeo.uploadMesh(vortexData); // [Domanda 12: Curve interpolanti di Hermite C^1 per Drone e Warp Gate] Carica VAO/VBO del vortice in VRAM
 
     // ------------------------------------------------------------------------
     // 4. Tracciato dell'Orbita di Lissajous a 8 (Visualizzazione Didattica)
@@ -145,14 +144,15 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     bool weakened = (m_weakenedTimer > 0.0f);
     if (weakened)
     {
-        m_weakenedTimer -= dt;
+        m_weakenedTimer -= dt; // Decremento del timer di indebolimento residuo
         speedMultiplier *= 0.35f; // Rallentamento drastico del 65%: moto faticoso e vulnerabile
     }
 
-    float omega = 0.85f * speedMultiplier;
-    m_orbitPhase += omega * dt;
+    float omega = 0.85f * speedMultiplier; // velocità angolare orbitale in rad/s (più veloce ai livelli alti)
+    m_orbitPhase += omega * dt; // Aggiornamento della fase orbitale per la traiettoria a 8
 
-    // 1. Traiettoria orbitale armonica a figura di 8 (Curva di Lissajous con rapporto 1:2):
+    // [Domanda 11: Curve parametriche e continuità C^1 (orbita chiusa regolare di Lissajous)]
+    // 1. Traiettoria orbitale armonica a figura di 8
     // x(t) = x_0 + A * cos(phi)
     // y(t) = y_0 + B * sin(2 * phi)
     // Ampiezza orizzontale A = 340px, ampiezza verticale B = 160px.
@@ -171,11 +171,13 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
             // Attiva una manovra rapida di 0.75s con direzione casuale:
             m_dashTimer = 0.75f;
             float randAngle = static_cast<float>(rand() % 360) * 0.0174533f;
-            m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle));
+            m_dashDirection = glm::vec2(std::cos(randAngle), std::sin(randAngle)); // direzione unitaria casuale
+            // costruisco un versore di offset iniziale per il dash (per evitare che parta da zero)
 
             // Prossimo scatto tra 4.5 e 8.0 secondi (più frequente nei livelli alti):
             float minInterval = std::max(2.8f, 5.0f - (m_level - 1) * 0.4f);
-            m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f;
+            m_dashCooldown = minInterval + static_cast<float>(rand() % 30) * 0.1f; 
+            // tra quanti secondi il drone potrà scattare di nuovo
         }
     }
     else
@@ -187,19 +189,20 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
 
     if (m_dashTimer > 0.0f)
     {
-        m_dashTimer -= dt;
+        m_dashTimer -= dt; // quando il timer scende a 0, il drone torna alla traiettoria normale
         float progress = 1.0f - (m_dashTimer / 0.75f); // 0.0 all'inizio, 1.0 alla fine
 
         // Profilo a campana sinusoidale (starts at 0, peaks at 1, returns to 0):
-        float bell = std::sin(progress * 3.14159f);
+        float bell = std::sin(progress * MathConstants::PI);
 
         // Giro strano: slancio direzionale combinato con un loop a vortice ad alta frequenza
-        float loopRadius = 60.0f * bell;
-        float loopAngle = progress * 6.28318f * 2.5f; // 2.5 rotazioni complete durante lo scatto
+        float loopRadius = 60.0f * bell; // raggio spirale si allarga e si restringe con la campana
+        float loopAngle = progress * MathConstants::TWO_PI * 2.5f; // 2.5 rotazioni complete durante lo scatto
         m_dashOffset = m_dashDirection * (bell * 110.0f) + glm::vec2(std::cos(loopAngle) * loopRadius, std::sin(loopAngle) * loopRadius);
+        // somma due movimenti: uno slancio + la spirale circolare
 
-        // Rollio della testa del drone durante la manovra
-        m_droneAngle = std::sin(progress * 6.28318f * 2.0f) * 45.0f;
+        // Inclina testa del drone durante la manovra
+        m_droneAngle = std::sin(progress * MathConstants::TWO_PI * 2.0f) * 45.0f;
     }
     else
     {
@@ -211,7 +214,7 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
         }
         else
         {
-            m_droneAngle = 0.0f;
+            m_droneAngle = 0.0f; // testa dritta quando il drone è in orbita normale
         }
     }
 
@@ -248,8 +251,8 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     // Gestione dell'Interazione Didattica: Sbattimento dell'Occhio (Eye-Blink)
     // "Quando ci passo sopra sbatte l'occhio UNA volta!"
     // ------------------------------------------------------------------------
-    float dist = glm::distance(playerPos, m_dronePos);
-    bool isOver = (dist < 65.0f);
+    float dist = glm::distance(playerPos, m_dronePos); // distanza tra giocatore e drone
+    bool isOver = (dist < 65.0f); // edge-trigger: attiva se il giocatore è entro 65px dal drone
 
     if (isOver)
     {
@@ -278,7 +281,8 @@ void HermiteManager::update(float dt, float currentTime, const glm::vec2& player
     }
 
     // Integrazione delle rotazioni del portale:
-    // L'anello esterno ruota a 22 gradi/secondo, il vortice interno ruota vorticosamente a 100 gradi/secondo.
+    // L'anello esterno ruota a 22 gradi/secondo
+    // il vortice interno ruota vorticosamente a 100 gradi/secondo.
     m_gateRotation += 22.0f * dt;
     m_vortexRotation += 100.0f * dt;
 }
@@ -339,7 +343,7 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         if (m_eyeBlinkTimer > 0.0f)
         {
             float progress = m_eyeBlinkTimer / 0.38f;
-            eyeScaleY = std::abs(std::sin(progress * 3.14159f));
+            eyeScaleY = std::abs(std::sin(progress * MathConstants::PI)); // Oscillazione da 1.0 a 0.0 e ritorno
             eyeScaleY = std::max(eyeScaleY, 0.08f); // Clamping per mantenere la fessura visibile
         }
         else if (weakened)
@@ -355,29 +359,29 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
         m_evilEyeGeo.draw();
 
         // D) Pupilla verticale all'interno dell'occhio.
-        glm::mat4 pupilMat = glm::scale(eyeMat, glm::vec3(1.0f, 0.9f, 1.0f));
-        shader.setMat4("model", pupilMat);
-        m_pupilGeo.draw();
+        glm::mat4 pupilMat = glm::scale(eyeMat, glm::vec3(1.0f, 0.9f, 1.0f)); // Scala leggermente sull'asse Y
+        shader.setMat4("model", pupilMat); // Invia matrice pupilla
+        m_pupilGeo.draw();                 // Disegna pupilla nera
 
         // E) Sopracciglio Destro inclinato di +28 gradi.
-        glm::mat4 browRight = glm::translate(headRoot, glm::vec3(10.0f, 15.0f, 0.0f));
-        browRight = glm::rotate(browRight, glm::radians(28.0f), glm::vec3(0, 0, 1));
-        browRight = glm::scale(browRight, glm::vec3(18.0f, 5.0f, 1.0f));
-        shader.setMat4("model", browRight);
-        m_eyebrowsGeo.draw();
+        glm::mat4 browRight = glm::translate(headRoot, glm::vec3(10.0f, 15.0f, 0.0f)); // Posizione sopra l'occhio DX
+        browRight = glm::rotate(browRight, glm::radians(28.0f), glm::vec3(0, 0, 1));   // Inclinazione aggressiva +28°
+        browRight = glm::scale(browRight, glm::vec3(18.0f, 5.0f, 1.0f));               // Dimensionamento rettangolare
+        shader.setMat4("model", browRight); // Invia matrice sopracciglio DX
+        m_eyebrowsGeo.draw();               // Disegna sopracciglio DX
 
         // F) Sopracciglio Sinistro inclinato di -28 gradi.
-        glm::mat4 browLeft = glm::translate(headRoot, glm::vec3(-10.0f, 15.0f, 0.0f));
-        browLeft = glm::rotate(browLeft, glm::radians(-28.0f), glm::vec3(0, 0, 1));
-        browLeft = glm::scale(browLeft, glm::vec3(-18.0f, 5.0f, 1.0f));
-        shader.setMat4("model", browLeft);
-        m_eyebrowsGeo.draw();
+        glm::mat4 browLeft = glm::translate(headRoot, glm::vec3(-10.0f, 15.0f, 0.0f)); // Posizione sopra l'occhio SX
+        browLeft = glm::rotate(browLeft, glm::radians(-28.0f), glm::vec3(0, 0, 1));   // Inclinazione simmetrica -28°
+        browLeft = glm::scale(browLeft, glm::vec3(-18.0f, 5.0f, 1.0f));               // Riflessione speculare X=-18
+        shader.setMat4("model", browLeft); // Invia matrice sopracciglio SX
+        m_eyebrowsGeo.draw();              // Riusa la mesh del sopracciglio
 
         // G) Bocca a ghigno malefico posizionata nella parte inferiore del volto.
-        glm::mat4 mouthMat = glm::translate(headRoot, glm::vec3(0.0f, -18.0f, 0.0f));
-        mouthMat = glm::scale(mouthMat, glm::vec3(22.0f, 8.0f, 1.0f));
-        shader.setMat4("model", mouthMat);
-        m_evilMouthGeo.draw();
+        glm::mat4 mouthMat = glm::translate(headRoot, glm::vec3(0.0f, -18.0f, 0.0f)); // Offset inferiore bocca
+        mouthMat = glm::scale(mouthMat, glm::vec3(22.0f, 8.0f, 1.0f));                // Larghezza 22px, altezza 8px
+        shader.setMat4("model", mouthMat); // Invia matrice bocca
+        m_evilMouthGeo.draw();             // Disegna bocca con zanna
 
         // H) Disegno Droni di Scorta e Puntamento Laser (Boss Mode v2)
         if (m_isBoss)
@@ -425,10 +429,10 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
     // ------------------------------------------------------------------------
     if (m_hasGate)
     {
-        glm::mat4 gateRoot = glm::mat4(1.0f);
-        gateRoot = glm::translate(gateRoot, glm::vec3(m_gatePos, 0.0f));
+        glm::mat4 gateRoot = glm::mat4(1.0f);                            // Matrice identità base portale
+        gateRoot = glm::translate(gateRoot, glm::vec3(m_gatePos, 0.0f)); // Trasla alla posizione fluttuante
 
-        bool activeVisual = (gateActive || m_relicPulseTimer > 0.0f);
+        bool activeVisual = (gateActive || m_relicPulseTimer > 0.0f); // Attivo visivamente se tutte le monete raccolte o toccato
         if (activeVisual)
         {
             // Portale Attivo: pulsazione luminosa radiale ad alta frequenza (10 rad/s).
@@ -443,33 +447,33 @@ void HermiteManager::draw(const Shader& shader, float currentTime, bool gateActi
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             // Vortice attivo a rotazione accelerata.
-            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 1.5f), glm::vec3(0, 0, 1));
-            vortexMat = glm::scale(vortexMat, glm::vec3(1.4f * pulse, 1.4f * pulse, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.3f, 1.0f, 0.95f, 1.0f));
-            shader.setMat4("model", vortexMat);
-            m_vortexGeo.draw();
+            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 1.5f), glm::vec3(0, 0, 1)); // Rotazione veloce
+            vortexMat = glm::scale(vortexMat, glm::vec3(1.4f * pulse, 1.4f * pulse, 1.0f)); // Scala pulsante
+            shader.setVec4("uColorTint", glm::vec4(0.3f, 1.0f, 0.95f, 1.0f)); // Tinta ciano brillante
+            shader.setMat4("model", vortexMat); // Invia matrice vortice
+            m_vortexGeo.draw();                 // Disegna vortice interno
 
             // Anello monumentale Hermite.
-            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 1.5f), glm::vec3(0, 0, 1));
-            ringMat = glm::scale(ringMat, glm::vec3(1.35f * pulse, 1.35f * pulse, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.4f, 0.85f, 1.0f, 1.0f));
-            shader.setMat4("model", ringMat);
-            m_gateGeo.draw();
+            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 1.5f), glm::vec3(0, 0, 1)); // Rotazione anello
+            ringMat = glm::scale(ringMat, glm::vec3(1.35f * pulse, 1.35f * pulse, 1.0f)); // Scala pulsante
+            shader.setVec4("uColorTint", glm::vec4(0.4f, 0.85f, 1.0f, 1.0f)); // Tinta azzurro elettrico
+            shader.setMat4("model", ringMat); // Invia matrice anello Hermite
+            m_gateGeo.draw();                 // Disegna i 144 vertici Hermite
         }
         else
         {
             // Portale Dormiente (in attesa che il giocatore raccolga le 5 monete).
-            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 0.4f), glm::vec3(0, 0, 1));
-            vortexMat = glm::scale(vortexMat, glm::vec3(1.15f, 1.15f, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.2f, 0.4f, 0.8f, 0.75f));
-            shader.setMat4("model", vortexMat);
-            m_vortexGeo.draw();
+            glm::mat4 vortexMat = glm::rotate(gateRoot, glm::radians(m_vortexRotation * 0.4f), glm::vec3(0, 0, 1)); // Rotazione lenta
+            vortexMat = glm::scale(vortexMat, glm::vec3(1.15f, 1.15f, 1.0f)); // Scala moderata
+            shader.setVec4("uColorTint", glm::vec4(0.2f, 0.4f, 0.8f, 0.75f)); // Tinta blu tenue semitrasparente
+            shader.setMat4("model", vortexMat); // Invia matrice vortice dormiente
+            m_vortexGeo.draw();                 // Disegna vortice
 
-            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 0.5f), glm::vec3(0, 0, 1));
-            ringMat = glm::scale(ringMat, glm::vec3(1.15f, 1.15f, 1.0f));
-            shader.setVec4("uColorTint", glm::vec4(0.35f, 0.6f, 0.95f, 0.9f));
-            shader.setMat4("model", ringMat);
-            m_gateGeo.draw();
+            glm::mat4 ringMat = glm::rotate(gateRoot, glm::radians(m_gateRotation * 0.5f), glm::vec3(0, 0, 1)); // Rotazione lenta anello
+            ringMat = glm::scale(ringMat, glm::vec3(1.15f, 1.15f, 1.0f)); // Scala fissa 1.15
+            shader.setVec4("uColorTint", glm::vec4(0.35f, 0.6f, 0.95f, 0.9f)); // Tinta blu sobria
+            shader.setMat4("model", ringMat); // Invia matrice anello dormiente
+            m_gateGeo.draw();                 // Disegna anello Hermite
         }
 
         // Ripristina la tinta colore globale.
@@ -484,10 +488,8 @@ bool HermiteManager::checkPlayerGateEnter(const CircleCollider& playerCol, bool 
 {
     if (!m_hasGate || !gateActive) return false;
 
-    // Raggio di attivazione del trigger circolare: 58 pixel.
-    float distSq = glm::dot(playerCol.center - m_gatePos, playerCol.center - m_gatePos);
-    float triggerRad = 58.0f;
-    return distSq <= (triggerRad * triggerRad);
+    // Raggio di attivazione del trigger circolare: 58 pixel (raggio punto = 0.0f).
+    return Collision2D::checkCircleCircle(playerCol.center, 0.0f, m_gatePos, 58.0f);
 }
 
 // ============================================================================
@@ -496,9 +498,8 @@ bool HermiteManager::checkPlayerGateEnter(const CircleCollider& playerCol, bool 
 bool HermiteManager::checkDroneCollision(const CircleCollider& playerCol) const
 {
     if (!m_hasDrone) return false;
-    float dist = glm::distance(playerCol.center, m_dronePos);
     float droneRadius = (m_weakenedTimer > 0.0f) ? 28.0f : 36.0f;
-    return dist <= (playerCol.radius + droneRadius);
+    return Collision2D::checkCircleCircle(playerCol.center, playerCol.radius, m_dronePos, droneRadius);
 }
 
 // ============================================================================
@@ -526,11 +527,9 @@ bool HermiteManager::checkLaserHit(const glm::vec2& bulletPos, float bulletRadiu
         }
     }
 
-    // Calcola la distanza cartesiana tra il dardo laser e il centro del Drone Rosso
-    float dist = glm::distance(bulletPos, m_dronePos);
     float hitRadius = (m_weakenedTimer > 0.0f) ? 30.0f : (m_isBoss ? 42.0f : 36.0f);
 
-    if (dist <= (hitRadius + bulletRadius))
+    if (Collision2D::checkCircleCircle(bulletPos, bulletRadius, m_dronePos, hitRadius))
     {
         m_hitFlashTimer = 0.20f;
         m_hitCount++;

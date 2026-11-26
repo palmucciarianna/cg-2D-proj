@@ -1,10 +1,14 @@
+// ORIGINE: Gestione input e callback GLFW basata sul pattern dei laboratori della prof, incapsulata in classe.
 // ============================================================================
-// File: src/Input.cpp
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Implementazione delle callback di input per GLFW.
-//              Garantisce l'assenza di variabili globali esportabili (`extern`),
-//              utilizzando variabili statiche con visibilità limitata al file di traduzione.
+// GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Input.cpp
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - Implementa le callback di sistema GLFW (keyCallback, cursorPositionCallback, framebufferSizeCallback).
+// 2. A CHI È COLLEGATO:
+//    - Registrato nel main.cpp; aggiorna la viewport OpenGL e notifica eventi discreti.
+// 3. FORMULE & PRINCIPI CG CHIAVE:
+//    - Separazione eventi discreti (callback) da eventi continui (polling con glfwGetKey) (Domanda 19).
+//    - Aggiornamento Viewport: glViewport(0, 0, width, height) mappa NDC [-1, 1] a pixel finestra (Domanda 9).
 // ============================================================================
 
 #include "OpenGL_Headers.h"
@@ -21,6 +25,7 @@ namespace Input
     // ========================================================================
     // Callback di Pressione Tasti
     // ========================================================================
+    // [Domanda 19: Input, eventi e callback GLFW (vs polling continuo in Player)]
     void keyCallback(
         GLFWwindow* window,
         int key,

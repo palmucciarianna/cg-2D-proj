@@ -118,9 +118,14 @@ La seguente tabella attesta la piena rispondenza del progetto a ciascuno dei cri
 
 ### 4.5 `BackgroundRenderer` (`include/BackgroundRenderer.h`, `src/BackgroundRenderer.cpp`) – Sfondo Senza Texture
 * **Ruolo:** Esegue il pass di rendering dedicato dello sfondo spaziale procedurale (Requisito 5.1).
-* **Funzionamento Algoritmico:**
-  - Disegna un quadrilatero fullscreen a coordinate normalizzate NDC $[-1, 1]$.
-  - Nel fragment shader (`assets/shaders/background.frag`), le stelle nascono da una funzione hash pseudo-casuale deterministica ad alta frequenza:
+* **Architettura C++ e Gestione Risorse GPU:**
+  - Implementa il pattern **RAII (Resource Acquisition Is Initialization)**: il costruttore alloca VAO e VBO sulla GPU, mentre il distruttore garantisce la deallocazione sicura con `glDeleteVertexArrays` e `glDeleteBuffers`.
+  - Conforme alla **Rule of Five**: disabilita esplicitamente costruttore di copia e operatore di assegnamento (`= delete`) per evitare copie superficiali di handle OpenGL e doppi rilasci di memoria GPU.
+* **Geometria Fullscreen Quad:**
+  - Alloca in memoria GPU due triangoli complanari (6 vertici) nello spazio delle coordinate normalizzate **NDC (Normalized Device Coordinates)** che coprono l'intero viewport da $(-1, -1)$ a $(+1, +1)$.
+  - Non richiede alcuna matrice di trasformazione Model o Projection, eseguendo direttamente il fragment shader su ogni pixel.
+* **Funzionamento Algoritmico dello Shader (`background.frag`):**
+  - Nel fragment shader, le stelle nascono da una funzione hash pseudo-casuale deterministica ad alta frequenza:
     $$h(\mathbf{p}) = \text{fract}\left(\sin(\mathbf{p} \cdot (12.9898, 78.233)) \cdot 43758.5453\right)$$
   - La funzione viene campionata su **tre layer di parallasse indipendenti**:
     1. *Layer Remoto ($120\times$):* stelle fitte, minute e a scorrimento lentissimo.

@@ -1,11 +1,34 @@
 // ============================================================================
-// File: include/GameWorld.h
-// Progetto: Astro-Miner 2D: Cosmic Coin Rush
-// Disciplina: Computer Graphics - Università di Bologna (UniBo)
-// Descrizione: Gestore principale del mondo di gioco (Facade Pattern).
-//              Incapsula l'intera gerarchia della scena 2D, i sottosistemi di rendering,
-//              la macchina a stati finiti (FSM), la logica di collisione, la gestione
-//              del delta-time e l'interfaccia grafica Dear ImGui (HUD di Missione).
+// GUIDA RAPIDA PER L'ORALE - CLASSE: GameWorld
+// ----------------------------------------------------------------------------
+// 1. A COSA SERVE:
+//    - È il "direttore d'orchestra" e coordinatore centrale del gioco (Facade Pattern).
+//    - Gestisce la FSM degli stati di gioco: PLAYING, LEVEL_CLEARED_HURRA, GAME_OVER.
+//    - Costruisce la matrice di proiezione ortografica (glm::ortho) per lo spazio 1280x720.
+//    - Risolve tutte le collisioni tra entità (Player, Asteroidi, Monete, Laser, Hermite Gate).
+//    - Renderizza l'interfaccia Dear ImGui (HUD di Missione) con auto-compressione non invasiva.
+//
+// 2. A CHI È COLLEGATA:
+//    - Creata e chiamata da: main.cpp (nel game loop tramite init(), update(dt), render()).
+//    - Contiene e orchestra tutti i sottosistemi del gioco:
+//      * BackgroundRenderer (sfondo procedurale in NDC)
+//      * Player (navicella composita ad albero gerarchico)
+//      * AsteroidManager (cintura asteroidi con Buffer Sharing su singolo VAO)
+//      * CollectibleManager (5 monete d'oro con rotazione pseudo-3D ortogonale)
+//      * HermiteManager (Alien Sentinel Drone su curva di Lissajous e Warp Gate)
+//      * LaserManager & HazardManager (proiettili laser e pericoli perimetrali)
+//      * ParticleSystem (motore particellare con attrito viscoso e alpha fade)
+//    - Utilizza: Shader ("background" e "basic") e Collider2D (test geometrici di collisione).
+//
+// 3. FORMULE & PRINCIPI DI COMPUTER GRAPHICS:
+//    - Proiezione Ortografica: P = glm::ortho(0, 1280, 0, 720, -1, 1). I raggi di proiezione
+//      sono paralleli; le dimensioni non variano con la distanza (Requisito 5 & Domanda 9).
+//    - Pipeline Graphics (Domanda 4): gestisce la fase di Application su CPU, calcola il moto
+//      Euleriano e le matrici Model/Projection, inoltrandole ai Vertex Shader.
+//    - Ordine di Disegno Back-to-Front (Domanda 20): Sfondo opaco -> Oggetti solidi ->
+//      Navicella -> Elementi traslucidi in Alpha Blending (fiamme, LED, particelle).
+//    - Separation of Concerns (SoC) e RAII (Requisito 8 & Domanda 19): architettura a moduli
+//      senza variabili globali, memoria gestita tramite smart pointer (std::unique_ptr).
 // ============================================================================
 
 #pragma once
@@ -109,6 +132,9 @@ public:
 
 
 private:
+    // Helper condiviso per inizializzare o resettare un livello di gioco (usato da nextLevel e restartGame).
+    void startLevel(int level, bool clearParticles);
+
     int m_screenWidth;  // Larghezza logica della finestra in pixel (1280)
     int m_screenHeight; // Altezza logica della finestra in pixel (720)
 
