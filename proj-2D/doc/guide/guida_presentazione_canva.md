@@ -208,6 +208,25 @@ Per ogni slide trovi:
 > *Quando un asteroide esplode o si raccoglie una moneta, `ParticleSystem` genera particelle dinamiche (`GL_DYNAMIC_DRAW` / `updatePositions`) con integrazione di Eulero, attrito viscoso $v \leftarrow v(1 - \gamma\Delta t)$ e **alpha fade** lineare su `uColorTint`, disegnate dopo gli oggetti opaci con `GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA`.*  
 > *Raccolte le 5 monete, il Warp Gate si attiva e attraversarlo porta allo stato `LEVEL_CLEARED_HURRA` con coriandoli particellari prima del livello successivo."*
 
+#### 📝 Versione approfondita (dettaglio completo Slide 8):
+> *"La slide 8 descrive tre aspetti fondamentali del gameplay e della simulazione: il sistema di collisioni geometriche, la fisica delle particelle e la gestione del flusso di vittoria.*
+>
+> ***Partiamo dalle collisioni (`Collider2D.h`).***  
+> *Nel progetto ho centralizzato tutti i controlli geometrici nel modulo `Collider2D.h`, utilizzando principalmente due tipi di test analitici:*  
+> *1. **Test Cerchio–Cerchio** (usato per navicella, asteroidi, monete, proiettili laser e drone): ogni entità è approssimata da un centro e un raggio. Invece di calcolare la distanza euclidea con la radice quadrata, confronto direttamente la **distanza al quadrato**, calcolata tramite prodotto scalare `glm::dot(diff, diff)`, con il quadrato della somma dei raggi: $\|c_1 - c_2\|^2 \le (r_1 + r_2)^2$. In questo modo elimino l'operazione `sqrt()`, rendendo il controllo molto più veloce all'interno del game loop.*  
+> *2. **Test Cerchio–AABB** (Axis-Aligned Bounding Box, cioè un rettangolo allineato agli assi cartesiani): in questo caso utilizzo il **clamping**. Limito le coordinate del centro del cerchio all'intervallo `[min, max]` del rettangolo su entrambi gli assi per trovare il punto del rettangolo più vicino al centro del cerchio; poi verifico, sempre al quadrato e senza radice, se la distanza tra quel punto e il centro è minore o uguale al raggio.*
+>
+> ***Passiamo alla fisica particellare e al blending (`ParticleSystem`).***  
+> *Quando un asteroide viene colpito dal laser, `ParticleSystem` genera **32 frammenti** che si espandono radialmente dal punto d'impatto (e allo stesso modo genera scintille sulle monete, scie dei razzi o **135 coriandoli** alla vittoria).*  
+> *- **Ciclo di vita e cinematica:** ogni particella ha posizione, velocità, rotazione, vita residua e colore RGBA (il vettore è pre-allocato con `reserve(256)` per evitare riallocazioni continue). Ad ogni frame, finché `life > 0`, la posizione avanza tramite **integrazione di Eulero** ($p \leftarrow p + v\Delta t$), la rotazione si aggiorna e applico un modello lineare di **attrito viscoso**: $v(t+\Delta t) = v(t)(1 - \gamma\Delta t)$ con $\gamma = 0.75$, così i frammenti rallentano progressivamente in modo naturale prima di scomparire.*  
+> *- **Dissolvenza e Buffer Sharing:** in fase di rendering non ricarico nuovi vertici in GPU: uso un'unica geometria base condivisa e calcolo per ogni particella il rapporto `progress = life / maxLife` in $[0, 1]$, con cui riduco sia la scala sia il canale alpha del colore, inviato poi allo shader tramite la uniform `uColorTint`.*  
+> *- **Alpha Blending e ordine di disegno:** per rendere corretta la trasparenza ho abilitato `glEnable(GL_BLEND)` con `glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)`, che implementa l'equazione $C_{\text{out}} = \alpha_s C_s + (1 - \alpha_s) C_d$ tra il colore della particella e quello già presente nel framebuffer. Inoltre, in `GameWorld::render`, le particelle sono disegnate **rigorosamente dopo tutti gli oggetti opaci** (ordine Back-to-Front) per evitare artefatti visivi.*
+>
+> ***Infine, il flusso di vittoria e i banner centrati (`GameWorld`).***  
+> *La logica di progressione è governata dalla macchina a stati finiti di `GameWorld`: raccolte tutte e **5 le monete**, il Warp Gate diventa attivo; attraversandolo, il gioco assegna **+500 punti bonus**, passa allo stato `LEVEL_CLEARED_HURRA` per **2,8 secondi**, lancia i **135 coriandoli particellari** e poi genera automaticamente il livello successivo (`nextLevel()`).*  
+> *Ho curato anche la resa grafica delle schermate di **HURRÀ!** e **Game Over** in Dear ImGui, posizionandole al centro dello schermo tramite un **pivot centrale `(0.5, 0.5)`** rispetto a `DisplaySize * 0.5` e centrando dinamicamente ogni riga di testo con `CalcTextSize`, così da avere un'interfaccia sempre bilanciata su qualsiasi risoluzione.*  
+> *In questo modo la slide mostra come geometria analitica, fisica discreta, blending OpenGL e logica FSM collaborino insieme dentro il frame loop."*
+
 ### ❓ Possibile domanda a trabocchetto:
 * **Professoressa:** *"Come ha configurato il blending per le particelle trasparenti?"*
 * **Risposta vincente:** *"Ho abilitato il blending con `glEnable(GL_BLEND)` e configurato i fattori sorgente e destinazione con `glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)`, che implementa l'equazione $C_{\text{out}} = \alpha_s C_s + (1 - \alpha_s) C_d$. Inoltre, per garantire la correttezza visiva, disegno le particelle semitrasparenti rigorosamente dopo tutti gli oggetti opaci della scena."*
