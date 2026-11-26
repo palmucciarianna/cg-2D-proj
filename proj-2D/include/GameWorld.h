@@ -12,7 +12,7 @@
 //    - Creata e chiamata da: main.cpp (nel game loop tramite init(), update(dt), render()).
 //    - Contiene e orchestra tutti i sottosistemi del gioco:
 //      * BackgroundRenderer (sfondo procedurale in NDC)
-//      * Player (navicella composita ad albero gerarchico a 11 nodi)
+//      * Player (navicella composita ad albero gerarchico)
 //      * AsteroidManager (cintura asteroidi con Buffer Sharing su singolo VAO)
 //      * CollectibleManager (5 monete d'oro con rotazione pseudo-3D ortogonale)
 //      * HermiteManager (Alien Sentinel Drone su curva di Lissajous e Warp Gate)

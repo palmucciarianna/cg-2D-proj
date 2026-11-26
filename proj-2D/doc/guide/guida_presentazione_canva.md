@@ -39,7 +39,7 @@ Per ogni slide trovi:
 
 ## SLIDE 2: Obiettivi Didattici & Rispondenza alle Specifiche
 * **Riquadri a schermo:**
-  * 🧩 **Geometrie:** Oggetto composto gerarchico a 8 parti + 2 modelli a spline cubiche di Hermite.
+  * 🧩 **Geometrie:** Oggetto composto gerarchico multi-parte + 2 modelli a spline cubiche di Hermite.
   * ⚡ **Prestazioni:** Istanziazione multipla condivisa su buffer statici VRAM (`GL_STATIC_DRAW`).
   * 🌌 **Rendering:** Due shader GLSL disaccoppiati (sfondo procedurale senza texture + shader oggetti).
   * 🕹️ **Dinamiche:** Loop scalato con Delta Time, particelle fisiche, ostacolo letale e Warp Gate di vittoria.
@@ -93,7 +93,7 @@ Per ogni slide trovi:
   * **Albero di Trasformazione:** $\text{Player Root } (\mathbf{M} = \mathbf{T}\mathbf{R}\mathbf{S}) \to \text{Fusoliera, Cabina UV, Ala DX, Ala SX } [\mathbf{S}(-1,1,1)], \text{Fiamme, Luci}$.
 
 ### 🎙️ Cosa dire a voce (50 secondi):
-> *"Per soddisfare il Requisito 3.1, ho realizzato la navicella mineraria Starfighter componendo 8 parti geometriche distinte connesse in un albero di trasformazione gerarchica.  
+> *"Per soddisfare il Requisito 3.1, ho realizzato la navicella mineraria Starfighter componendo più parti geometriche distinte connesse in un albero di trasformazione gerarchica.  
 > La radice dell'albero rappresenta la posizione e l'orientamento globale del pilota nel mondo: $M_{\text{player}} = T \cdot R \cdot S$.  
 > Ciascun componente figlio possiede una trasformazione locale che viene moltiplicata a destra per quella del genitore: $M_{\text{comp}} = M_{\text{player}} \cdot T_{\text{rel}} \cdot R_{\text{rel}} \cdot S_{\text{rel}}$.  
 > Un'ottimizzazione algebrica importante riguarda le ali: per disegnare l'ala sinistra non ho duplicato i dati dei vertici su VRAM, ma ho riutilizzato la mesh dell'ala destra anteponendo una matrice di riflessione speculare con fattore di scala orizzontale negativo $S(-1, 1, 1)$."*

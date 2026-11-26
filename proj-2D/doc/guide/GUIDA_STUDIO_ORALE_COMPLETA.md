@@ -101,7 +101,7 @@ Tutti i file del progetto contengono in cima al codice la **Guida Rapida per l'O
   - [`main.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/main.cpp) (Inizializzazione, GLFW, GLAD, V-Sync, Render Loop con Delta-Time Clamping)
   - [`GameWorld.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/GameWorld.h) e [`GameWorld.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/GameWorld.cpp) (FSM, `glm::ortho`, coordinamento collisioni, HUD Dear ImGui)
 * **Entità di Gioco e Modellazione:**
-  - [`Player.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Player.h) e [`Player.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Player.cpp) (Albero gerarchico a 11 nodi, $S(-1,1,1)$, texture cabina, fiamme)
+  - [`Player.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Player.h) e [`Player.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Player.cpp) (Albero gerarchico multi-parte, $S(-1,1,1)$, texture cabina, fiamme)
   - [`AsteroidManager.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/AsteroidManager.h) e [`AsteroidManager.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/AsteroidManager.cpp) (Buffer Sharing con 1 solo VAO statico su VRAM per $N$ istanze)
   - [`Collectible.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/Collectible.h) e [`Collectible.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/Collectible.cpp) (5 monete d'oro, rotazione pseudo-3D ortogonale $s_x(t) = |\cos(\omega t)|$)
   - [`HermiteObject.h`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/include/HermiteObject.h) e [`HermiteObject.cpp`](file:///Users/ariannapalmucci/Desktop/cg-project/proj-2D/src/HermiteObject.cpp) (Spline cubiche di Hermite $C^1$, traiettoria a 8 di Lissajous, ammiccamento eye-blink, Warp Gate)
@@ -456,7 +456,7 @@ In questa sezione analizziamo tutto ciò che risiede nella cartella `assets/` e 
 
 | Requisito Ufficiale | Descrizione Scheda Docente | Implementazione Esatta in Astro-Miner 2D | File Chiave |
 | :--- | :--- | :--- | :--- |
-| **3.1 Primitive Composte** | Almeno 1 oggetto composto da $\ge 3$ parti con albero di trasformazione | Navicella Starfighter composta da 11 nodi gerarchici (fusoliera, muso, cabina, ali specchiate con $S(-1,1,1)$, cannoni, fiamme reattive, luci LED) | `Player.cpp`, `Player.h` |
+| **3.1 Primitive Composte** | Almeno 1 oggetto composto da $\ge 3$ parti con albero di trasformazione | Navicella Starfighter ad albero gerarchico multi-parte (fusoliera, muso, cabina, ali specchiate con $S(-1,1,1)$, cannoni, fiamme reattive, luci LED) | `Player.cpp`, `Player.h` |
 | **3.2 Curve di Hermite** | Almeno 2 geometrie distinte basate su spline cubiche di Hermite, di cui almeno 1 dinamica | 1. **Alien Drone**: nemico ostile su traiettoria a 8 di Lissajous con animazione di ammiccamento occhio (eye-blink);<br>2. **Warp Gate**: portale dimensionale monumentale a due anelli rotanti | `HermiteObject.cpp`, `alien_drone.obj`, `warp_gate.obj` |
 | **4. Trasformazioni / Istanze** | Calcolo Model Matrix su CPU, passaggio a GPU via uniform; almeno 3 istanze a geometria condivisa | **Buffer Sharing**: singolo VBO/VAO caricato in VRAM in `GL_STATIC_DRAW` sia per gli asteroidi (4-9 istanze) sia per le monete (5 istanze). La CPU invia solo `model` ad ogni draw call | `AsteroidManager.cpp`, `Collectible.cpp` |
 | **5. Due Shader Program** | Almeno 2 shader program con compiti distinti; sfondo procedurale puro senza immagini | 1. **Shader Sfondo**: Fullscreen quad in NDC, stelle a parallasse con hash pseudo-casuale, domain warping e onde polari;<br>2. **Shader Oggetti**: Proiezione ortografica `glm::ortho` e colore Gouraud | `background.frag`, `basic.vert`, `BackgroundRenderer.cpp` |
@@ -615,7 +615,7 @@ Per il testo completo parola per parola da pronunciare durante il colloquio e pe
 | **1** | **Copertina & Titolo** (*Astro-Miner 2D*) | OpenGL 3.3 Core Profile, pipeline programmabile | Zero pipeline fissa, portabilità nativa macOS/Win |
 | **2** | **Obiettivi Didattici & Specifiche** | Modellazione gerarchica, Hermite $C^1$, VRAM static | Conformità 100% ai requisiti d'esame |
 | **3** | **Architettura Software & Game Loop** | Separation of Concerns (SoC), delta time clamping $\Delta t$ | Zero variabili globali, RAII, disaccoppiamento |
-| **4** | **Oggetto Composto (Requisito 3.1)** | $M_{\text{comp}} = M_{\text{player}} \cdot T \cdot R \cdot S$, specularità $S(-1,1,1)$ | 8 componenti logici (11 nodi), nessun vertice duplicato |
+| **4** | **Oggetto Composto (Requisito 3.1)** | $M_{\text{comp}} = M_{\text{player}} \cdot T \cdot R \cdot S$, specularità $S(-1,1,1)$ | Componenti gerarchici, nessun vertice duplicato |
 | **5** | **Curve di Hermite (Requisito 3.2)** | $p(t) = \sum h_{ij}(t) P_j$, raccordo $C^1$ ($C = C, C' = C'$) | Alien Drone (113 vtx) su Lissajous e Warp Gate (144 vtx) |
 | **6** | **Buffer Statici & Istanziazione (Req. 4)** | `GL_STATIC_DRAW`, $v_{\text{clip}} = P \cdot M \cdot v_{\text{loc}}$ | 1 solo VAO statico per 9 asteroidi: zero bus transfer |
 | **7** | **Shader Sfondo vs Shader Oggetti (Req. 5)** | Starfield $h(p) = \text{fract}(\sin(p \cdot K) \cdot 43758.54)$, $P_{\text{ortho}}$ | Sfondo procedurale matematico in NDC puro $[-1,1]$ |

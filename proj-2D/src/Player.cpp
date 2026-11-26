@@ -2,7 +2,7 @@
 // GUIDA RAPIDA PER L'ORALE - IMPLEMENTAZIONE: Player.cpp
 // ----------------------------------------------------------------------------
 // 1. A COSA SERVE:
-//    - Realizza la navicella composta a 11 nodi gerarchici guidata dal pilota (Requisito 3.1).
+//    - Realizza la navicella composta gerarchica guidata dal pilota (Requisito 3.1).
 //    - Integra la cinematica fisica Euleriana continua (accelerazione, trascinamento inerziale).
 //    - Gestisce la texture 2D della foto del pilota con ritaglio ellittico.
 // 2. A CHI È COLLEGATO:
