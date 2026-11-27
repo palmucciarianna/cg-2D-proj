@@ -13,7 +13,8 @@ Il giocatore pilota una navicella mineraria composita (modellata gerarchicamente
 ### Struttura del Repository
 * **`proj-2D/`**: Progetto Elaborato 1 (Midterm 2D) — codice sorgente (`include/`, `src/`), shader e modelli (`assets/`), dipendenze (`external/`), documentazione (`doc/`).
 * **`consegna/`**: Versione pulita per la consegna d'esame con script di test rapido.
-* **`proj-3D/`** e **`proj-blender/`**: Cartelle predisposte per i progetti successivi.
+* **`proj-3D/`**: Progetto Elaborato 2 (Scena 3D e illuminazione) → [palmucciarianna/cg-3D-proj](https://github.com/palmucciarianna/cg-3D-proj.git)
+* **`proj-blender/`**: Modellazione e rendering avanzato → [palmucciarianna/cg-blender-proj](https://github.com/palmucciarianna/cg-blender-proj.git)
 
 ---
 
